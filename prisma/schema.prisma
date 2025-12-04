@@ -1,0 +1,508 @@
+// This is your Prisma schema file for SQLite database
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Core Tables
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  email       String?  @unique
+  password    String // Hashed password
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  transactions     Transaction[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  stockMovements   StockMovement[]
+  priceHistory      PriceHistory[]  @relation("PriceHistoryChangedBy")
+  scheduledReports ScheduledReport[]
+  userPermissions  UserPermission[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique // e.g., "products.create", "transactions.view", "users.manage"
+  name        String
+  description String?
+  category    String? // e.g., "products", "transactions", "users", "inventory", "reports", "settings"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userPermissions UserPermission[]
+
+  @@index([code])
+  @@index([category])
+}
+
+model UserPermission {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  permissionId Int
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+}
+
+model Setting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  type        String   @default("string") // string, number, boolean, json
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String // create, update, delete, login, logout, etc.
+  entity    String // product, transaction, user, etc.
+  entityId  Int?
+  details   String? // JSON string of additional details
+  timestamp DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([timestamp])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String // low_stock, expiry_warning, system_error, transaction, etc.
+  title     String
+  message   String
+  userId    Int?
+  isRead    Boolean  @default(false)
+  priority  String   @default("normal") // low, normal, high, urgent
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Sprint 3: Product Management Tables
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  parentId    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent       Category?     @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]    @relation("CategoryHierarchy")
+  products     Product[]
+  pricingRules PricingRule[]
+
+  @@index([name])
+  @@index([parentId])
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  name      String
+  contact   String?
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([name])
+  @@index([email])
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  code        String?  @unique
+  barcode     String?  @unique
+  name        String
+  description String?
+  categoryId  Int?
+  unit        String   @default("pcs") // pcs, kg, liter, etc.
+  price       Float
+  costPrice   Float?
+  currency    String   @default("USD")
+  supplierId  Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  category           Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  transactionItems   TransactionItem[]
+  inventory          Inventory?
+  stockMovements     StockMovement[]
+  priceHistory       PriceHistory[]
+  purchaseOrderItems PurchaseOrderItem[]
+  pricingRules       PricingRule[]
+
+  @@index([code])
+  @@index([barcode])
+  @@index([name])
+  @@index([categoryId])
+  @@index([supplierId])
+  // PERFORMANCE FIX: Composite indexes for common product queries
+  @@index([categoryId, name]) // For category product lists (sorted by name)
+  @@index([supplierId, name]) // For supplier product lists (sorted by name)
+}
+
+// Sprint 4: Transaction Tables
+
+model Transaction {
+  id                Int      @id @default(autoincrement())
+  transactionNumber String   @unique // Format: TXN-YYYYMMDD-XXXXX
+  type              String   @default("sale") // sale, return
+  status            String   @default("pending") // pending, completed, voided, held
+  subtotal          Float
+  tax               Float    @default(0)
+  discount          Float    @default(0)
+  total             Float
+  // Dual currency fields
+  subtotalUsd       Float    @default(0)
+  subtotalLbp        Float    @default(0)
+  taxUsd            Float    @default(0)
+  taxLbp             Float    @default(0)
+  discountUsd       Float    @default(0)
+  discountLbp        Float    @default(0)
+  totalUsd           Float    @default(0)
+  totalLbp            Float    @default(0)
+  cashierId         Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  cashier  User              @relation(fields: [cashierId], references: [id])
+  items    TransactionItem[]
+  payments Payment[]
+
+  @@index([transactionNumber])
+  @@index([createdAt])
+  @@index([cashierId])
+  @@index([status])
+  @@index([type])
+  // PERFORMANCE FIX: Composite indexes for common query patterns
+  @@index([status, createdAt]) // For date range queries with status filter (reports)
+  @@index([cashierId, status, createdAt]) // For cashier-specific reports
+}
+
+model TransactionItem {
+  id            Int   @id @default(autoincrement())
+  transactionId Int
+  productId     Int?  // Made nullable to preserve items even if product is deleted
+  quantity      Float
+  unitPrice     Float
+  currency      String @default("USD") // Currency from product
+  discount      Float @default(0) // Item-level discount
+  tax           Float @default(0) // Item tax amount
+  subtotal      Float // (quantity * unitPrice) - discount
+  total         Float // subtotal + tax
+  // Dual currency fields
+  subtotalUsd   Float @default(0)
+  subtotalLbp    Float @default(0)
+  taxUsd        Float @default(0)
+  taxLbp         Float @default(0)
+  totalUsd       Float @default(0)
+  totalLbp        Float @default(0)
+  // Product snapshot fields - preserve product info even if product is deleted
+  productName   String? // Snapshot of product name at time of transaction
+  productCode   String? // Snapshot of product code at time of transaction
+
+  // Relations
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product     Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@index([productId])
+  // PERFORMANCE FIX: Composite index for product sales analysis
+  @@index([transactionId, productId]) // For product performance reports
+  @@index([productId, transactionId]) // For product sales history queries
+}
+
+model Payment {
+  id            Int      @id @default(autoincrement())
+  transactionId Int
+  amount        Float
+  currency      String   @default("USD") // Payment currency
+  received      Float // Amount received from customer
+  change        Float    @default(0) // Change given (received - amount)
+  // Dual currency fields
+  amountUsd     Float    @default(0)
+  amountLbp      Float    @default(0)
+  receivedUsd   Float    @default(0)
+  receivedLbp    Float    @default(0)
+  changeUsd     Float    @default(0)
+  changeLbp      Float    @default(0)
+  timestamp     DateTime @default(now())
+
+  // Relations
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@index([timestamp])
+}
+
+// Sprint 5: Inventory Management Tables
+
+model Inventory {
+  id           Int       @id @default(autoincrement())
+  productId    Int       @unique
+  quantity     Float     @default(0)
+  reorderLevel Float     @default(0) // Minimum stock level before reorder alert
+  location     String? // Optional: warehouse location or bin number
+  expiryDate   DateTime? // Expiry date for current stock (null if product doesn't expire)
+  lastUpdated  DateTime  @default(now()) @updatedAt
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([quantity])
+  @@index([reorderLevel])
+  @@index([expiryDate])
+  // PERFORMANCE FIX: Composite indexes for inventory filtering
+  @@index([quantity, reorderLevel]) // For low stock queries (quantity <= reorderLevel)
+  @@index([expiryDate, quantity]) // For expiry alerts
+}
+
+model StockMovement {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  type        String // sale, return, adjustment, transfer, purchase, damage, expiry
+  quantity    Float // Positive for additions, negative for deductions
+  reason      String? // Reason for movement (e.g., "Stock adjustment", "Sale", "Return")
+  userId      Int? // User who made the change
+  referenceId Int? // Reference to transaction, purchase order, etc.
+  expiryDate  DateTime? // Expiry date for this stock batch (used for purchase/receiving movements)
+  timestamp   DateTime @default(now())
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([timestamp])
+  @@index([type])
+  @@index([userId])
+  @@index([expiryDate])
+  // PERFORMANCE FIX: Composite index for stock movement reports and receiving reports
+  @@index([timestamp, type]) // For date range queries with type filter
+}
+
+model PriceHistory {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  oldPrice  Float
+  newPrice  Float
+  changedBy Int // User ID who made the change
+  changedAt DateTime @default(now())
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation("PriceHistoryChangedBy", fields: [changedBy], references: [id])
+
+  @@index([productId])
+  @@index([changedAt])
+  // PERFORMANCE FIX: Composite index for price history reports
+  @@index([productId, changedAt]) // For product price history queries sorted by date
+}
+
+// Sprint 6: Purchase Order Tables
+
+model PurchaseOrder {
+  id           Int       @id @default(autoincrement())
+  orderNumber  String    @unique // Format: PO-YYYYMMDD-XXXXX
+  supplierId   Int
+  status       String    @default("draft") // draft, pending, partially_received, received, cancelled
+  total        Float     @default(0)
+  orderDate    DateTime  @default(now())
+  expectedDate DateTime?
+  receivedDate DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items    PurchaseOrderItem[]
+  invoices PurchaseInvoice[]
+
+  @@index([orderNumber])
+  @@index([supplierId])
+  @@index([status])
+  @@index([orderDate])
+  // PERFORMANCE FIX: Composite index for purchase order reports
+  @@index([orderDate, status]) // For date range queries with status filter
+}
+
+model PurchaseOrderItem {
+  id               Int   @id @default(autoincrement())
+  purchaseOrderId  Int
+  productId        Int
+  quantity         Float
+  unitPrice        Float
+  receivedQuantity Float @default(0)
+  subtotal         Float // quantity * unitPrice
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+}
+
+model PurchaseInvoice {
+  id              Int       @id @default(autoincrement())
+  purchaseOrderId Int
+  invoiceNumber   String    @unique
+  amount          Float
+  dueDate         DateTime?
+  paidDate        DateTime?
+  status          String    @default("pending") // pending, partial, paid, overdue
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([dueDate])
+  // PERFORMANCE FIX: Composite index for supplier payment reports
+  @@index([status, dueDate]) // For filtering invoices by status and due date
+}
+
+// Sprint 7: Pricing, Discounts & Promotions Tables
+
+model PricingRule {
+  id            Int       @id @default(autoincrement())
+  name          String
+  type          String // percentage_discount, fixed_discount, quantity_based, buy_x_get_y, time_based
+  productId     Int? // Null for category-wide or store-wide rules
+  categoryId    Int? // Null for product-specific or store-wide rules
+  promotionId   Int? // Link to promotion (optional - rules can exist without promotions)
+  startDate     DateTime?
+  endDate       DateTime?
+  discountType  String // percentage, fixed
+  discountValue Float // Percentage (0-100) or fixed amount
+  minQuantity   Float     @default(1) // Minimum quantity for rule to apply
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  product   Product?    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category  Category?   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  promotion Promotion?  @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([categoryId])
+  @@index([promotionId])
+  @@index([isActive])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([type])
+}
+
+model Promotion {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  type        String // product_promotion, category_promotion, store_wide
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  pricingRules PricingRule[]
+
+  @@index([isActive])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([type])
+}
+
+// Sprint 8: Report Scheduling
+model ScheduledReport {
+  id              Int      @id @default(autoincrement())
+  name            String
+  reportType      String // sales, inventory, financial, product, purchase, etc.
+  scheduleType    String // daily, weekly, monthly, custom
+  scheduleConfig  String // JSON string with schedule details (cron expression, day of week, day of month, etc.)
+  dateRangeType   String // fixed, relative (last7days, last30days, etc.)
+  dateRangeConfig String? // JSON string with date range configuration
+  exportFormat    String   @default("pdf") // csv, excel, pdf
+  exportPath      String? // Optional: custom export path
+  isActive        Boolean  @default(true)
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  createdById     Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([isActive])
+  @@index([nextRunAt])
+  @@index([reportType])
+}
+
+// Sprint 9: Operation Queue for Offline Sync
+model QueuedOperation {
+  id        Int      @id @default(autoincrement())
+  type      String // incrementUserCount, decrementUserCount, syncUserCount
+  data      String // JSON string with operation data
+  status    String   @default("pending") // pending, processing, completed, failed
+  retryCount Int     @default(0)
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
