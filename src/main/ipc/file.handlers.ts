@@ -117,8 +117,9 @@ function downloadFile(url: string, destPath: string, redirectCount = 0): Promise
 
 /**
  * Download and setup SumatraPDF automatically if not found
+ * Exported for use during app initialization
  */
-async function ensureSumatraPDF(): Promise<string | null> {
+export async function ensureSumatraPDF(): Promise<string | null> {
   const sumatraDir = path.join(app.getPath('userData'), 'sumatra');
   const sumatraPath = path.join(sumatraDir, 'SumatraPDF.exe');
   

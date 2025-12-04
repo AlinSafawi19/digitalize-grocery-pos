@@ -54,6 +54,7 @@ import { registerIpcHandlers } from './ipc';
 import { ReportCacheService } from './services/reports/report-cache.service';
 import { ReportSchedulerService } from './services/reports/report-scheduler.service';
 import { NotificationCountCronService } from './services/notifications/notification-count-cron.service';
+import { ensureSumatraPDF } from './ipc/file.handlers';
 import fs from 'fs-extra';
 
 // CRITICAL: Set app name explicitly to ensure consistent userData path
@@ -263,6 +264,23 @@ async function initializeApp() {
         daysRemaining: licenseValidation.daysRemaining,
       });
     }
+
+    // Pre-download SumatraPDF in the background (non-blocking)
+    // This ensures it's ready when the user prints their first receipt
+    ensureSumatraPDF()
+      .then((sumatraPath) => {
+        if (sumatraPath) {
+          logger.info('SumatraPDF ready for printing', { path: sumatraPath });
+        } else {
+          logger.warn('SumatraPDF download failed during initialization, will retry on first print');
+        }
+      })
+      .catch((error) => {
+        logger.warn('Error pre-downloading SumatraPDF', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+        // Don't block app startup - will retry on first print
+      });
 
     // Create main window
     await createWindow();
