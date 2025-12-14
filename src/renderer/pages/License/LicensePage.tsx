@@ -19,7 +19,7 @@ import {
   AppBar,
   Toolbar,
 } from '@mui/material';
-import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, Phone } from '@mui/icons-material';
+import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -417,11 +417,11 @@ export default function LicensePage() {
                 Contact Administrator:
               </Typography>
               <Box sx={footerLinkBoxSx}>
-                <Phone sx={{ fontSize: 16 }} />
+                <MessageCircle sx={{ fontSize: 16 }} />
                 <Typography
                   variant="body2"
                   component="a"
-                  href="tel:+96171882088"
+                  href="https://wa.me/96171882088"
                   sx={footerLinkTypographySx}
                 >
                   +96171882088
@@ -675,7 +675,7 @@ export default function LicensePage() {
                         Open your payment app (banking app, mobile wallet, etc.)
                       </Box>
                       <Box component="li" sx={{ mb: 1 }}>
-                        Select "Scan QR Code" or "Pay with QR"
+                        Select &quot;Scan QR Code&quot; or &quot;Pay with QR&quot;
                       </Box>
                       <Box component="li" sx={{ mb: 1 }}>
                         Scan the QR code shown above
@@ -687,10 +687,10 @@ export default function LicensePage() {
                         Complete the transfer
                       </Box>
                       <Box component="li" sx={{ mb: 1 }}>
-                        Send payment confirmation screenshot via phone:{' '}
+                        Send payment confirmation screenshot via whatsapp:{' '}
                         <Typography
                           component="a"
-                          href="tel:+96171882088"
+                          href="https://wa.me/96171882088"
                           sx={{
                             color: '#1565c0',
                             textDecoration: 'underline',
@@ -709,7 +709,7 @@ export default function LicensePage() {
                         Renewal Information:
                       </Typography>
                       <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                        Annual subscriptions are $50/year. You'll receive a renewal notice before expiration. 
+                        Annual subscriptions are $50/year. You&apos;ll receive a renewal notice before expiration. 
                         Payment is made via QR code scanning - simply scan the $50 QR code to renew. 
                         Your license will be extended for another year upon payment confirmation.
                       </Typography>

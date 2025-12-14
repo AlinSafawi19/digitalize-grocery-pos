@@ -6,6 +6,7 @@ import path from 'path';
 import os from 'os';
 import { app } from 'electron';
 
+
 class DatabaseService {
   private prisma: PrismaClient | null = null;
   private isInitialized = false;

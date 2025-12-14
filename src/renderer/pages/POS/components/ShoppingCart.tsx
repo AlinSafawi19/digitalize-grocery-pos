@@ -63,6 +63,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ onCheckout, activePromotion
       dispatch(updateQuantityWithRounding({ productId, quantity: currentQuantity - 1 }));
     } else {
       // When quantity is 1, decreasing will remove the item - ask for confirmation
+      const item = items.find((i) => i.productId === productId);
       const itemName = item?.productName || 'this item';
       const itemTransactionType = item?.transactionType || 'sale';
       setRemoveItemDialog({
@@ -92,15 +93,11 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ onCheckout, activePromotion
 
   const handleConfirmRemoveItem = useCallback(() => {
     const { productId, transactionType } = removeItemDialog;
-    const itemToRemove = items.find((i) => {
-      const itemType = i.transactionType || 'sale';
-      return i.productId === productId && itemType === transactionType;
-    });
     
     // Always pass transactionType to ensure only the specific item is removed
     dispatch(removeItemWithRounding({ productId, transactionType }));
     setRemoveItemDialog({ open: false, productId: 0, transactionType: 'sale', itemName: '' });
-  }, [removeItemDialog, items, dispatch]);
+  }, [removeItemDialog, dispatch]);
 
   const handleStartEditDiscount = useCallback((productId: number, currentDiscount: number) => {
     setEditingDiscount(productId);

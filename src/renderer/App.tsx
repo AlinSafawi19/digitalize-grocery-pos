@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, lazy, Suspense, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import { Box, CircularProgress } from '@mui/material';
 import { AppDispatch, RootState } from './store';
@@ -915,14 +915,14 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter
+    <HashRouter
       future={{
         v7_startTransition: true,
         v7_relativeSplatPath: true,
       }}
     >
       <AppContent />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

@@ -16,6 +16,8 @@ import {
   Collapse,
 } from '@mui/material';
 import { ArrowBack, ExpandMore, ExpandLess } from '@mui/icons-material';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -47,14 +49,14 @@ const CashierForm: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<{
     username?: string;
-    email?: string;
+    phone?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
 
   const [formData, setFormData] = useState<CreateUserInput & { confirmPassword?: string; isActive?: boolean }>({
     username: '',
-    email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     isActive: true,
@@ -63,7 +65,7 @@ const CashierForm: React.FC = () => {
   // Initial form data for change detection
   const [initialFormData, setInitialFormData] = useState<CreateUserInput & { confirmPassword?: string; isActive?: boolean }>({
     username: '',
-    email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     isActive: true,
@@ -164,7 +166,7 @@ const CashierForm: React.FC = () => {
             setCashier(usr);
             const loadedFormData = {
               username: usr.username,
-              email: usr.email || '',
+              phone: usr.phone || '',
               password: '',
               confirmPassword: '',
               isActive: usr.isActive,
@@ -191,7 +193,7 @@ const CashierForm: React.FC = () => {
       setCashier(null);
       setFormData({
         username: '',
-        email: '',
+        phone: '',
         password: '',
         confirmPassword: '',
         isActive: true,
@@ -219,7 +221,7 @@ const CashierForm: React.FC = () => {
   const validateForm = useCallback((): boolean => {
     const errors: {
       username?: string;
-      email?: string;
+      phone?: string;
       password?: string;
       confirmPassword?: string;
     } = {};
@@ -233,11 +235,11 @@ const CashierForm: React.FC = () => {
       errors.username = 'Username can only contain letters, numbers, and underscores';
     }
 
-    // Validate email (optional but must be valid if provided)
-    if (formData.email && formData.email.trim() !== '') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) {
-        errors.email = 'Please enter a valid email address';
+    // Validate phone (optional but must be valid if provided)
+    if (formData.phone && formData.phone.trim() !== '') {
+      const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
+      if (!phoneRegex.test(formData.phone.trim())) {
+        errors.phone = 'Please enter a valid phone number';
       }
     }
 
@@ -305,7 +307,7 @@ const CashierForm: React.FC = () => {
         
         const hasChanges = 
           formData.username !== initialFormData.username ||
-          formData.email !== initialFormData.email ||
+          formData.phone !== initialFormData.phone ||
           (formData.password && formData.password.trim() !== '') ||
           formData.isActive !== initialFormData.isActive ||
           permissionsChanged;
@@ -319,7 +321,7 @@ const CashierForm: React.FC = () => {
         // Update
         const updateInput: UpdateUserInput = {
           username: formData.username !== initialFormData.username ? formData.username : undefined,
-          email: formData.email !== initialFormData.email ? (formData.email || null) : undefined,
+          phone: formData.phone !== initialFormData.phone ? (formData.phone || null) : undefined,
           password: formData.password && formData.password.trim() !== '' ? formData.password : undefined,
           isActive: formData.isActive !== initialFormData.isActive ? formData.isActive : undefined,
           permissionIds: Array.from(selectedPermissionIds),
@@ -338,7 +340,7 @@ const CashierForm: React.FC = () => {
         // Create
         const createInput: CreateUserInput = {
           username: formData.username.trim(),
-          email: formData.email && formData.email.trim() !== '' ? formData.email.trim() : null,
+          phone: formData.phone && formData.phone.trim() !== '' ? formData.phone.trim() : null,
           password: formData.password,
           permissionIds: selectedPermissionIds.size > 0 ? Array.from(selectedPermissionIds) : undefined,
         };
@@ -371,16 +373,8 @@ const CashierForm: React.FC = () => {
   const handleUsernameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const emailInput = document.getElementById('cashier-email');
-      emailInput?.focus();
-    }
-  }, []);
-
-  const handleEmailKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      const passwordInput = document.getElementById('cashier-password');
-      passwordInput?.focus();
+      const phoneInput = document.getElementById('cashier-phone');
+      phoneInput?.focus();
     }
   }, []);
 
@@ -430,13 +424,13 @@ const CashierForm: React.FC = () => {
     });
   }, []);
 
-  const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFormData((prev) => ({ ...prev, email: value }));
+  const handlePhoneChange = useCallback((value: string | undefined) => {
+    const phoneValue = value || '';
+    setFormData((prev) => ({ ...prev, phone: phoneValue }));
     setFieldErrors((prev) => {
-      if (prev.email) {
+      if (prev.phone) {
         const newErrors = { ...prev };
-        delete newErrors.email;
+        delete newErrors.phone;
         return newErrors;
       }
       return prev;
@@ -697,20 +691,55 @@ const CashierForm: React.FC = () => {
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        id="cashier-email"
-                        label="Email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleEmailChange}
-                        onKeyDown={handleEmailKeyDown}
-                        error={!!fieldErrors.email}
-                        helperText={fieldErrors.email}
-                        disabled={loading}
-                        tabIndex={2}
-                        sx={textFieldWithHelperSx}
-                      />
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontSize: '16px', color: fieldErrors.phone ? 'error.main' : 'text.secondary' }}>
+                          Phone Number
+                        </Typography>
+                        <PhoneInput
+                          international
+                          defaultCountry="LB"
+                          value={formData.phone !== null ? formData.phone : undefined}
+                          onChange={handlePhoneChange}
+                          disabled={loading}
+                          className="mui-phone-input"
+                          style={{
+                            '--PhoneInputInput-height': '44px',
+                            '--PhoneInputInput-fontSize': '16px',
+                          } as React.CSSProperties}
+                        />
+                        {fieldErrors.phone && (
+                          <Typography variant="caption" sx={{ color: 'error.main', fontSize: '14px', mt: 0.5, display: 'block' }}>
+                            {fieldErrors.phone}
+                          </Typography>
+                        )}
+                        <style>{`
+                          .mui-phone-input {
+                            width: 100%;
+                          }
+                          .mui-phone-input .PhoneInputInput {
+                            width: 100%;
+                            height: 44px;
+                            padding: 10px 14px;
+                            font-size: 16px;
+                            border: 1px solid ${fieldErrors.phone ? '#d32f2f' : '#c0c0c0'};
+                            border-radius: 0;
+                            font-family: inherit;
+                            background-color: #ffffff;
+                          }
+                          .mui-phone-input .PhoneInputInput:focus {
+                            border-color: #1a237e;
+                            border-width: 1px;
+                            outline: none;
+                          }
+                          .mui-phone-input .PhoneInputInput:disabled {
+                            background-color: rgba(0, 0, 0, 0.06);
+                            cursor: not-allowed;
+                          }
+                          .mui-phone-input .PhoneInputCountry {
+                            margin-right: 8px;
+                          }
+                        `}</style>
+                      </Box>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <TextField

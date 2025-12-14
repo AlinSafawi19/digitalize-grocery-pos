@@ -12,7 +12,7 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, Phone, VpnKey, People } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle } from '@mui/icons-material';
 import NotificationCenter from '../NotificationCenter/NotificationCenter';
 import BackupOperationBanner from '../common/BackupOperationBanner';
 import HelpersPanel from '../helpers/HelpersPanel';
@@ -532,7 +532,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <Toolbar sx={toolbarSx}>
           <Box
             component="img"
-            src="/logo-white.svg"
+            src="./logo-white.svg"
             alt="DigitalizePOS"
             sx={logoBoxSx}
             onClick={handleNavigateToHome}
@@ -975,11 +975,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
             Contact administrator:
           </Typography>
           <Box sx={footerLinkBoxSx}>
-            <Phone sx={{ fontSize: 20 }} />
+            <MessageCircle sx={{ fontSize: 20 }} />
             <Typography
               variant="body2"
               component="a"
-              href="tel:+96171882088"
+              href="https://wa.me/96171882088"
               sx={footerLinkTypographySx}
             >
               +96171882088

@@ -6,7 +6,7 @@ import {
   Button,
   Container,
 } from '@mui/material';
-import { Block as BlockIcon, Home, Phone } from '@mui/icons-material';
+import { Block as BlockIcon, Home, ChatBubble as MessageCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
 
@@ -53,11 +53,11 @@ export default function AccessDeniedPage() {
             Only the main administrator can access this feature. Please contact your administrator if you need access.
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 4 }}>
-            <Phone sx={{ fontSize: 20, color: 'primary.main' }} />
+            <MessageCircle sx={{ fontSize: 20, color: 'primary.main' }} />
             <Typography
               variant="body2"
               component="a"
-              href="tel:+96171882088"
+              href="https://wa.me/96171882088"
               sx={{
                 color: 'primary.main',
                 textDecoration: 'none',

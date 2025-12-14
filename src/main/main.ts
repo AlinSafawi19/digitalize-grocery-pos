@@ -45,8 +45,12 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
+// No Prisma fix needed when ASAR is disabled
+
 // Now import everything else
 import { app, BrowserWindow, session, nativeImage } from 'electron';
+import fs from 'fs-extra';
+
 import { databaseService } from './services/database/database.service';
 import { licenseService } from './services/license/license.service';
 import { logger } from './utils/logger';
@@ -55,7 +59,6 @@ import { ReportCacheService } from './services/reports/report-cache.service';
 import { ReportSchedulerService } from './services/reports/report-scheduler.service';
 import { NotificationCountCronService } from './services/notifications/notification-count-cron.service';
 import { ensureSumatraPDF } from './ipc/file.handlers';
-import fs from 'fs-extra';
 
 // CRITICAL: Set app name explicitly to ensure consistent userData path
 // This prevents multiple databases from being created with different app names
@@ -77,7 +80,15 @@ if (!app.isReady()) {
 }
 
 // __dirname is already defined above for dotenv config
-const distDir = fileURLToPath(new URL('.', import.meta.url));
+// In packaged apps, we need to use app.getAppPath() instead of import.meta.url
+let distDir: string;
+if (app.isPackaged) {
+  // In packaged app: main.js is at resources/app/dist-electron/main.js
+  distDir = join(app.getAppPath(), 'dist-electron');
+} else {
+  // In development: use import.meta.url
+  distDir = fileURLToPath(new URL('.', import.meta.url));
+}
 
 // The built directory structure
 //
@@ -98,6 +109,17 @@ let win: BrowserWindow | null = null;
 const preload = join(distDir, 'preload.js');
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(process.env.DIST || '', 'index.html');
+
+// Log paths for debugging
+logger.info('Path configuration:', {
+  distDir,
+  dist: process.env.DIST,
+  vitePublic: process.env.VITE_PUBLIC,
+  preload,
+  indexHtml,
+  isPackaged: app.isPackaged,
+  appPath: app.isPackaged ? app.getAppPath() : 'N/A (dev mode)',
+});
 
 // Get Windows icon path
 function getIconPath(): string | undefined {
@@ -180,6 +202,22 @@ async function createWindow() {
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString());
+    logger.info('Window loaded successfully');
+  });
+
+  // Handle load errors
+  win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    logger.error('Failed to load window', {
+      errorCode,
+      errorDescription,
+      validatedURL,
+      indexHtml,
+    });
+  });
+
+  // Log when page starts loading
+  win.webContents.on('did-start-loading', () => {
+    logger.info('Window started loading', { url: url || indexHtml });
   });
 
   if (url) {
@@ -188,7 +226,18 @@ async function createWindow() {
     // Open devTool if the app is not packaged
     win.webContents.openDevTools();
   } else {
-    win.loadFile(indexHtml);
+    // Check if index.html exists before loading
+    if (!fs.existsSync(indexHtml)) {
+      logger.error('index.html not found at:', indexHtml);
+      logger.error('Available files in DIST:', fs.existsSync(process.env.DIST || '') 
+        ? fs.readdirSync(process.env.DIST || '').join(', ')
+        : 'DIST directory does not exist');
+    } else {
+      logger.info('Loading index.html from:', indexHtml);
+    }
+    win.loadFile(indexHtml).catch((error) => {
+      logger.error('Error loading index.html', error);
+    });
   }
 }
 

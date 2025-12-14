@@ -421,7 +421,7 @@ export function registerUserHandlers(): void {
             user: {
               id: user.id,
               username: user.username,
-              email: user.email,
+              phone: user.phone,
             },
           };
         }
@@ -433,7 +433,7 @@ export function registerUserHandlers(): void {
           select: {
             id: true,
             username: true,
-            email: true,
+            phone: true,
           },
         });
 

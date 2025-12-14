@@ -19,6 +19,8 @@ import {
   Divider,
   Tooltip,
 } from '@mui/material';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import {
   Store,
   Receipt,
@@ -498,8 +500,8 @@ export default function SettingsPage() {
     setStoreInfo((prev) => ({ ...prev, address: e.target.value }));
   }, []);
 
-  const handleStorePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setStoreInfo((prev) => ({ ...prev, phone: e.target.value }));
+  const handleStorePhoneChange = useCallback((value: string | undefined) => {
+    setStoreInfo((prev) => ({ ...prev, phone: value || '' }));
   }, []);
 
   const handleLogoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -912,14 +914,50 @@ export default function SettingsPage() {
               </Grid>
               <Grid item xs={12} md={6}>
                 <Tooltip title="Phone - Enter your store's contact phone number. This will appear on receipts and reports. Optional field.">
-                  <TextField
-                    fullWidth
-                    label="Phone"
-                    value={storeInfo.phone}
-                    onChange={handleStorePhoneChange}
-                    disabled={saving}
-                    sx={textFieldSx}
-                  />
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1, fontSize: '16px', color: 'text.secondary' }}>
+                      Phone
+                    </Typography>
+                    <PhoneInput
+                      international
+                      defaultCountry="LB"
+                      value={storeInfo.phone}
+                      onChange={handleStorePhoneChange}
+                      disabled={saving}
+                      className="mui-phone-input"
+                      style={{
+                        '--PhoneInputInput-height': '44px',
+                        '--PhoneInputInput-fontSize': '16px',
+                      } as React.CSSProperties}
+                    />
+                    <style>{`
+                      .mui-phone-input {
+                        width: 100%;
+                      }
+                      .mui-phone-input .PhoneInputInput {
+                        width: 100%;
+                        height: 44px;
+                        padding: 10px 14px;
+                        font-size: 16px;
+                        border: 1px solid #c0c0c0;
+                        border-radius: 0;
+                        font-family: inherit;
+                        background-color: #ffffff;
+                      }
+                      .mui-phone-input .PhoneInputInput:focus {
+                        border-color: #1a237e;
+                        border-width: 1px;
+                        outline: none;
+                      }
+                      .mui-phone-input .PhoneInputInput:disabled {
+                        background-color: rgba(0, 0, 0, 0.06);
+                        cursor: not-allowed;
+                      }
+                      .mui-phone-input .PhoneInputCountry {
+                        margin-right: 8px;
+                      }
+                    `}</style>
+                  </Box>
                 </Tooltip>
               </Grid>
               <Grid item xs={12}>

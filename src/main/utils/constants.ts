@@ -17,10 +17,11 @@ export const REPORTS_DIR = path.join(USER_DATA_PATH, 'reports');
 export const LOGS_DIR = path.join(USER_DATA_PATH, 'logs');
 
 // License Server
-// Default to localhost for development, override with env var for production
+// Default to production URL for packaged apps, localhost for development
+// Can be overridden with LICENSE_SERVER_URL environment variable
 // NOTE: If .env file is not loaded, this will be undefined - dotenv must load first!
 export const LICENSE_SERVER_URL =
-  process.env.LICENSE_SERVER_URL || 'http://localhost:3000';
+  process.env.LICENSE_SERVER_URL || (app.isPackaged ? 'https://api.digitalizepos.com' : 'http://localhost:3000');
 // Use env var if set, otherwise fallback to a dev default
 // For production, always set APP_SECRET via environment variable
 // NOTE: If .env file is not loaded, this will be undefined - dotenv must load first!

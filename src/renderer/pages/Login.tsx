@@ -13,7 +13,7 @@ import {
   InputAdornment,
   Tooltip,
 } from '@mui/material';
-import { HelpOutline, Phone } from '@mui/icons-material';
+import { HelpOutline, ChatBubble as MessageCircle } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { login, clearError } from '../store/slices/auth.slice';
@@ -75,46 +75,66 @@ const Login: React.FC = () => {
     // Clear error when component mounts
     dispatch(clearError());
 
-    // Check if users exist
-    const checkUsers = async () => {
+    // Check license status first - if no license, redirect to activation
+    const checkLicenseAndRedirect = async () => {
       try {
-        const result = await window.electron.ipcRenderer.invoke('user:hasUsers') as {
-          success: boolean;
-          hasUsers?: boolean;
-          error?: string;
-        };
-        if (result.success) {
-          setHasUsers(result.hasUsers ?? null);
+        const isActivated = await window.electron.ipcRenderer.invoke('license:isActivated') as boolean;
+        if (!isActivated) {
+          // No license activated - redirect to activation page
+          navigate(ROUTES.LICENSE_ACTIVATION, { replace: true });
+          return;
         }
       } catch (err) {
-        console.error('Failed to check users:', err);
+        console.error('Failed to check license:', err);
+        // On error, assume no license and redirect to activation
+        navigate(ROUTES.LICENSE_ACTIVATION, { replace: true });
+        return;
       }
-    };
 
-    // Check immediately
-    checkUsers();
+      // Only check for users if license is activated
+      // Check if users exist
+      const checkUsers = async () => {
+        try {
+          const result = await window.electron.ipcRenderer.invoke('user:hasUsers') as {
+            success: boolean;
+            hasUsers?: boolean;
+            error?: string;
+          };
+          if (result.success) {
+            setHasUsers(result.hasUsers ?? null);
+          }
+        } catch (err) {
+          console.error('Failed to check users:', err);
+        }
+      };
 
-    // If navigating from license activation, check again after a short delay
-    // to ensure user creation has completed
-    if (location.state && (location.state as { refreshUsers?: boolean }).refreshUsers) {
-      setTimeout(() => {
-        checkUsers();
-      }, 500);
-    }
+      // Check immediately
+      checkUsers();
 
-    // Also check when page becomes visible (user might have activated license in another tab/window)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkUsers();
+      // If navigating from license activation, check again after a short delay
+      // to ensure user creation has completed
+      if (location.state && (location.state as { refreshUsers?: boolean }).refreshUsers) {
+        setTimeout(() => {
+          checkUsers();
+        }, 500);
       }
+
+      // Also check when page becomes visible (user might have activated license in another tab/window)
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          checkUsers();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [dispatch, location.state]);
+    checkLicenseAndRedirect();
+  }, [dispatch, location.state, navigate]);
 
   const validateForm = useCallback((): boolean => {
     const errors: {
@@ -366,7 +386,7 @@ const Login: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
               <Box
                 component="img"
-                src="/logo.svg"
+                src="./logo.svg"
                 alt="DigitalizePOS"
                 sx={logoBoxSx}
               />
@@ -410,11 +430,11 @@ const Login: React.FC = () => {
                   <br />
                   <strong>Note:</strong> If you&apos;ve lost your credentials, you may need to contact administrator.
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
-                    <Phone sx={{ fontSize: 18, color: 'primary.main' }} />
+                    <MessageCircle sx={{ fontSize: 18, color: 'primary.main' }} />
                     <Typography
                       variant="body2"
                       component="a"
-                      href="tel:+96171882088"
+                      href="https://wa.me/96171882088"
                       sx={{
                         color: 'primary.main',
                         textDecoration: 'none',

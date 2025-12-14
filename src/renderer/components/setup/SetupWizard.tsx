@@ -23,6 +23,8 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Image as ImageIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import {
   SettingsService,
   BusinessRules as BusinessRulesType,
@@ -741,30 +743,51 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
               </Grid>
               <Grid item xs={12}>
                 <Tooltip title="Phone Number - Enter your store's contact phone number. This will appear on receipts and reports. This is optional.">
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    value={storeInfo.phone}
-                    onChange={(e) =>
-                      setStoreInfo({ ...storeInfo, phone: e.target.value })
-                    }
-                    onKeyDown={(e) => handleKeyDown(e, undefined, true)}
-                    inputRef={storePhoneRef}
-                    disabled={saving}
-                    size="medium"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        fontSize: '18px',
-                        minHeight: 56,
-                        '& input': {
-                          padding: '16px 14px',
-                        },
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '16px',
-                      },
-                    }}
-                  />
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1, fontSize: '16px', color: 'text.secondary' }}>
+                      Phone Number
+                    </Typography>
+                    <PhoneInput
+                      international
+                      defaultCountry="LB"
+                      value={storeInfo.phone}
+                      onChange={(value) =>
+                        setStoreInfo({ ...storeInfo, phone: value || '' })
+                      }
+                      disabled={saving}
+                      style={{
+                        '--PhoneInputInput-height': '56px',
+                        '--PhoneInputInput-fontSize': '18px',
+                      } as React.CSSProperties}
+                      className="mui-phone-input"
+                    />
+                    <style>{`
+                      .mui-phone-input {
+                        width: 100%;
+                      }
+                      .mui-phone-input .PhoneInputInput {
+                        width: 100%;
+                        height: 56px;
+                        padding: 16px 14px;
+                        font-size: 18px;
+                        border: 1px solid rgba(0, 0, 0, 0.23);
+                        border-radius: 4px;
+                        font-family: inherit;
+                      }
+                      .mui-phone-input .PhoneInputInput:focus {
+                        border-color: #1976d2;
+                        border-width: 2px;
+                        outline: none;
+                      }
+                      .mui-phone-input .PhoneInputInput:disabled {
+                        background-color: rgba(0, 0, 0, 0.06);
+                        cursor: not-allowed;
+                      }
+                      .mui-phone-input .PhoneInputCountry {
+                        margin-right: 8px;
+                      }
+                    `}</style>
+                  </Box>
                 </Tooltip>
               </Grid>
               <Grid item xs={12}>

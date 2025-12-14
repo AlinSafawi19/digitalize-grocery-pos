@@ -341,7 +341,6 @@ const cartSlice = createSlice({
         // Ensure transactionType is set explicitly
         existingItem.transactionType = itemTransactionType;
         // Increase quantity
-        const previousQuantity = existingItem.quantity;
         existingItem.quantity += quantity;
         const { subtotal, tax, total } = calculateItemTotals(
           existingItem.quantity,
@@ -402,7 +401,6 @@ const cartSlice = createSlice({
       // If transactionType is provided, remove only items matching both productId and transactionType
       // Otherwise, remove all items with that productId (backward compatibility)
       if (transactionType !== undefined) {
-        const beforeCount = state.items.length;
         state.items = state.items.filter((item) => {
           // Get item's transactionType (should always be set now, but fallback to 'sale' for safety)
           const itemType = item.transactionType || 'sale';
@@ -497,8 +495,6 @@ const cartSlice = createSlice({
      * Clear cart
      */
     clearCart: (state) => {
-      const itemCount = state.items.length;
-      const previousTotal = state.total;
       state.items = [];
       state.transactionDiscount = 0;
       state.subtotal = 0;

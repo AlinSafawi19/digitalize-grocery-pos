@@ -1,7 +1,7 @@
 export interface User {
   id: number;
   username: string;
-  email: string | null;
+  phone: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -9,14 +9,14 @@ export interface User {
 
 export interface CreateUserInput {
   username: string;
-  email?: string | null;
+  phone?: string | null;
   password: string;
   permissionIds?: number[]; // Optional: specific permissions to assign. If not provided, default cashier permissions will be used.
 }
 
 export interface UpdateUserInput {
   username?: string;
-  email?: string | null;
+  phone?: string | null;
   password?: string;
   isActive?: boolean;
   permissionIds?: number[]; // Optional: specific permissions to assign. If provided, replaces all existing permissions.

@@ -6,7 +6,7 @@ import {
   Button,
   Container,
 } from '@mui/material';
-import { Error as ErrorIcon, Logout, Phone } from '@mui/icons-material';
+import { Error as ErrorIcon, Logout, ChatBubble as MessageCircle } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -61,11 +61,11 @@ export default function LicenseExpiredPage() {
             Only the main administrator can manage license renewal. Please reach out to them for assistance.
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 4 }}>
-            <Phone sx={{ fontSize: 20, color: 'primary.main' }} />
+            <MessageCircle sx={{ fontSize: 20, color: 'primary.main' }} />
             <Typography
               variant="body2"
               component="a"
-              href="tel:+96171882088"
+              href="https://wa.me/96171882088"
               sx={{
                 color: 'primary.main',
                 textDecoration: 'none',

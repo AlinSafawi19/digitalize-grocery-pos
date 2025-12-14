@@ -27,7 +27,7 @@ async function getStoreInfo(userId?: number): Promise<StoreInfo | null> {
       return result.storeInfo;
     }
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -420,7 +420,7 @@ export async function exportToPDF(
               
               doc.addImage(logoUrl, 'PNG', logoX, logoY, logoWidth, maxLogoHeight);
               resolve();
-            } catch (error) {
+            } catch {
               resolve(); // Continue without logo
             }
           };
@@ -428,7 +428,7 @@ export async function exportToPDF(
             resolve(); // Continue without logo
           };
         });
-      } catch (error) {
+      } catch {
         // Continue without logo
       }
     }

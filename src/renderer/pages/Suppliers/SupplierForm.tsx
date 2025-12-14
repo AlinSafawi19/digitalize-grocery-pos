@@ -10,6 +10,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -221,13 +223,6 @@ const SupplierForm: React.FC = () => {
     }
   }, []);
 
-  const handlePhoneKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      const addressInput = document.getElementById('supplier-address');
-      addressInput?.focus();
-    }
-  }, []);
 
   const handleAddressKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     // For multiline, Shift+Enter creates new line, Enter triggers form submission
@@ -262,9 +257,9 @@ const SupplierForm: React.FC = () => {
     setFormData((prev) => ({ ...prev, email: e.target.value || null }));
   }, []);
 
-  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value || null;
-    setFormData((prev) => ({ ...prev, phone: value }));
+  const handlePhoneChange = useCallback((value: string | undefined) => {
+    const phoneValue = value || '';
+    setFormData((prev) => ({ ...prev, phone: phoneValue }));
     setFieldErrors((prev) => {
       if (prev.phone) {
         const newErrors = { ...prev };
@@ -522,19 +517,55 @@ const SupplierForm: React.FC = () => {
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        id="supplier-phone"
-                        label="Phone *"
-                        value={formData.phone}
-                        onChange={handlePhoneChange}
-                        onKeyDown={handlePhoneKeyDown}
-                        error={!!fieldErrors.phone}
-                        helperText={fieldErrors.phone}
-                        disabled={loading}
-                        tabIndex={4}
-                        sx={textFieldWithHelperSx}
-                      />
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1, fontSize: '16px', color: fieldErrors.phone ? 'error.main' : 'text.secondary' }}>
+                          Phone *
+                        </Typography>
+                        <PhoneInput
+                          international
+                          defaultCountry="LB"
+                          value={(formData.phone || undefined) as string | undefined}
+                          onChange={handlePhoneChange}
+                          disabled={loading}
+                          className="mui-phone-input"
+                          style={{
+                            '--PhoneInputInput-height': '44px',
+                            '--PhoneInputInput-fontSize': '16px',
+                          } as React.CSSProperties}
+                        />
+                        {fieldErrors.phone && (
+                          <Typography variant="caption" sx={{ color: 'error.main', fontSize: '14px', mt: 0.5, display: 'block' }}>
+                            {fieldErrors.phone}
+                          </Typography>
+                        )}
+                        <style>{`
+                          .mui-phone-input {
+                            width: 100%;
+                          }
+                          .mui-phone-input .PhoneInputInput {
+                            width: 100%;
+                            height: 44px;
+                            padding: 10px 14px;
+                            font-size: 16px;
+                            border: 1px solid ${fieldErrors.phone ? '#d32f2f' : '#c0c0c0'};
+                            border-radius: 0;
+                            font-family: inherit;
+                            background-color: #ffffff;
+                          }
+                          .mui-phone-input .PhoneInputInput:focus {
+                            border-color: #1a237e;
+                            border-width: 1px;
+                            outline: none;
+                          }
+                          .mui-phone-input .PhoneInputInput:disabled {
+                            background-color: rgba(0, 0, 0, 0.06);
+                            cursor: not-allowed;
+                          }
+                          .mui-phone-input .PhoneInputCountry {
+                            margin-right: 8px;
+                          }
+                        `}</style>
+                      </Box>
                     </Grid>
                     <Grid item xs={12}>
                       <TextField

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Grid, TextField, InputAdornment, Paper, Button, ButtonGroup, IconButton, Menu, MenuItem, Typography, Tooltip, useMediaQuery, useTheme } from '@mui/material';
-import { Search, QrCodeScanner, Home, Menu as MenuIcon, Dashboard, Inventory, Category, LocalShipping, Receipt, Warehouse, ShoppingCart as ShoppingCartIcon, LocalOffer, Assessment, Analytics, History, Settings, Backup, Phone, VpnKey, People, AccountBalanceWallet } from '@mui/icons-material';
+import { Search, QrCodeScanner, Home, Menu as MenuIcon, Dashboard, Inventory, Category, LocalShipping, Receipt, Warehouse, ShoppingCart as ShoppingCartIcon, LocalOffer, Assessment, Analytics, History, Settings, Backup, VpnKey, People, AccountBalanceWallet, ChatBubble as MessageCircle } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -28,7 +28,7 @@ const POSPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useSelector((state: RootState): AuthState => state.auth);
-  const { items, subtotal, tax, total, transactionDiscount } = useSelector((state: RootState) => state.cart);
+  const { items, total, transactionDiscount } = useSelector((state: RootState) => state.cart);
   const { toast, showToast, hideToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -270,7 +270,7 @@ const POSPage: React.FC = () => {
         transactionType: transactionType,
       })
     );
-  }, [dispatch, user?.id, transactionType, taxRate, taxInclusive]);
+  }, [dispatch, transactionType, taxRate, taxInclusive]);
 
   // Handle manual cash drawer open
   const handleOpenDrawer = useCallback(async () => {
@@ -498,7 +498,7 @@ const POSPage: React.FC = () => {
     } finally {
       setProcessingCheckout(false);
     }
-  }, [items, user?.id, total, subtotal, tax, transactionDiscount, dispatch, showToast, pendingTransactionId]);
+  }, [items, user?.id, total, transactionDiscount, dispatch, showToast, pendingTransactionId]);
 
   // Memoize sx prop objects to avoid recreation on every render
   const containerBoxSx = useMemo(() => ({
@@ -957,10 +957,10 @@ const POSPage: React.FC = () => {
             Contact Administrator:
           </Typography>
           <Box sx={footerPhoneBoxSx}>
-            <Phone sx={{ fontSize: 18 }} />
+            <MessageCircle sx={{ fontSize: 18 }} />
             <Typography
               component="a"
-              href="tel:+96171882088"
+              href="https://wa.me/96171882088"
               sx={footerPhoneLinkSx}
             >
               +96171882088

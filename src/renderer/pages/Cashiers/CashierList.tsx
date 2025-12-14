@@ -99,7 +99,7 @@ const CashierRow = memo<CashierRowProps>(({ cashier, onEdit, onDelete, selected,
       </TableCell>
       <TableCell>
         <Typography variant="body2" color="text.secondary" sx={bodyTypographySx}>
-          {cashier.email || '-'}
+          {cashier.phone || '-'}
         </Typography>
       </TableCell>
       <TableCell>
@@ -571,7 +571,7 @@ const CashierList: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>Username</TableCell>
-                    <TableCell>Email</TableCell>
+                    <TableCell>Phone</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell align="center">Actions</TableCell>

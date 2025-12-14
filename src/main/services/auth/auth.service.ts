@@ -12,7 +12,7 @@ export interface LoginCredentials {
 export interface UserSession {
   id: number;
   username: string;
-  email: string | null;
+  phone: string | null;
   isActive: boolean;
 }
 
@@ -111,7 +111,7 @@ export class AuthService {
         user: {
           id: user.id,
           username: user.username,
-          email: user.email,
+          phone: user.phone,
           isActive: user.isActive,
         },
       };
@@ -165,7 +165,7 @@ export class AuthService {
         select: {
           id: true,
           username: true,
-          email: true,
+          phone: true,
           isActive: true,
         },
       });
@@ -185,7 +185,7 @@ export class AuthService {
       return {
         id: user.id,
         username: user.username,
-        email: user.email,
+        phone: user.phone,
         isActive: user.isActive,
       };
     } catch (error) {

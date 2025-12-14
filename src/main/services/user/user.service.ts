@@ -6,7 +6,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 
 export interface CreateUserInput {
   username: string;
-  email?: string | null;
+  phone?: string | null;
   password: string;
   permissionIds?: number[]; // Optional: specific permissions to assign. If not provided, default cashier permissions will be used.
 }
@@ -14,7 +14,7 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   username?: string;
-  email?: string | null;
+  phone?: string | null;
   password?: string;
   isActive?: boolean;
   permissionIds?: number[]; // Optional: specific permissions to assign. If provided, replaces all existing permissions.
@@ -36,12 +36,12 @@ export class UserService {
   /**
    * Create an user
    * @param input User creation data
-   * @returns Promise<{ id: number; username: string; email: string | null }>
+   * @returns Promise<{ id: number; username: string; phone: string | null }>
    */
   static async createUser(input: CreateUserInput): Promise<{
     id: number;
     username: string;
-    email: string | null;
+    phone: string | null;
   }> {
     try {
       const prisma = databaseService.getClient();
@@ -51,7 +51,7 @@ export class UserService {
         where: {
           OR: [
             { username: input.username },
-            ...(input.email ? [{ email: input.email }] : []),
+            ...(input.phone ? [{ phone: input.phone }] : []),
           ],
         },
       });
@@ -59,12 +59,12 @@ export class UserService {
       if (existingUser) {
         logger.info('User already exists', {
           username: input.username,
-          email: input.email,
+          phone: input.phone,
         });
         return {
           id: existingUser.id,
           username: existingUser.username,
-          email: existingUser.email,
+          phone: existingUser.phone,
         };
       }
 
@@ -75,21 +75,21 @@ export class UserService {
       const user = await prisma.user.create({
         data: {
           username: input.username,
-          email: input.email || null,
+          phone: input.phone || null,
           password: passwordHash,
           isActive: true,
         } as Prisma.UserUncheckedCreateInput,
         select: {
           id: true,
           username: true,
-          email: true,
+          phone: true,
         },
       });
 
       logger.info('User created successfully', {
         id: user.id,
         username: user.username,
-        email: user.email,
+        phone: user.phone,
       });
 
       // Check if this is the first user (default user) - ID 1 indicates the first user in SQLite
@@ -163,7 +163,7 @@ export class UserService {
       // Also log all users if any exist (for debugging)
       if (userCount > 0) {
         const users = await prisma.user.findMany({
-          select: { id: true, username: true, email: true, createdAt: true }
+          select: { id: true, username: true, phone: true, createdAt: true }
         });
         logger.info('Users found in database', { users });
       }
@@ -194,35 +194,39 @@ export class UserService {
   }
 
   /**
-   * Generate a default password from customer email or name
-   * @param customerEmail Customer email
+   * Generate a default password from customer phone/identifier or name
+   * @param customerIdentifier Customer phone number or other identifier
    * @param customerName Customer name
    * @returns string Default password
    */
   static generateDefaultPassword(
-    customerEmail?: string | null,
+    customerIdentifier?: string | null,
     customerName?: string | null
   ): string {
-    // Use email if available, otherwise use name, otherwise use default
-    const base = customerEmail || customerName || 'user';
+    // Use identifier if available, otherwise use name, otherwise use default
+    const base = customerIdentifier || customerName || 'user';
     // Generate a simple password: first 8 chars of base + "123!"
     const basePart = base.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 8);
     return `${basePart}123!`;
   }
 
   /**
-   * Generate a username from customer email or name
-   * @param customerEmail Customer email
+   * Generate a username from customer phone/identifier or name
+   * @param customerIdentifier Customer phone number or other identifier
    * @param customerName Customer name
    * @returns string Username
    */
   static generateUsername(
-    customerEmail?: string | null,
+    customerIdentifier?: string | null,
     customerName?: string | null
   ): string {
-    // Use email prefix if available, otherwise use name, otherwise use default
-    if (customerEmail) {
-      return customerEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Use identifier if available (remove non-alphanumeric chars), otherwise use name, otherwise use default
+    if (customerIdentifier) {
+      // Remove all non-alphanumeric characters and take first part if it contains @ (for backward compatibility)
+      const cleaned = customerIdentifier.includes('@') 
+        ? customerIdentifier.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+        : customerIdentifier.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return cleaned || 'user';
     }
     if (customerName) {
       return customerName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
@@ -236,7 +240,7 @@ export class UserService {
   static async getUserById(id: number): Promise<{
     id: number;
     username: string;
-    email: string | null;
+    phone: string | null;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -248,7 +252,7 @@ export class UserService {
         select: {
           id: true,
           username: true,
-          email: true,
+          phone: true,
           isActive: true,
           createdAt: true,
           updatedAt: true,
@@ -275,7 +279,7 @@ export class UserService {
     users: Array<{
       id: number;
       username: string;
-      email: string | null;
+      phone: string | null;
       isActive: boolean;
       createdAt: Date;
       updatedAt: Date;
@@ -297,7 +301,7 @@ export class UserService {
       if (options.search) {
         where.OR = [
           { username: { contains: options.search } },
-          { email: { contains: options.search } },
+          { phone: { contains: options.search } },
         ];
       }
       // Always exclude the auto-created user (ID = 1) and the logged-in user
@@ -317,7 +321,7 @@ export class UserService {
           select: {
             id: true,
             username: true,
-            email: true,
+            phone: true,
             isActive: true,
             createdAt: true,
             updatedAt: true,
@@ -351,7 +355,7 @@ export class UserService {
   ): Promise<{
     id: number;
     username: string;
-    email: string | null;
+    phone: string | null;
   }> {
     try {
       const prisma = databaseService.getClient();
@@ -365,8 +369,8 @@ export class UserService {
         throw new Error('User not found');
       }
 
-      // Check if username/email conflicts
-      if (input.username || input.email) {
+      // Check if username/phone conflicts
+      if (input.username || input.phone) {
         const conflictUser = await prisma.user.findFirst({
           where: {
             AND: [
@@ -374,7 +378,7 @@ export class UserService {
               {
                 OR: [
                   ...(input.username ? [{ username: input.username }] : []),
-                  ...(input.email ? [{ email: input.email }] : []),
+                  ...(input.phone ? [{ phone: input.phone }] : []),
                 ],
               },
             ],
@@ -382,7 +386,7 @@ export class UserService {
         });
 
         if (conflictUser) {
-          throw new Error('Username or email already in use');
+          throw new Error('Username or phone already in use');
         }
       }
 
@@ -391,8 +395,8 @@ export class UserService {
       if (input.username !== undefined) {
         updateData.username = input.username;
       }
-      if (input.email !== undefined) {
-        updateData.email = input.email;
+      if (input.phone !== undefined) {
+        updateData.phone = input.phone;
       }
       if (input.isActive !== undefined) {
         updateData.isActive = input.isActive;
@@ -409,7 +413,7 @@ export class UserService {
         select: {
           id: true,
           username: true,
-          email: true,
+          phone: true,
         },
       });
 

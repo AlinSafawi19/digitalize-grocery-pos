@@ -29,7 +29,7 @@ export interface ActivateLicenseResult {
   token?: string;
   locationId?: number;
   customerName?: string | null;
-  customerEmail?: string | null;
+  customerPhone?: string | null;
   // User credentials if user was auto-created
   userCredentials?: {
     username: string;
@@ -89,25 +89,25 @@ export class LicenseService {
   }
 
   /**
-   * Send credentials via email using the license server
+   * Send credentials via WhatsApp using the license server
    */
-  private async sendCredentialsEmail(data: {
+  private async sendCredentialsWhatsApp(data: {
     licenseKey: string;
     username: string;
     password: string;
     locationName: string;
     locationAddress: string;
     customerName?: string | null;
-    customerEmail?: string | null;
+    customerPhone?: string | null;
   }): Promise<void> {
     try {
-      // Only send email if customer email is available
-      if (!data.customerEmail) {
-        logger.info('Skipping credentials email: customer email not available');
+      // Only send WhatsApp message if customer phone is available
+      if (!data.customerPhone) {
+        logger.info('Skipping credentials WhatsApp message: customer phone not available');
         return;
       }
 
-      logger.info('Sending credentials email...', { email: data.customerEmail });
+      logger.info('Sending credentials WhatsApp message...', { phone: data.customerPhone });
       
       const response = await this.apiClient.post('/api/license/send-credentials', {
         licenseKey: data.licenseKey,
@@ -116,23 +116,23 @@ export class LicenseService {
         locationName: data.locationName,
         locationAddress: data.locationAddress,
         customerName: data.customerName,
-        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
       });
 
       if (response.data.success) {
-        logger.info('Credentials email sent successfully', { email: data.customerEmail });
+        logger.info('Credentials WhatsApp message sent successfully', { phone: data.customerPhone });
       } else {
-        logger.warn('Credentials email may not have been sent', {
-          email: data.customerEmail,
+        logger.warn('Credentials WhatsApp message may not have been sent', {
+          phone: data.customerPhone,
           message: response.data.message,
         });
       }
     } catch (error: unknown) {
       // Don't throw - just log the error
       const err = error as { message?: string };
-      logger.error('Error sending credentials email', {
+      logger.error('Error sending credentials WhatsApp message', {
         error: err.message,
-        email: data.customerEmail,
+        phone: data.customerPhone,
       });
       // Re-throw only for logging purposes, but caller should catch it
       throw error;
@@ -372,22 +372,23 @@ export class LicenseService {
           // Only create user if this is a new activation or reactivating a deactivated license
           if (!hasUsers && !isReactivatingActive) {
             const customerName = response.data.customerName;
-            const customerEmail = response.data.customerEmail;
+            const customerPhone = response.data.customerPhone;
             
             // Generate credentials first (so we can return them even if creation fails)
-            const username = UserService.generateUsername(customerEmail, customerName);
-            const password = UserService.generateDefaultPassword(customerEmail, customerName);
+            // Use phone number or customer name for username generation
+            const username = UserService.generateUsername(customerPhone || customerName || 'user', customerName);
+            const password = UserService.generateDefaultPassword(customerPhone || customerName || 'user', customerName);
             
             logger.info('No users exist - creating user with credentials', { 
               username,
-              email: customerEmail,
+              phone: customerPhone,
               name: customerName 
             });
             
             try {
               const user = await UserService.createUser({
                 username,
-                email: customerEmail || null,
+                phone: null, // Phone will be set from customer phone if available
                 password,
               });
 
@@ -421,14 +422,15 @@ export class LicenseService {
                 logger.info('User verified in database', { 
                   userId: verifyUser.id, 
                   username: verifyUser.username,
-                  email: verifyUser.email 
+                  phone: verifyUser.phone 
                 });
               }
 
-              // Store credentials to return to UI
+              // Credentials are sent via WhatsApp only, not returned to UI
+              // Store credentials for logging purposes only (not returned to UI)
               userCredentials = { username, password };
               
-              logger.info('User created and verified - credentials will be returned to UI', { 
+              logger.info('User created and verified - credentials will be sent via WhatsApp only', { 
                 userId: user.id, 
                 username,
                 hasCredentials: !!userCredentials 
@@ -448,28 +450,28 @@ export class LicenseService {
                 logger.error('Failed to save credentials to persistent storage', saveError);
               }
 
-              // Send credentials via email (non-blocking, don't fail activation if this fails)
+              // Send credentials via WhatsApp (non-blocking, don't fail activation if this fails)
               try {
-                await this.sendCredentialsEmail({
+                await this.sendCredentialsWhatsApp({
                   licenseKey: input.licenseKey,
                   username,
                   password,
                   locationName: response.data.locationName || '',
                   locationAddress: response.data.locationAddress || '',
                   customerName: response.data.customerName,
-                  customerEmail: response.data.customerEmail,
+                  customerPhone: response.data.customerPhone,
                 });
-              } catch (emailError) {
-                // Log but don't fail activation if email sending fails
-                logger.warn('Failed to send credentials email (activation still successful)', {
-                  error: emailError instanceof Error ? emailError.message : 'Unknown error',
+              } catch (whatsappError) {
+                // Log but don't fail activation if WhatsApp sending fails
+                logger.warn('Failed to send credentials WhatsApp message (activation still successful)', {
+                  error: whatsappError instanceof Error ? whatsappError.message : 'Unknown error',
                 });
               }
 
               logger.info('User auto-created during license activation', {
                 userId: user.id,
                 username: user.username,
-                email: user.email,
+                phone: user.phone,
                 note: `Default password: ${password}`,
               });
               
@@ -481,7 +483,7 @@ export class LicenseService {
                 error: userErr.message,
                 stack: userErr.stack,
                 username,
-                email: customerEmail,
+                phone: customerPhone,
                 name: customerName,
               });
               
@@ -550,7 +552,7 @@ export class LicenseService {
           // Log what we're returning
           logger.info('Returning activation result', { 
             success: true, 
-            hasUserCredentials: !!userCredentials,
+            credentialsSentViaWhatsApp: !!userCredentials,
             userCredentialsUsername: userCredentials?.username 
           });
           
@@ -562,8 +564,9 @@ export class LicenseService {
             token: response.data.token,
             locationId: response.data.locationId,
             customerName: response.data.customerName,
-            customerEmail: response.data.customerEmail,
-            userCredentials, // This should be set if user was created
+            customerPhone: response.data.customerPhone,
+            // Credentials are sent via WhatsApp only, not returned to UI
+            userCredentials: undefined,
           };
         } else {
           logger.error('License activation did not complete successfully - not saving license data');

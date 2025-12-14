@@ -33,8 +33,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
   useEffect(() => {
     const loadProductCurrencies = async () => {
-      const startTime = Date.now();
-      
       // PERFORMANCE FIX: Use Promise.all() to execute all currency conversions in parallel
       // instead of sequential for...of loop. This reduces load time from 5-20s to 0.5-2s for 100+ products
       // PERFORMANCE FIX: Use cache to avoid redundant conversions

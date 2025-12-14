@@ -39,7 +39,7 @@ import {
   History,
   Settings,
   Backup,
-  Phone,
+  ChatBubble as MessageCircle,
   VpnKey,
   Visibility,
   People,
@@ -1200,8 +1200,8 @@ export default function NotificationsPage() {
             Contact Administrator:
           </Typography>
           <Box sx={footerPhoneBoxSx}>
-            <Phone sx={{ fontSize: 18 }} />
-            <Typography variant="body2" component="a" href="tel:+96171882088" sx={footerPhoneLinkSx}>
+            <MessageCircle sx={{ fontSize: 18 }} />
+            <Typography variant="body2" component="a" href="https://wa.me/96171882088" sx={footerPhoneLinkSx}>
               +96171882088
             </Typography>
           </Box>

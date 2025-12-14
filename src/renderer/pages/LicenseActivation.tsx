@@ -8,13 +8,8 @@ import {
   Box,
   Alert,
   CircularProgress,
-  Divider,
-  IconButton,
-  Checkbox,
-  FormControlLabel,
   Tooltip,
 } from '@mui/material';
-import { ContentCopy as CopyIcon, Check as CheckIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { ROUTES } from '../utils/constants';
 import { useToast } from '../hooks/useToast';
 import Toast from '../components/common/Toast';
@@ -37,8 +32,6 @@ const LicenseActivation: React.FC = () => {
     message: string;
     userCredentials?: UserCredentials;
   } | null>(null);
-  const [copied, setCopied] = useState<'username' | 'password' | null>(null);
-  const [credentialsConfirmed, setCredentialsConfirmed] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     licenseKey?: string;
   }>({});
@@ -46,15 +39,6 @@ const LicenseActivation: React.FC = () => {
   const [existingLicenseKey, setExistingLicenseKey] = useState<string | null>(null);
   const [checkingLicense, setCheckingLicense] = useState(true);
 
-  const handleCopy = useCallback(async (text: string, type: 'username' | 'password') => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  }, []);
 
   const validateForm = useCallback((): boolean => {
     const errors: {
@@ -128,14 +112,10 @@ const LicenseActivation: React.FC = () => {
   }, [validateForm, licenseKey, showToast, hasExistingLicense, existingLicenseKey]);
 
   const handleContinue = useCallback(() => {
-    // If credentials were shown, require confirmation
-    if (activationResult?.userCredentials && !credentialsConfirmed) {
-      return;
-    }
     // Navigate to login page - no need to verify activation
     // License was just activated, so navigation should work
     window.location.href = ROUTES.LOGIN;
-  }, [activationResult, credentialsConfirmed]);
+  }, []);
 
   const handleLicenseKeyChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setLicenseKey(e.target.value);
@@ -144,38 +124,6 @@ const LicenseActivation: React.FC = () => {
     }
   }, [fieldErrors.licenseKey]);
 
-  const handleCredentialsConfirmedChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setCredentialsConfirmed(e.target.checked);
-  }, []);
-
-
-  const handleCopyUsername = useCallback(() => {
-    if (activationResult?.userCredentials) {
-      handleCopy(activationResult.userCredentials.username, 'username');
-    }
-  }, [activationResult?.userCredentials, handleCopy]);
-
-  const handleCopyPassword = useCallback(() => {
-    if (activationResult?.userCredentials) {
-      handleCopy(activationResult.userCredentials.password, 'password');
-    }
-  }, [activationResult?.userCredentials, handleCopy]);
-
-  const handleDownloadCredentials = useCallback(() => {
-    if (!activationResult?.userCredentials) return;
-
-    const credentialsText = `DigitalizePOS - Login Credentials\n\nUsername: ${activationResult.userCredentials.username}\nPassword: ${activationResult.userCredentials.password}\n\nPlease keep this information secure.\n\nGenerated on: ${new Date().toLocaleString()}`;
-    
-    const blob = new Blob([credentialsText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `digitalizePOS-credentials-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [activationResult?.userCredentials]);
 
   // Memoize sx prop objects to avoid recreation on every render
   const containerSx = useMemo(() => ({
@@ -239,49 +187,6 @@ const LicenseActivation: React.FC = () => {
     },
   }), []);
 
-  const warningAlertSx = useMemo(() => ({
-    mb: 3,
-    borderRadius: 0,
-    border: '1px solid #ffb74d',
-    backgroundColor: '#fff3e0',
-    '& .MuiAlert-icon': {
-      color: '#f57c00',
-    },
-  }), []);
-
-  const warningTitleTypographySx = useMemo(() => ({
-    fontSize: '15px',
-    fontWeight: 600,
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  }), []);
-
-  const credentialBoxSx = useMemo(() => ({
-    bgcolor: '#f5f5f5',
-    p: 2,
-    borderRadius: 0,
-    mb: 2,
-    border: '1px solid #e0e0e0',
-  }), []);
-
-  const credentialLabelTypographySx = useMemo(() => ({
-    fontSize: '12px',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  }), []);
-
-  const credentialValueTypographySx = useMemo(() => ({
-    fontFamily: 'monospace',
-    flexGrow: 1,
-    fontWeight: 'bold',
-    fontSize: '14px',
-  }), []);
-
-  const copyButtonSx = useMemo(() => ({
-    padding: '4px',
-    '&:hover': {
-      backgroundColor: 'rgba(26, 35, 126, 0.08)',
-    },
-  }), []);
-
   const infoAlertSx = useMemo(() => ({
     mb: 2,
     borderRadius: 0,
@@ -290,26 +195,6 @@ const LicenseActivation: React.FC = () => {
     '& .MuiAlert-icon': {
       color: '#1565c0',
     },
-  }), []);
-
-  const confirmationBoxSx = useMemo(() => ({
-    mt: 3,
-    p: 2,
-    bgcolor: '#f5f5f5',
-    borderRadius: 0,
-    border: '1px solid #e0e0e0',
-  }), []);
-
-  const checkboxSx = useMemo(() => ({
-    padding: '4px',
-    '& .MuiSvgIcon-root': {
-      fontSize: '18px',
-    },
-  }), []);
-
-  const confirmationLabelTypographySx = useMemo(() => ({
-    fontSize: '16px',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
   const continueButtonSx = useMemo(() => ({
@@ -396,31 +281,7 @@ const LicenseActivation: React.FC = () => {
     },
   }), []);
 
-  // Check for saved credentials if activation was successful but no credentials shown
-  useEffect(() => {
-    if (activationResult?.success && !activationResult.userCredentials) {
-      // Check if there are saved credentials that weren't shown
-      window.electron.ipcRenderer.invoke('license:getCredentials').then((result) => {
-        const typedResult = result as {
-          success: boolean;
-          credentials?: UserCredentials;
-        };
-        if (typedResult.success && typedResult.credentials) {
-          setActivationResult((prev) => {
-            if (prev && !prev.userCredentials) {
-              return {
-                ...prev,
-                userCredentials: typedResult.credentials,
-              };
-            }
-            return prev;
-          });
-        }
-      }).catch(() => {
-        // Silently fail - credentials might not exist
-      });
-    }
-  }, [activationResult]);
+  // Credentials are sent via WhatsApp only, not displayed in UI
 
   // Check if a license is already activated when component mounts
   useEffect(() => {
@@ -475,7 +336,7 @@ const LicenseActivation: React.FC = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
                 <Box
                   component="img"
-                  src="/logo.svg"
+                  src="./logo.svg"
                   alt="DigitalizePOS"
                   sx={logoBoxSx}
                 />
@@ -494,160 +355,27 @@ const LicenseActivation: React.FC = () => {
                 </Alert>
               </Box>
 
-              {activationResult.userCredentials && (
-                <>
-                  <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
-                  <Box sx={{ mb: 3 }}>
-                    <Alert severity="warning" sx={warningAlertSx}>
-                      <Typography
-                        variant="h6"
-                        gutterBottom
-                        sx={warningTitleTypographySx}
-                      >
-                        CRITICAL: Save Your Login Credentials Now
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                        An account has been created for you. <strong>You must save these credentials before continuing.</strong> If you lose them, you may not be able to log in to the application.
-                      </Typography>
-                    </Alert>
-
-                    <Box sx={credentialBoxSx}>
-                      <Typography
-                        variant="subtitle2"
-                        color="text.secondary"
-                        gutterBottom
-                        sx={credentialLabelTypographySx}
-                      >
-                        Username
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography
-                          variant="body1"
-                          sx={credentialValueTypographySx}
-                        >
-                          {activationResult.userCredentials.username}
-                        </Typography>
-                        <Tooltip title={copied === 'username' ? "Username copied!" : "Copy Username - Copy the username to your clipboard"}>
-                          <IconButton
-                            onClick={handleCopyUsername}
-                            color="primary"
-                            size="small"
-                            sx={copyButtonSx}
-                          >
-                            {copied === 'username' ? <CheckIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Download Credentials - Download your credentials as a text file">
-                          <IconButton
-                            onClick={handleDownloadCredentials}
-                            color="primary"
-                            size="small"
-                            sx={copyButtonSx}
-                          >
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-
-                    <Box sx={credentialBoxSx}>
-                      <Typography
-                        variant="subtitle2"
-                        color="text.secondary"
-                        gutterBottom
-                        sx={credentialLabelTypographySx}
-                      >
-                        Password
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography
-                          variant="body1"
-                          sx={credentialValueTypographySx}
-                        >
-                          {activationResult.userCredentials.password}
-                        </Typography>
-                        <Tooltip title={copied === 'password' ? "Password copied!" : "Copy Password - Copy the password to your clipboard"}>
-                          <IconButton
-                            onClick={handleCopyPassword}
-                            color="primary"
-                            size="small"
-                            sx={copyButtonSx}
-                          >
-                            {copied === 'password' ? <CheckIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Download Credentials - Download your credentials as a text file">
-                          <IconButton
-                            onClick={handleDownloadCredentials}
-                            color="primary"
-                            size="small"
-                            sx={copyButtonSx}
-                          >
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-
-                    <Alert severity="info" sx={infoAlertSx}>
-                      <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                        <strong>Email Sent:</strong> We&apos;ve also sent these credentials to your email address for your records.
-                      </Typography>
-                    </Alert>
-
-                    <Alert severity="info" sx={infoAlertSx}>
-                      <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                        <strong>Security Note:</strong> Please change your password after your first login for better security.
-                      </Typography>
-                    </Alert>
-
-                    <Box sx={confirmationBoxSx}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={credentialsConfirmed}
-                            onChange={handleCredentialsConfirmedChange}
-                            color="primary"
-                            sx={checkboxSx}
-                          />
-                        }
-                        label={
-                          <Typography
-                            variant="body2"
-                            sx={confirmationLabelTypographySx}
-                          >
-                            <strong>I have saved my credentials</strong> (username and password)
-                          </Typography>
-                        }
-                      />
-                    </Box>
-                  </Box>
-                </>
-              )}
-
-              {activationResult?.success && !activationResult.userCredentials && (
-                <Box sx={{ mb: 3 }}>
-                  <Alert severity="info" sx={infoAlertSx}>
-                    <Typography variant="body2" gutterBottom sx={{ fontSize: '13px' }}>
-                      <strong>Please check your email.</strong> We&apos;ve sent you an email with your login credentials.
-                    </Typography>
-                  </Alert>
-                </Box>
-              )}
+              <Box sx={{ mb: 3 }}>
+                <Alert severity="info" sx={infoAlertSx}>
+                  <Typography variant="body2" gutterBottom sx={{ fontSize: '13px' }}>
+                    <strong>Please check your WhatsApp.</strong> We&apos;ve sent you a WhatsApp message with your login credentials.
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '13px', mt: 1 }}>
+                    <strong>Security Note:</strong> Please change your password after your first login for better security.
+                  </Typography>
+                </Alert>
+              </Box>
 
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
-                <Tooltip title={activationResult.userCredentials && !credentialsConfirmed ? "Please confirm that you have saved your credentials" : "Continue to Login - Proceed to the login page to sign in with your new credentials"}>
-                  <span>
-                    <Button
-                      onClick={handleContinue}
-                      variant="contained"
-                      size="large"
-                      disabled={activationResult.userCredentials && !credentialsConfirmed}
-                      sx={continueButtonSx}
-                    >
-                      Continue to Login
-                    </Button>
-                  </span>
+                <Tooltip title="Continue to Login - Proceed to the login page to sign in with your credentials">
+                  <Button
+                    onClick={handleContinue}
+                    variant="contained"
+                    size="large"
+                    sx={continueButtonSx}
+                  >
+                    Continue to Login
+                  </Button>
                 </Tooltip>
               </Box>
             </Box>
@@ -673,7 +401,7 @@ const LicenseActivation: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
               <Box
                 component="img"
-                src="/logo.svg"
+                src="./logo.svg"
                 alt="DigitalizePOS"
                 sx={logoBoxSx}
               />

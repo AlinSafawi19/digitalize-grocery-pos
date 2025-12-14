@@ -119,7 +119,7 @@ export function useRoutePermission(route: string): boolean {
   useEffect(() => {
     if (!user?.id) {
       const currentValue = false;
-      if (hasPermission !== currentValue) {
+      if (lastKnownValueRef.current !== currentValue) {
         setHasPermission(currentValue);
       }
       lastKnownValueRef.current = false;
@@ -139,7 +139,7 @@ export function useRoutePermission(route: string): boolean {
     const cached = routePermissionCache.get(cacheKey);
     if (cached !== undefined) {
       // Only update if different to avoid unnecessary re-renders
-      if (hasPermission !== cached) {
+      if (lastKnownValueRef.current !== cached) {
         setHasPermission(cached);
       }
       lastKnownValueRef.current = cached;
@@ -158,7 +158,7 @@ export function useRoutePermission(route: string): boolean {
 
     // Use last known value optimistically while checking (prevents flicker)
     // Only update if we have a previous value to use
-    if (lastKnownValueRef.current !== null && hasPermission !== lastKnownValueRef.current) {
+    if (lastKnownValueRef.current !== null) {
       setHasPermission(lastKnownValueRef.current);
     }
 

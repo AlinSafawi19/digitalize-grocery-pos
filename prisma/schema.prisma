@@ -15,7 +15,7 @@ datasource db {
 model User {
   id          Int      @id @default(autoincrement())
   username    String   @unique
-  email       String?  @unique
+  phone       String?  @unique
   password    String // Hashed password
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -31,7 +31,7 @@ model User {
   userPermissions  UserPermission[]
 
   @@index([username])
-  @@index([email])
+  @@index([phone])
 }
 
 model Permission {
