@@ -20,21 +20,16 @@ export function registerLicenseHandlers(): void {
       });
       const result = await licenseService.activateLicense(input);
       
-      // Credentials are sent via WhatsApp only, not returned to UI
-      // Do not fetch or return credentials
-      
       // Serialize Date objects to ISO strings for IPC (Electron IPC can't serialize Date objects)
       const serializedResult = {
         ...result,
         expiresAt: result.expiresAt instanceof Date ? result.expiresAt.toISOString() : result.expiresAt,
         gracePeriodEnd: result.gracePeriodEnd instanceof Date ? result.gracePeriodEnd.toISOString() : result.gracePeriodEnd,
-        // Ensure credentials are not returned
-        userCredentials: undefined,
       };
       
       logger.info('Returning activation result', {
         success: serializedResult.success,
-        credentialsSentViaWhatsApp: true,
+        hasUserCredentials: !!serializedResult.userCredentials,
       });
       
       return serializedResult;

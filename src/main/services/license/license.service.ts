@@ -28,6 +28,8 @@ export interface ActivateLicenseResult {
   gracePeriodEnd?: Date;
   token?: string;
   locationId?: number;
+  locationName?: string;
+  locationAddress?: string;
   customerName?: string | null;
   customerPhone?: string | null;
   // User credentials if user was auto-created
@@ -563,10 +565,13 @@ export class LicenseService {
             gracePeriodEnd: new Date(response.data.gracePeriodEnd),
             token: response.data.token,
             locationId: response.data.locationId,
+            locationName: response.data.locationName,
+            locationAddress: response.data.locationAddress,
             customerName: response.data.customerName,
             customerPhone: response.data.customerPhone,
-            // Credentials are sent via WhatsApp only, not returned to UI
-            userCredentials: undefined,
+            // Also return credentials so UI can display them on first activation
+            // (credentials are still sent via WhatsApp and stored securely)
+            userCredentials,
           };
         } else {
           logger.error('License activation did not complete successfully - not saving license data');

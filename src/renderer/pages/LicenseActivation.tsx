@@ -19,6 +19,16 @@ interface UserCredentials {
   password: string;
 }
 
+interface ActivationResultState {
+  success: boolean;
+  message: string;
+  userCredentials?: UserCredentials;
+  expiresAt?: string;
+  gracePeriodEnd?: string;
+  locationName?: string;
+  locationAddress?: string;
+}
+
 interface ActivationInput {
   licenseKey: string;
 }
@@ -27,11 +37,7 @@ const LicenseActivation: React.FC = () => {
   const { toast, showToast, hideToast } = useToast();
   const [licenseKey, setLicenseKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activationResult, setActivationResult] = useState<{
-    success: boolean;
-    message: string;
-    userCredentials?: UserCredentials;
-  } | null>(null);
+  const [activationResult, setActivationResult] = useState<ActivationResultState | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     licenseKey?: string;
   }>({});
@@ -93,6 +99,10 @@ const LicenseActivation: React.FC = () => {
         success: boolean;
         message: string;
         userCredentials?: UserCredentials;
+        expiresAt?: string;
+        gracePeriodEnd?: string;
+        locationName?: string;
+        locationAddress?: string;
       };
 
       if (result.success) {
@@ -100,6 +110,10 @@ const LicenseActivation: React.FC = () => {
           success: true,
           message: result.message,
           userCredentials: result.userCredentials,
+          expiresAt: result.expiresAt,
+          gracePeriodEnd: result.gracePeriodEnd,
+          locationName: result.locationName,
+          locationAddress: result.locationAddress,
         });
       } else {
         showToast(result.message || 'License activation failed', 'error');
@@ -321,6 +335,13 @@ const LicenseActivation: React.FC = () => {
   }, []);
 
   if (activationResult?.success) {
+    const formattedExpiresAt = activationResult.expiresAt
+      ? new Date(activationResult.expiresAt).toLocaleString()
+      : null;
+    const formattedGracePeriodEnd = activationResult.gracePeriodEnd
+      ? new Date(activationResult.gracePeriodEnd).toLocaleString()
+      : null;
+
     return (
       <Box sx={containerSx}>
         <Container component="main" maxWidth="md">
@@ -358,10 +379,54 @@ const LicenseActivation: React.FC = () => {
               <Box sx={{ mb: 3 }}>
                 <Alert severity="info" sx={infoAlertSx}>
                   <Typography variant="body2" gutterBottom sx={{ fontSize: '13px' }}>
-                    <strong>Please check your WhatsApp.</strong> We&apos;ve sent you a WhatsApp message with your login credentials.
+                    <strong>License Information</strong>
                   </Typography>
-                  <Typography variant="body2" sx={{ fontSize: '13px', mt: 1 }}>
-                    <strong>Security Note:</strong> Please change your password after your first login for better security.
+                  {activationResult.locationName && (
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      Location: {activationResult.locationName}
+                    </Typography>
+                  )}
+                  {activationResult.locationAddress && (
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      Address: {activationResult.locationAddress}
+                    </Typography>
+                  )}
+                  {formattedExpiresAt && (
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      Expires At: {formattedExpiresAt}
+                    </Typography>
+                  )}
+                  {formattedGracePeriodEnd && (
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      Grace Period Ends: {formattedGracePeriodEnd}
+                    </Typography>
+                  )}
+                </Alert>
+              </Box>
+
+              {activationResult.userCredentials && (
+                <Box sx={{ mb: 3 }}>
+                  <Alert severity="info" sx={infoAlertSx}>
+                    <Typography variant="body2" gutterBottom sx={{ fontSize: '13px' }}>
+                      <strong>Login Credentials</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      Username: <strong>{activationResult.userCredentials.username}</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      Password: <strong>{activationResult.userCredentials.password}</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '13px', mt: 1 }}>
+                      <strong>Security Note:</strong> Please change your password after your first login for better security.
+                    </Typography>
+                  </Alert>
+                </Box>
+              )}
+
+              <Box sx={{ mb: 3 }}>
+                <Alert severity="info" sx={infoAlertSx}>
+                  <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                    We&apos;ve also sent your login credentials via WhatsApp to the registered phone number (if available).
                   </Typography>
                 </Alert>
               </Box>
