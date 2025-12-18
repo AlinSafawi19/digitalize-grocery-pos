@@ -143,7 +143,20 @@ export class UserService {
 
       return user;
     } catch (error) {
-      logger.error('Error creating user', error);
+      const err = error as {
+        message?: string;
+        name?: string;
+        code?: string;
+        meta?: unknown;
+        stack?: string;
+      };
+      logger.error('Error creating user (FULL ERROR)', {
+        message: err?.message,
+        name: err?.name,
+        code: err?.code,
+        meta: err?.meta,
+        stack: err?.stack,
+      });
       throw error;
     }
   }

@@ -364,6 +364,38 @@ class DatabaseService {
         }
         throw verifyError;
       }
+
+      // Backward-compatibility fix: ensure User.phone column exists.
+      // Some older databases were created from migrations that did not
+      // include the phone column, while the current Prisma schema expects it.
+      try {
+        const columns = await this.prisma!.$queryRawUnsafe<
+          Array<{ name: string }>
+        >('PRAGMA table_info("User");');
+
+        const hasPhoneColumn = columns.some((col) => col.name === 'phone');
+
+        if (!hasPhoneColumn) {
+          logger.warn(
+            'User table is missing `phone` column – adding it for compatibility'
+          );
+
+          // Add nullable phone column; Prisma schema treats it as String?
+          await this.prisma!.$executeRawUnsafe(
+            'ALTER TABLE "User" ADD COLUMN "phone" TEXT;'
+          );
+
+          // Optional unique index to match schema; existing nulls are allowed.
+          await this.prisma!.$executeRawUnsafe(
+            'CREATE UNIQUE INDEX IF NOT EXISTS "User_phone_key" ON "User"("phone");'
+          );
+
+          logger.info('User table `phone` column added successfully');
+        }
+      } catch (fixError) {
+        logger.error('Failed to ensure `User.phone` column exists', fixError);
+        // Do not throw here; the database is otherwise usable.
+      }
     } catch (error) {
       logger.error('Failed to run migrations', error);
       // Re-throw migration errors so they can be handled properly

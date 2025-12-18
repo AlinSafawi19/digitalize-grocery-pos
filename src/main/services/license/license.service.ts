@@ -528,6 +528,25 @@ export class LicenseService {
             errorType: err.constructor?.name,
           });
           
+          // Attempt to roll back activation on the license server so that
+          // a failed POS-side activation (e.g., user creation failure) does
+          // not leave the license marked as activated.
+          try {
+            await this.apiClient.post('/api/license/rollback-activation', {
+              licenseKey: input.licenseKey,
+              hardwareId: this.hardwareId,
+            });
+            logger.info('Requested license activation rollback on server due to POS activation failure', {
+              licenseKey: input.licenseKey.substring(0, 8) + '...',
+            });
+          } catch (rollbackError: unknown) {
+            const rollbackErr = rollbackError as { message?: string };
+            logger.error('Failed to roll back license activation on server', {
+              error: rollbackErr.message,
+              licenseKey: input.licenseKey.substring(0, 8) + '...',
+            });
+          }
+          
           // Clear cache since activation failed
           this.cachedLicenseData = null;
           

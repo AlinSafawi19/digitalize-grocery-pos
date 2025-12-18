@@ -24,7 +24,8 @@ export class AuditLogService {
   static log(input: AuditLogInput): Promise<void> {
     // Return immediately resolved promise (non-blocking)
     // Execute actual logging in background
-    Promise.resolve().then(async () => {
+    Promise.resolve()
+      .then(async () => {
       try {
         const prisma = databaseService.getClient();
 
@@ -39,12 +40,30 @@ export class AuditLogService {
         });
       } catch (error) {
         // Don't throw error for audit logging failures
-        // Just log to console/logger
-        logger.error('Error creating audit log', error);
+          // Just log to console/logger with full Prisma error details
+          const err = error as {
+            message?: string;
+            name?: string;
+            code?: string;
+            meta?: unknown;
+            stack?: string;
+          };
+          logger.error('Error creating audit log (FULL PRISMA ERROR)', {
+            message: err?.message,
+            name: err?.name,
+            code: err?.code,
+            meta: err?.meta,
+            stack: err?.stack,
+          });
       }
-    }).catch((error) => {
+      })
+      .catch((error) => {
       // Catch any errors in the promise chain
-      logger.error('Error in audit log promise chain', error);
+        const err = error as { message?: string; stack?: string };
+        logger.error('Error in audit log promise chain', {
+          message: err?.message,
+          stack: err?.stack,
+        });
     });
 
     // Return immediately resolved promise (non-blocking)

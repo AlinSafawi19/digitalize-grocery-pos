@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -35,6 +36,7 @@ interface ActivationInput {
 
 const LicenseActivation: React.FC = () => {
   const { toast, showToast, hideToast } = useToast();
+  const navigate = useNavigate();
   const [licenseKey, setLicenseKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activationResult, setActivationResult] = useState<ActivationResultState | null>(null);
@@ -126,10 +128,54 @@ const LicenseActivation: React.FC = () => {
   }, [validateForm, licenseKey, showToast, hasExistingLicense, existingLicenseKey]);
 
   const handleContinue = useCallback(() => {
-    // Navigate to login page - no need to verify activation
-    // License was just activated, so navigation should work
-    window.location.href = ROUTES.LOGIN;
-  }, []);
+    // Navigate to login page within the HashRouter
+    navigate(ROUTES.LOGIN);
+  }, [navigate]);
+
+  const handleCopyToClipboard = useCallback(
+    async (label: string, value?: string) => {
+      if (!value) {
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(value);
+        showToast(`${label} copied to clipboard`, 'success');
+      } catch (error) {
+        console.error('Failed to copy to clipboard', error);
+        showToast(`Failed to copy ${label.toLowerCase()}`, 'error');
+      }
+    },
+    [showToast]
+  );
+
+  const handleDownloadCredentials = useCallback(() => {
+    if (!activationResult?.userCredentials) {
+      return;
+    }
+
+    const { username, password } = activationResult.userCredentials;
+    const contentLines = [
+      'DigitalizePOS - Login Credentials',
+      '',
+      `Username: ${username}`,
+      `Password: ${password}`,
+      '',
+      'Security note: Please change your password after your first login for better security.',
+    ];
+
+    const blob = new Blob([contentLines.join('\r\n')], {
+      type: 'text/plain;charset=utf-8',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'digitalizepos-credentials.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [activationResult]);
 
   const handleLicenseKeyChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setLicenseKey(e.target.value);
@@ -410,12 +456,43 @@ const LicenseActivation: React.FC = () => {
                     <Typography variant="body2" gutterBottom sx={{ fontSize: '13px' }}>
                       <strong>Login Credentials</strong>
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                      Username: <strong>{activationResult.userCredentials.username}</strong>
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                      Password: <strong>{activationResult.userCredentials.password}</strong>
-                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 2, flexWrap: 'wrap' }}>
+                      <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                        Username: <strong>{activationResult.userCredentials.username}</strong>
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleCopyToClipboard('Username', activationResult.userCredentials?.username)}
+                      >
+                        Copy Username
+                      </Button>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1, gap: 2, flexWrap: 'wrap' }}>
+                      <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                        Password: <strong>{activationResult.userCredentials.password}</strong>
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleCopyToClipboard('Password', activationResult.userCredentials?.password)}
+                      >
+                        Copy Password
+                      </Button>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 2 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={handleDownloadCredentials}
+                      >
+                        Download Credentials (.txt)
+                      </Button>
+                    </Box>
+
                     <Typography variant="body2" sx={{ fontSize: '13px', mt: 1 }}>
                       <strong>Security Note:</strong> Please change your password after your first login for better security.
                     </Typography>
