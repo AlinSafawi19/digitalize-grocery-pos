@@ -434,7 +434,7 @@ const Login: React.FC = () => {
                     <Typography
                       variant="body2"
                       component="a"
-                      href="https://wa.me/96171882088"
+                      href="https://wa.me/96181943475"
                       sx={{
                         color: 'primary.main',
                         textDecoration: 'none',
@@ -444,7 +444,7 @@ const Login: React.FC = () => {
                         },
                       }}
                     >
-                      +96171882088
+                      +96181943475
                     </Typography>
                   </Box>
                 </Typography>

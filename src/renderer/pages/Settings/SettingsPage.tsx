@@ -182,6 +182,7 @@ export default function SettingsPage() {
         businessRulesResult,
         notificationSettingsResult,
         exchangeRate,
+        licenseStatus,
       ] = await Promise.all([
         SettingsService.getStoreInfo(user.id),
         SettingsService.getTaxConfig(user.id),
@@ -189,17 +190,36 @@ export default function SettingsPage() {
         SettingsService.getBusinessRules(user.id),
         SettingsService.getNotificationSettings(user.id),
         CurrencyService.getExchangeRate(),
+        window.electron.ipcRenderer.invoke('license:getStatus') as Promise<{ customerPhone?: string | null } | null>,
       ]);
 
       if (storeInfoResult.success && storeInfoResult.storeInfo) {
+        // Use license customer phone if store phone is empty
+        const storePhone = storeInfoResult.storeInfo.phone || '';
+        const licensePhone = licenseStatus?.customerPhone || null;
+        const phoneToUse = storePhone || licensePhone || '';
+        
         const loadedStoreInfo = {
           name: storeInfoResult.storeInfo.name,
           address: storeInfoResult.storeInfo.address,
-          phone: storeInfoResult.storeInfo.phone,
+          phone: phoneToUse,
           logo: storeInfoResult.storeInfo.logo || '',
         };
         setStoreInfo(loadedStoreInfo);
         setInitialStoreInfo(loadedStoreInfo);
+      } else {
+        // If no store info exists, try to use license phone
+        const licensePhone = licenseStatus?.customerPhone || null;
+        if (licensePhone) {
+          const loadedStoreInfo = {
+            name: '',
+            address: '',
+            phone: licensePhone,
+            logo: '',
+          };
+          setStoreInfo(loadedStoreInfo);
+          setInitialStoreInfo(loadedStoreInfo);
+        }
       }
       if (taxConfigResult.success && taxConfigResult.taxConfig) {
         setTaxConfig(taxConfigResult.taxConfig);

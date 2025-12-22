@@ -421,10 +421,10 @@ export default function LicensePage() {
                 <Typography
                   variant="body2"
                   component="a"
-                  href="https://wa.me/96171882088"
+                  href="https://wa.me/96181943475"
                   sx={footerLinkTypographySx}
                 >
-                  +96171882088
+                  +96181943475
                 </Typography>
               </Box>
             </Box>
@@ -649,8 +649,8 @@ export default function LicensePage() {
                         component="img"
                         src={
                           subscriptionInfo.nextPaymentFee === 350
-                            ? '/qr-code-350.jpg'
-                            : '/qr-code-50.jpg'
+                            ? './qr-code-350.jpg'
+                            : './qr-code-50.jpg'
                         }
                         alt={`QR Code for $${subscriptionInfo.nextPaymentFee.toFixed(2)} payment`}
                         sx={{
@@ -678,7 +678,7 @@ export default function LicensePage() {
                         Select &quot;Scan QR Code&quot; or &quot;Pay with QR&quot;
                       </Box>
                       <Box component="li" sx={{ mb: 1 }}>
-                        Scan the QR code shown above
+                        Scan the appropriate QR code above ({subscriptionInfo.nextPaymentFee === 350 ? '$350 for initial license' : '$50 for annual subscription'})
                       </Box>
                       <Box component="li" sx={{ mb: 1 }}>
                         The payment amount is already set in the QR code - just confirm the payment
@@ -690,7 +690,7 @@ export default function LicensePage() {
                         Send payment confirmation screenshot via whatsapp:{' '}
                         <Typography
                           component="a"
-                          href="https://wa.me/96171882088"
+                          href="https://wa.me/96181943475"
                           sx={{
                             color: '#1565c0',
                             textDecoration: 'underline',
@@ -702,6 +702,26 @@ export default function LicensePage() {
                       </Box>
                       <Box component="li">License activated upon confirmation</Box>
                     </Box>
+                  </Alert>
+                  <Alert severity="success" sx={{ ...infoAlertSx, mt: 2 }}>
+                    <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1 }}>
+                      Payment Confirmation
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      After payment, send confirmation via whatsapp to{' '}
+                      <Typography
+                        component="a"
+                        href="https://wa.me/96181943475"
+                        sx={{
+                          color: '#1565c0',
+                          textDecoration: 'underline',
+                          fontWeight: 600,
+                        }}
+                      >
+                        +961 71 882 088
+                      </Typography>
+                      {' '}with your license key/order number, date, amount, and screenshot (for QR payments).
+                    </Typography>
                   </Alert>
                   {subscriptionInfo.nextPaymentFee === 50 && (
                     <Alert severity="success" sx={infoAlertSx}>

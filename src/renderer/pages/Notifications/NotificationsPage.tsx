@@ -1201,8 +1201,8 @@ export default function NotificationsPage() {
           </Typography>
           <Box sx={footerPhoneBoxSx}>
             <MessageCircle sx={{ fontSize: 18 }} />
-            <Typography variant="body2" component="a" href="https://wa.me/96171882088" sx={footerPhoneLinkSx}>
-              +96171882088
+            <Typography variant="body2" component="a" href="https://wa.me/96181943475" sx={footerPhoneLinkSx}>
+              +96181943475
             </Typography>
           </Box>
         </Box>

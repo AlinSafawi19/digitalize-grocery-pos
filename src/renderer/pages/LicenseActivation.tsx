@@ -28,6 +28,7 @@ interface ActivationResultState {
   gracePeriodEnd?: string;
   locationName?: string;
   locationAddress?: string;
+  credentialsSentViaWhatsApp?: boolean;
 }
 
 interface ActivationInput {
@@ -105,6 +106,7 @@ const LicenseActivation: React.FC = () => {
         gracePeriodEnd?: string;
         locationName?: string;
         locationAddress?: string;
+        credentialsSentViaWhatsApp?: boolean;
       };
 
       if (result.success) {
@@ -116,6 +118,7 @@ const LicenseActivation: React.FC = () => {
           gracePeriodEnd: result.gracePeriodEnd,
           locationName: result.locationName,
           locationAddress: result.locationAddress,
+          credentialsSentViaWhatsApp: result.credentialsSentViaWhatsApp,
         });
       } else {
         showToast(result.message || 'License activation failed', 'error');
@@ -500,13 +503,15 @@ const LicenseActivation: React.FC = () => {
                 </Box>
               )}
 
-              <Box sx={{ mb: 3 }}>
-                <Alert severity="info" sx={infoAlertSx}>
-                  <Typography variant="body2" sx={{ fontSize: '13px' }}>
-                    We&apos;ve also sent your login credentials via WhatsApp to the registered phone number (if available).
-                  </Typography>
-                </Alert>
-              </Box>
+              {activationResult.credentialsSentViaWhatsApp && (
+                <Box sx={{ mb: 3 }}>
+                  <Alert severity="info" sx={infoAlertSx}>
+                    <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                      We&apos;ve also sent your login credentials via WhatsApp to the registered phone number (if available).
+                    </Typography>
+                  </Alert>
+                </Box>
+              )}
 
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
                 <Tooltip title="Continue to Login - Proceed to the login page to sign in with your credentials">

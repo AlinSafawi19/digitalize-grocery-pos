@@ -37,6 +37,8 @@ export interface ActivateLicenseResult {
     username: string;
     password: string;
   };
+  // Whether credentials were sent via WhatsApp successfully
+  credentialsSentViaWhatsApp?: boolean;
 }
 
 /**
@@ -92,6 +94,7 @@ export class LicenseService {
 
   /**
    * Send credentials via WhatsApp using the license server
+   * @returns true if message was sent successfully, false otherwise
    */
   private async sendCredentialsWhatsApp(data: {
     licenseKey: string;
@@ -101,12 +104,12 @@ export class LicenseService {
     locationAddress: string;
     customerName?: string | null;
     customerPhone?: string | null;
-  }): Promise<void> {
+  }): Promise<boolean> {
     try {
       // Only send WhatsApp message if customer phone is available
       if (!data.customerPhone) {
         logger.info('Skipping credentials WhatsApp message: customer phone not available');
-        return;
+        return false;
       }
 
       logger.info('Sending credentials WhatsApp message...', { phone: data.customerPhone });
@@ -123,21 +126,22 @@ export class LicenseService {
 
       if (response.data.success) {
         logger.info('Credentials WhatsApp message sent successfully', { phone: data.customerPhone });
+        return true;
       } else {
         logger.warn('Credentials WhatsApp message may not have been sent', {
           phone: data.customerPhone,
           message: response.data.message,
         });
+        return false;
       }
     } catch (error: unknown) {
-      // Don't throw - just log the error
+      // Don't throw - just log the error and return false
       const err = error as { message?: string };
       logger.error('Error sending credentials WhatsApp message', {
         error: err.message,
         phone: data.customerPhone,
       });
-      // Re-throw only for logging purposes, but caller should catch it
-      throw error;
+      return false;
     }
   }
 
@@ -299,6 +303,10 @@ export class LicenseService {
           hardwareId: this.hardwareId,
           locationName: response.data.locationName,
           locationAddress: response.data.locationAddress,
+          // Use customerPhone from server if available, otherwise preserve existing one
+          customerPhone: response.data.customerPhone !== undefined && response.data.customerPhone !== null
+            ? response.data.customerPhone
+            : (existingLicenseData?.customerPhone || null),
           activatedAt: isReactivatingActive && existingLicenseData 
             ? existingLicenseData.activatedAt  // Preserve original activation date
             : Date.now(),
@@ -321,6 +329,7 @@ export class LicenseService {
         // Auto-create user on first activation (if no users exist)
         let userCredentials: { username: string; password: string } | undefined;
         let activationSucceeded = false;
+        let credentialsSentViaWhatsApp = false;
         
         // Ensure database is initialized and ready - this is critical for user creation
         try {
@@ -454,7 +463,7 @@ export class LicenseService {
 
               // Send credentials via WhatsApp (non-blocking, don't fail activation if this fails)
               try {
-                await this.sendCredentialsWhatsApp({
+                credentialsSentViaWhatsApp = await this.sendCredentialsWhatsApp({
                   licenseKey: input.licenseKey,
                   username,
                   password,
@@ -468,6 +477,7 @@ export class LicenseService {
                 logger.warn('Failed to send credentials WhatsApp message (activation still successful)', {
                   error: whatsappError instanceof Error ? whatsappError.message : 'Unknown error',
                 });
+                credentialsSentViaWhatsApp = false;
               }
 
               logger.info('User auto-created during license activation', {
@@ -573,7 +583,7 @@ export class LicenseService {
           // Log what we're returning
           logger.info('Returning activation result', { 
             success: true, 
-            credentialsSentViaWhatsApp: !!userCredentials,
+            credentialsSentViaWhatsApp,
             userCredentialsUsername: userCredentials?.username 
           });
           
@@ -591,6 +601,7 @@ export class LicenseService {
             // Also return credentials so UI can display them on first activation
             // (credentials are still sent via WhatsApp and stored securely)
             userCredentials,
+            credentialsSentViaWhatsApp,
           };
         } else {
           logger.error('License activation did not complete successfully - not saving license data');

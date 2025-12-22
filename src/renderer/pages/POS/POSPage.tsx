@@ -960,10 +960,10 @@ const POSPage: React.FC = () => {
             <MessageCircle sx={{ fontSize: 18 }} />
             <Typography
               component="a"
-              href="https://wa.me/96171882088"
+              href="https://wa.me/96181943475"
               sx={footerPhoneLinkSx}
             >
-              +96171882088
+              +96181943475
             </Typography>
           </Box>
         </Box>

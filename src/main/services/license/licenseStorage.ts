@@ -9,6 +9,7 @@ export interface LicenseData {
   hardwareId: string;
   locationName?: string;
   locationAddress?: string;
+  customerPhone?: string | null; // Customer phone from license
   activatedAt: number;
   expiresAt: number;
   gracePeriodEnd: number;

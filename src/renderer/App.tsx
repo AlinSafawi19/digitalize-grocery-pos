@@ -907,6 +907,7 @@ function AppContent() {
           onComplete={handleSetupComplete}
           userId={user.id}
           passwordOnly={setupWizardPasswordOnly}
+          currentUsername={user.username}
         />
       )}
     </>

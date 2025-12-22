@@ -40,6 +40,7 @@ interface SetupWizardProps {
   onComplete: () => void;
   userId: number;
   passwordOnly?: boolean; // If true, only show password change step
+  currentUsername?: string; // Current username for the user
 }
 
 interface StoreInfo {
@@ -65,6 +66,7 @@ type NotificationSettings = NotificationSettingsType;
 
 const steps = [
   'Change Password',
+  'Change Username',
   'Store Information',
   'Tax Configuration',
   'Currency Settings',
@@ -73,7 +75,7 @@ const steps = [
   'Notifications',
 ];
 
-const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, passwordOnly = false }) => {
+const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, passwordOnly = false, currentUsername = '' }) => {
   const { toast, showToast, hideToast } = useToast();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -123,6 +125,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Username change state
+  const [newUsername, setNewUsername] = useState('');
+
   // Field errors
   const [errors, setErrors] = useState<{
     storeName?: string;
@@ -132,12 +137,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     currentPassword?: string;
     newPassword?: string;
     confirmPassword?: string;
+    username?: string;
   }>({});
 
   // Refs for keyboard navigation
   const currentPasswordRef = useRef<HTMLInputElement>(null);
   const newPasswordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
+  const newUsernameRef = useRef<HTMLInputElement>(null);
   const storeNameRef = useRef<HTMLInputElement>(null);
   const storeAddressRef = useRef<HTMLTextAreaElement>(null);
   const storePhoneRef = useRef<HTMLInputElement>(null);
@@ -157,21 +164,24 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
             currentPasswordRef.current?.focus();
             break;
           case 1:
-            storeNameRef.current?.focus();
+            newUsernameRef.current?.focus();
             break;
           case 2:
-            taxRateRef.current?.focus();
+            storeNameRef.current?.focus();
             break;
           case 3:
-            exchangeRateRef.current?.focus();
+            taxRateRef.current?.focus();
             break;
           case 4:
-            printerNameRef.current?.focus();
+            exchangeRateRef.current?.focus();
             break;
           case 5:
-            // Business Rules - no text input, focus first select
+            printerNameRef.current?.focus();
             break;
           case 6:
+            // Business Rules - no text input, focus first select
+            break;
+          case 7:
             // Notifications - focus sound volume if enabled
             if (notificationSettings.soundEnabled) {
               soundVolumeRef.current?.focus();
@@ -194,6 +204,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         notificationSettingsResult,
         cashDrawerSettingsResult,
         exchangeRate,
+        licenseStatus,
       ] = await Promise.all([
         SettingsService.getStoreInfo(userId),
         SettingsService.getTaxConfig(userId),
@@ -202,15 +213,30 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         SettingsService.getNotificationSettings(userId),
         SettingsService.getCashDrawerSettings(userId),
         CurrencyService.getExchangeRate(),
+        window.electron.ipcRenderer.invoke('license:getStatus') as Promise<{ customerPhone?: string | null } | null>,
       ]);
 
       if (storeInfoResult.success && storeInfoResult.storeInfo) {
+        // Use license customer phone if store phone is empty
+        const storePhone = storeInfoResult.storeInfo.phone || '';
+        const licensePhone = licenseStatus?.customerPhone || null;
+        const phoneToUse = storePhone || licensePhone || '';
+        
         setStoreInfo({
           name: storeInfoResult.storeInfo.name || '',
           address: storeInfoResult.storeInfo.address || '',
-          phone: storeInfoResult.storeInfo.phone || '',
+          phone: phoneToUse,
           logo: storeInfoResult.storeInfo.logo || '',
         });
+      } else {
+        // If no store info exists, try to use license phone
+        const licensePhone = licenseStatus?.customerPhone || null;
+        if (licensePhone) {
+          setStoreInfo((prev) => ({
+            ...prev,
+            phone: licensePhone,
+          }));
+        }
       }
 
       if (taxConfigResult.success && taxConfigResult.taxConfig) {
@@ -269,9 +295,25 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      // Initialize username field with current username
+      setNewUsername(currentUsername || '');
       setErrors({});
     }
-  }, [open, loadSettings]);
+  }, [open, loadSettings, currentUsername]);
+
+  // Username validation function (matching ProfilePage pattern)
+  const validateUsername = useCallback((value: string): string | undefined => {
+    if (!value || value.trim().length === 0) {
+      return 'Username is required';
+    }
+    if (value.trim().length < 3) {
+      return 'Username must be at least 3 characters long';
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(value.trim())) {
+      return 'Username can only contain letters, numbers, and underscores';
+    }
+    return undefined;
+  }, []);
 
   const validateStep = useCallback((step: number): boolean => {
     const newErrors: typeof errors = {};
@@ -292,31 +334,38 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         newErrors.confirmPassword = 'Passwords do not match';
       }
     } else if (step === 1) {
+      // Username change validation - use the same validation as ProfilePage
+      const usernameError = validateUsername(newUsername);
+      if (usernameError) {
+        newErrors.username = usernameError;
+      }
+      // Note: If username is the same as current, we'll just skip the update (no error)
+    } else if (step === 2) {
       // Store Information validation
       if (!storeInfo.name.trim()) {
         newErrors.storeName = 'Store name is required';
       }
-    } else if (step === 2) {
+    } else if (step === 3) {
       // Tax Configuration validation
       if (taxConfig.defaultTaxRate < 0 || taxConfig.defaultTaxRate > 100) {
         newErrors.taxRate = 'Tax rate must be between 0 and 100';
       }
-    } else if (step === 3) {
+    } else if (step === 4) {
       // Currency Settings validation
       if (currencySettings.usdToLbp <= 0) {
         newErrors.exchangeRate = 'Exchange rate must be greater than 0';
       }
-    } else if (step === 4) {
+    } else if (step === 5) {
       // Printer Settings validation
       if (printerSettings.paperWidth < 58 || printerSettings.paperWidth > 110) {
         newErrors.paperWidth = 'Paper width must be between 58mm and 110mm';
       }
     }
-    // Steps 5, 6 don't require validation (all optional settings)
+    // Steps 6, 7 don't require validation (all optional settings)
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [currentPassword, newPassword, confirmPassword, storeInfo, taxConfig, currencySettings, printerSettings]);
+  }, [currentPassword, newPassword, confirmPassword, newUsername, validateUsername, storeInfo, taxConfig, currencySettings, printerSettings]);
 
   const handleNext = useCallback(async () => {
     if (!validateStep(activeStep)) {
@@ -375,6 +424,38 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         setSaving(false);
         return;
       }
+    }
+
+    // If we're on the username step (step 1), save the username before proceeding
+    if (activeStep === 1 && newUsername && newUsername.trim()) {
+      // Only update if username is different from current
+      if (newUsername.trim() !== currentUsername) {
+        try {
+          setSaving(true);
+          const usernameResult = await window.electron.ipcRenderer.invoke(
+            'user:updateProfile',
+            {
+              username: newUsername.trim(),
+            },
+            userId
+          ) as { success: boolean; error?: string; user?: { username: string } };
+
+          if (!usernameResult.success) {
+            showToast(usernameResult.error || 'Failed to change username', 'error');
+            setSaving(false);
+            return;
+          }
+
+          showToast('Username changed successfully', 'success');
+          setSaving(false);
+        } catch (error) {
+          console.error('Failed to change username:', error);
+          showToast('Failed to change username. Please try again.', 'error');
+          setSaving(false);
+          return;
+        }
+      }
+      // If username is the same, just proceed without updating
     }
 
     // If password-only mode and on password step, don't proceed to next step
@@ -673,6 +754,81 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
+              Please change your username. Your current username is: <strong>{currentUsername || 'Not set'}</strong>
+            </Alert>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  id="setup-current-username"
+                  label="Current Username"
+                  value={currentUsername || ''}
+                  disabled
+                  size="medium"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '18px',
+                      minHeight: 56,
+                      '& input': {
+                        padding: '16px 14px',
+                      },
+                      backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: '16px',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  id="setup-new-username"
+                  label="New Username *"
+                  value={newUsername}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewUsername(value);
+                    // Re-validate if there's already an error (matching ProfilePage pattern)
+                    if (errors.username) {
+                      const usernameError = validateUsername(value);
+                      setErrors((prev) => ({ ...prev, username: usernameError }));
+                    }
+                  }}
+                  onBlur={() => {
+                    // Validate on blur (matching ProfilePage pattern)
+                    const usernameError = validateUsername(newUsername);
+                    setErrors((prev) => ({ ...prev, username: usernameError }));
+                  }}
+                  onKeyDown={(e) => handleKeyDown(e, undefined, true)}
+                  inputRef={newUsernameRef}
+                  error={!!errors.username}
+                  helperText={errors.username || 'Username must be at least 3 characters and contain only letters, numbers, and underscores'}
+                  disabled={saving}
+                  size="medium"
+                  autoFocus
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '18px',
+                      minHeight: 56,
+                      '& input': {
+                        padding: '16px 14px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: '16px',
+                    },
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        );
+
+      case 2:
+        return (
+          <Box sx={{ mt: 3 }}>
+            <Alert severity="info" sx={{ mb: 3 }}>
               Please provide your store information. This will be used on receipts and reports.
             </Alert>
             <Grid container spacing={3}>
@@ -914,7 +1070,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           </Box>
         );
 
-      case 2:
+      case 3:
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -984,7 +1140,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           </Box>
         );
 
-      case 3:
+      case 4:
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -1032,7 +1188,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           </Box>
         );
 
-      case 4:
+      case 5:
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -1158,7 +1314,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           </Box>
         );
 
-      case 5:
+      case 6:
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -1224,7 +1380,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           </Box>
         );
 
-      case 6:
+      case 7:
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
