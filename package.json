@@ -133,7 +133,8 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "differentialPackage": false
+      "differentialPackage": false,
+      "artifactName": "grocery-pos-${version}.${ext}"
     }
   }
 }

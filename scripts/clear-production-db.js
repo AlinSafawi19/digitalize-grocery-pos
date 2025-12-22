@@ -4,7 +4,7 @@
  clear db: cd C:\Projects\DigitalizePOS\digitalize-grocery-pos; node scripts/clear-production-db.js
  
  run installer: cd C:\Projects\DigitalizePOS\digitalize-grocery-pos\release
-   & ".\DigitalizePOS Setup 1.0.0.exe"
+   & ".\grocery-pos-1.0.0.exe"
  */
 
 const path = require('path');
