@@ -697,7 +697,7 @@ export default function LicensePage() {
                             fontWeight: 600,
                           }}
                         >
-                          +961 71 882 088
+                          +961 81 943 475
                         </Typography>
                       </Box>
                       <Box component="li">License activated upon confirmation</Box>
@@ -718,7 +718,7 @@ export default function LicensePage() {
                           fontWeight: 600,
                         }}
                       >
-                        +961 71 882 088
+                        +961 81 943 475
                       </Typography>
                       {' '}with your license key/order number, date, amount, and screenshot (for QR payments).
                     </Typography>
