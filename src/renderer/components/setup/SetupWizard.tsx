@@ -34,6 +34,9 @@ import {
 import { CurrencyService } from '../../services/currency.service';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../common/Toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store';
+import { setUser } from '../../store/slices/auth.slice';
 
 interface SetupWizardProps {
   open: boolean;
@@ -76,6 +79,8 @@ const steps = [
 ];
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, passwordOnly = false, currentUsername = '' }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -446,6 +451,16 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
             return;
           }
 
+          // Update Redux store with new username
+          if (usernameResult.user && user) {
+            dispatch(
+              setUser({
+                ...user,
+                username: usernameResult.user.username,
+              })
+            );
+          }
+
           showToast('Username changed successfully', 'success');
           setSaving(false);
         } catch (error) {
@@ -464,7 +479,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     }
 
     setActiveStep((prevStep) => prevStep + 1);
-  }, [validateStep, activeStep, currentPassword, newPassword, passwordOnly, userId, onComplete, showToast]);
+  }, [validateStep, activeStep, currentPassword, newPassword, passwordOnly, userId, onComplete, showToast, dispatch, user, currentUsername, newUsername]);
 
   const handleBack = () => {
     setActiveStep((prevStep) => prevStep - 1);

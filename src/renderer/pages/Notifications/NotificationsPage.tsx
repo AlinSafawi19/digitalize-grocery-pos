@@ -535,12 +535,18 @@ export default function NotificationsPage() {
     '&:hover': {
       backgroundColor: '#e3f2fd',
     },
+    '& .MuiSvgIcon-root': {
+      fontSize: { xs: 28, md: 32 },
+    },
   }), []);
 
   const menuIconButtonSx = useMemo(() => ({
     color: '#1a237e',
     '&:hover': {
       backgroundColor: '#e3f2fd',
+    },
+    '& .MuiSvgIcon-root': {
+      fontSize: { xs: 28, md: 32 },
     },
   }), []);
 
@@ -894,7 +900,7 @@ export default function NotificationsPage() {
               title="Go to Dashboard"
               sx={homeIconButtonSx}
             >
-              <Home sx={{ fontSize: '20px' }} />
+              <Home />
             </IconButton>
             <IconButton
               onClick={handleNavMenuOpen}
@@ -902,7 +908,7 @@ export default function NotificationsPage() {
               title="Navigation Menu"
               sx={menuIconButtonSx}
             >
-              <MenuIcon sx={{ fontSize: '20px' }} />
+              <MenuIcon />
             </IconButton>
             <Menu
               anchorEl={menuAnchorEl}

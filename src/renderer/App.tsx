@@ -12,6 +12,7 @@ import { SettingsService } from './services/settings.service';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import PermissionProtectedRoute from './components/common/PermissionProtectedRoute';
 import SetupWizard from './components/setup/SetupWizard';
+import UpdateNotification from './components/UpdateNotification/UpdateNotification';
 
 // PERFORMANCE FIX: Lazy load all page components for route-based code splitting
 // This reduces initial bundle size by 40-60% and improves first load time
@@ -910,6 +911,9 @@ function AppContent() {
           currentUsername={user.username}
         />
       )}
+      
+      {/* Update Notification - Non-blocking update notifications */}
+      <UpdateNotification />
     </>
   );
 }

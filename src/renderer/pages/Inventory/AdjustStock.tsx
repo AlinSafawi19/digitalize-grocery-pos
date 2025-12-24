@@ -41,14 +41,14 @@ const AdjustStock: React.FC = () => {
 
   const [inventoryItem, setInventoryItem] = useState<InventoryItem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adjustmentType, setAdjustmentType] = useState<'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase'>('adjustment');
+  const [adjustmentType, setAdjustmentType] = useState<'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase' | ''>('');
   const [quantity, setQuantity] = useState<string>('1');
   const [reason, setReason] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<Date | null>(null);
   const [processing, setProcessing] = useState(false);
 
   // Initial values for change detection
-  const [initialAdjustmentType] = useState<'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase'>('adjustment');
+  const [initialAdjustmentType] = useState<'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase' | ''>('');
   const [initialQuantity] = useState<string>('1');
   const [initialReason] = useState<string>('');
   const [initialExpiryDate] = useState<Date | null>(null);
@@ -59,13 +59,15 @@ const AdjustStock: React.FC = () => {
   const adjustmentTypeSelectWasOpenedRef = useRef(false);
 
   // Handle adjustment type change - reset quantity to appropriate default
-  const handleAdjustmentTypeChange = useCallback((newType: 'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase') => {
+  const handleAdjustmentTypeChange = useCallback((newType: 'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase' | '') => {
     setAdjustmentType(newType);
-    // Reset quantity to 1 when changing types
-    setQuantity('1');
-    // Clear expiry date if switching to a type that doesn't support it
-    if (newType !== 'purchase' && newType !== 'adjustment') {
-      setExpiryDate(null);
+    // Reset quantity to 1 when changing types (only if a type is selected)
+    if (newType) {
+      setQuantity('1');
+      // Clear expiry date if switching to a type that doesn't support it
+      if (newType !== 'purchase' && newType !== 'adjustment') {
+        setExpiryDate(null);
+      }
     }
     // Set flag to move to next field after dropdown closes
     adjustmentTypeSelectWasOpenedRef.current = true;
@@ -196,6 +198,15 @@ const AdjustStock: React.FC = () => {
   const handleAdjust = useCallback(async () => {
     if (!inventoryItem || !user?.id) return;
 
+    // Validate adjustment type is selected
+    if (!adjustmentType) {
+      showToast('Please select an adjustment type', 'error');
+      return;
+    }
+
+    // Type guard: at this point adjustmentType is guaranteed to be non-empty
+    const selectedType = adjustmentType as 'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase';
+
     let quantityNum = parseFloat(quantity);
     if (isNaN(quantityNum) || quantityNum === 0) {
       showToast('Please enter a valid quantity', 'error');
@@ -220,11 +231,11 @@ const AdjustStock: React.FC = () => {
 
     // Apply type-specific quantity logic
     // For damage and expiry, the input is positive but we need to send negative
-    if (adjustmentType === 'damage' || adjustmentType === 'expiry') {
+    if (selectedType === 'damage' || selectedType === 'expiry') {
       quantityNum = -Math.abs(quantityNum); // Ensure it's negative
     }
     // For purchase, ensure it's positive
-    else if (adjustmentType === 'purchase') {
+    else if (selectedType === 'purchase') {
       quantityNum = Math.abs(quantityNum); // Ensure it's positive
     }
     // For adjustment and transfer, allow both positive and negative
@@ -235,7 +246,7 @@ const AdjustStock: React.FC = () => {
       const input: AdjustStockInput = {
         productId: inventoryItem.productId,
         quantity: quantityNum,
-        type: adjustmentType,
+        type: selectedType,
         reason: reason || undefined,
         userId: user.id,
         expiryDate: expiryDate,
@@ -329,6 +340,7 @@ const AdjustStock: React.FC = () => {
   
   // Get label and helper text based on type
   const getQuantityLabel = useCallback(() => {
+    if (!adjustmentType) return 'Quantity';
     switch (adjustmentType) {
       case 'purchase':
         return 'Quantity to Add';
@@ -340,48 +352,55 @@ const AdjustStock: React.FC = () => {
       case 'transfer':
         return 'Transfer Quantity';
       default:
-        return 'Quantity Adjustment';
+        return 'Quantity';
     }
   }, [adjustmentType]);
   
   const getQuantityHelperText = useCallback(() => {
     if (!inventoryItem) return 'Enter quantity';
-    if (!quantity || quantity.trim() === '') {
-      switch (adjustmentType) {
-        case 'purchase':
-          return 'Enter the quantity of stock being added';
-        case 'damage':
-        case 'expiry':
-          return 'Enter the quantity of stock being removed';
-        case 'adjustment':
-          return 'Enter positive number to add, negative to subtract';
-        case 'transfer':
-          return 'Enter positive for incoming, negative for outgoing';
-        default:
-          return 'Enter quantity';
-      }
+    
+    // If no adjustment type selected, prompt to select one first
+    if (!adjustmentType) {
+      return 'Please select an adjustment type first';
     }
+    
+    // Get the instruction text based on adjustment type
+    let instructionText = '';
+    switch (adjustmentType) {
+      case 'purchase':
+        instructionText = 'Enter the quantity of stock being added';
+        break;
+      case 'damage':
+      case 'expiry':
+        instructionText = 'Enter the quantity of stock being removed';
+        break;
+      case 'adjustment':
+        instructionText = 'Enter positive number to add, negative to subtract (for corrections/mistakes)';
+        break;
+      case 'transfer':
+        instructionText = 'Enter positive for incoming, negative for outgoing';
+        break;
+      default:
+        instructionText = 'Enter quantity';
+    }
+    
+    // If quantity is empty or invalid, just show instruction
+    if (!quantity || quantity.trim() === '') {
+      return instructionText;
+    }
+    
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty === 0) {
-      switch (adjustmentType) {
-        case 'purchase':
-          return 'Enter the quantity of stock being added';
-        case 'damage':
-        case 'expiry':
-          return 'Enter the quantity of stock being removed';
-        case 'adjustment':
-          return 'Enter positive number to add, negative to subtract';
-        case 'transfer':
-          return 'Enter positive for incoming, negative for outgoing';
-        default:
-          return 'Enter quantity';
-      }
+      return instructionText;
     }
+    
+    // If quantity is valid, show both instruction and new quantity
     const displayQty = getDisplayQuantity();
     if (isNaN(displayQty) || displayQty === null || displayQty === undefined) {
-      return 'Enter a valid quantity';
+      return `${instructionText} • Enter a valid quantity`;
     }
-    return `New quantity will be: ${displayQty.toFixed(2)} ${inventoryItem.product.unit}`;
+    
+    return `${instructionText} • New quantity will be: ${displayQty.toFixed(2)} ${inventoryItem.product.unit}`;
   }, [quantity, adjustmentType, getDisplayQuantity, inventoryItem]);
 
   const quantityLabel = useMemo(() => getQuantityLabel(), [getQuantityLabel]);
@@ -699,16 +718,21 @@ const AdjustStock: React.FC = () => {
                     <Select
                       id="adjust-stock-type"
                       value={adjustmentType}
-                      label="Adjustment Type"
-                      onChange={(e: SelectChangeEvent) => handleAdjustmentTypeChange(e.target.value as 'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase')}
+                      label="Adjustment Type *"
+                      onChange={(e: SelectChangeEvent) => handleAdjustmentTypeChange(e.target.value as 'adjustment' | 'transfer' | 'damage' | 'expiry' | 'purchase' | '')}
                       open={adjustmentTypeSelectOpen}
                       onOpen={handleAdjustmentTypeSelectOpen}
                       onClose={handleAdjustmentTypeSelectClose}
                       disabled={processing}
                       tabIndex={1}
+                      required
+                      error={!adjustmentType}
                       sx={selectSx}
                     >
-                      <MenuItem value="adjustment" onClick={(e) => handleAdjustmentTypeMenuItemClick(e)} sx={menuItemSx}>Stock Adjustment</MenuItem>
+                      <MenuItem value="" disabled sx={menuItemSx}>
+                        <em>Select adjustment type...</em>
+                      </MenuItem>
+                      <MenuItem value="adjustment" onClick={(e) => handleAdjustmentTypeMenuItemClick(e)} sx={menuItemSx}>Stock Adjustment (Add/Subtract for corrections)</MenuItem>
                       <MenuItem value="purchase" onClick={(e) => handleAdjustmentTypeMenuItemClick(e)} sx={menuItemSx}>Purchase/Receiving</MenuItem>
                       <MenuItem value="damage" onClick={(e) => handleAdjustmentTypeMenuItemClick(e)} sx={menuItemSx}>Damage/Loss</MenuItem>
                       <MenuItem value="expiry" onClick={(e) => handleAdjustmentTypeMenuItemClick(e)} sx={menuItemSx}>Expiry</MenuItem>
@@ -731,9 +755,9 @@ const AdjustStock: React.FC = () => {
                       step: 0.01,
                       min: (adjustmentType === 'purchase' || adjustmentType === 'damage' || adjustmentType === 'expiry') ? 0 : undefined
                     }}
-                    disabled={processing}
+                    disabled={processing || !adjustmentType}
                     tabIndex={2}
-                    autoFocus
+                    autoFocus={!!adjustmentType}
                     sx={textFieldSx}
                   />
                 </Grid>
@@ -830,7 +854,7 @@ const AdjustStock: React.FC = () => {
                       id="adjust-stock-submit"
                       onClick={handleAdjust}
                       variant="contained"
-                      disabled={processing || !quantity || parseFloat(quantity) === 0}
+                      disabled={processing || !adjustmentType || !quantity || parseFloat(quantity) === 0}
                       tabIndex={6}
                       sx={submitButtonSx}
                     >

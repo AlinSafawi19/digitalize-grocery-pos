@@ -814,18 +814,14 @@ export default function NotificationCenter({ onNotificationClick }: Notification
               ))}
             </List>
           )}
-          {notifications.length > 0 && (
-            <>
-              <Divider sx={{ mt: 1, mb: 1, borderColor: '#e0e0e0' }} />
-              <Button
-                fullWidth
-                onClick={handleViewAll}
-                sx={viewAllButtonSx}
-              >
-                View All Notifications
-              </Button>
-            </>
-          )}
+          <Divider sx={{ mt: 1, mb: 1, borderColor: '#e0e0e0' }} />
+          <Button
+            fullWidth
+            onClick={handleViewAll}
+            sx={viewAllButtonSx}
+          >
+            View All Notifications
+          </Button>
         </Box>
       </Popover>
     </>

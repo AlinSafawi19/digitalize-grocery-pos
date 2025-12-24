@@ -22,6 +22,7 @@ import { registerAuditLogHandlers } from './audit-log.handlers';
 import { registerPermissionHandlers } from './permission.handlers';
 import { registerCashDrawerHandlers } from './cash-drawer.handlers';
 import { registerSyncHandlers } from './sync.handlers';
+import { registerUpdateHandlers } from './update.handlers';
 
 /**
  * Register all IPC handlers
@@ -58,6 +59,7 @@ export function registerIpcHandlers(): void {
   registerPermissionHandlers();
   registerCashDrawerHandlers();
   registerSyncHandlers();
+  registerUpdateHandlers();
 
   logger.info('IPC handlers registered');
 }

@@ -59,6 +59,7 @@ import { ReportCacheService } from './services/reports/report-cache.service';
 import { ReportSchedulerService } from './services/reports/report-scheduler.service';
 import { NotificationCountCronService } from './services/notifications/notification-count-cron.service';
 import { ensureSumatraPDF } from './ipc/file.handlers';
+import { UpdateService } from './services/update/update.service';
 
 // CRITICAL: Set app name explicitly to ensure consistent userData path
 // This prevents multiple databases from being created with different app names
@@ -297,6 +298,14 @@ async function initializeApp() {
     NotificationCountCronService.start();
     logger.info('Notification count cron service started');
 
+    // Initialize update service (non-blocking, checks in background)
+    if (app.isPackaged) {
+      UpdateService.initialize();
+      logger.info('Update service initialized');
+    } else {
+      logger.info('Update service skipped (development mode)');
+    }
+
     // Start operation queue processing for offline sync
     const { OperationQueueService } = await import('./services/sync/operation-queue.service');
     OperationQueueService.startPeriodicProcessing(60000); // Process every minute
@@ -359,6 +368,7 @@ app.on('activate', () => {
 // Handle app quit
 app.on('before-quit', async () => {
   logger.info('Application shutting down...');
+  UpdateService.cleanup();
   await databaseService.disconnect();
 });
 
