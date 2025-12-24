@@ -45,7 +45,7 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
-// No Prisma fix needed when ASAR is disabled
+// Note: ASAR is disabled in package.json to ensure Prisma client module resolution works correctly
 
 // Now import everything else
 import { app, BrowserWindow, session, nativeImage } from 'electron';
