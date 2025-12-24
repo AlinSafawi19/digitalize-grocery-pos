@@ -24,55 +24,42 @@ module.exports = async function(context) {
     }
   }
   
-  // Target locations in packaged app
-  // Need to copy to both ASAR location and unpacked location
-  const targetPrismaAsar = path.join(appOutDir, 'resources', 'app', 'node_modules', '.prisma');
-  const targetPrismaUnpacked = path.join(appOutDir, 'resources', 'app.asar.unpacked', 'node_modules', '.prisma');
+  // Target location in packaged app (ASAR is disabled, so files are directly in resources/app)
+  const targetPrisma = path.join(appOutDir, 'resources', 'app', 'node_modules', '.prisma');
   
   console.log('[Post-Pack] Copying Prisma client...');
   console.log('[Post-Pack] Source:', sourcePrisma || 'NOT FOUND');
-  console.log('[Post-Pack] Target (ASAR):', targetPrismaAsar);
-  console.log('[Post-Pack] Target (Unpacked):', targetPrismaUnpacked);
+  console.log('[Post-Pack] Target:', targetPrisma);
   
   if (!sourcePrisma || !fs.existsSync(sourcePrisma)) {
     console.error('[Post-Pack] ❌ Source Prisma client not found. Tried:');
     possibleSources.forEach(src => console.error(`  - ${src} (exists: ${fs.existsSync(src)})`));
     throw new Error(`Prisma client not found. Make sure to run 'prisma generate' before building.`);
   }
-  
+
   try {
-    // Copy to both ASAR and unpacked locations
-    const copyToLocation = (targetPath, locationName) => {
-      // Ensure target directory exists
-      fs.ensureDirSync(path.dirname(targetPath));
-      
-      // Remove old copy if exists
-      if (fs.existsSync(targetPath)) {
-        fs.removeSync(targetPath);
+    // Ensure target directory exists
+    fs.ensureDirSync(path.dirname(targetPrisma));
+    
+    // Remove old copy if exists
+    if (fs.existsSync(targetPrisma)) {
+      fs.removeSync(targetPrisma);
+    }
+    
+    // Copy entire .prisma directory with all its contents
+    fs.copySync(sourcePrisma, targetPrisma, {
+      overwrite: true,
+      filter: (src) => {
+        // Copy everything, including hidden files
+        return true;
       }
-      
-      // Copy entire .prisma directory with all its contents
-      fs.copySync(sourcePrisma, targetPath, {
-        overwrite: true,
-        filter: (src) => {
-          // Copy everything, including hidden files
-          return true;
-        }
-      });
-      
-      console.log(`[Post-Pack] ✅ Copied to ${locationName}`);
-    };
+    });
     
-    // Copy to ASAR location
-    copyToLocation(targetPrismaAsar, 'ASAR location');
+    console.log('[Post-Pack] ✅ Copied Prisma client to app directory');
     
-    // Copy to unpacked location (critical for runtime resolution)
-    copyToLocation(targetPrismaUnpacked, 'unpacked location');
-    
-    // Verify the copy - check for critical files in unpacked location (where it will be used)
-    const defaultJs = path.join(targetPrismaUnpacked, 'client', 'default.js');
-    const indexJs = path.join(targetPrismaUnpacked, 'client', 'index.js');
-    const indexBrowserJs = path.join(targetPrismaUnpacked, 'client', 'index-browser.js');
+    // Verify the copy - check for critical files
+    const defaultJs = path.join(targetPrisma, 'client', 'default.js');
+    const indexJs = path.join(targetPrisma, 'client', 'index.js');
     
     const criticalFiles = [
       { path: defaultJs, name: 'default.js' },
@@ -91,48 +78,39 @@ module.exports = async function(context) {
       console.log('[Post-Pack] ✅ Prisma client copied successfully');
       console.log(`[Post-Pack] ✅ Verified: default.js exists at ${defaultJs}`);
       
-      // Also copy @prisma/client package to both locations
+      // Also ensure @prisma/client package is in the app directory
       const sourcePrismaClient = path.join(projectDir, 'node_modules', '@prisma', 'client');
-      const targetPrismaClientAsar = path.join(appOutDir, 'resources', 'app', 'node_modules', '@prisma', 'client');
-      const targetPrismaClientUnpacked = path.join(appOutDir, 'resources', 'app.asar.unpacked', 'node_modules', '@prisma', 'client');
+      const targetPrismaClient = path.join(appOutDir, 'resources', 'app', 'node_modules', '@prisma', 'client');
       
-      const copyPrismaClientPackage = (targetPath, locationName) => {
-        if (!fs.existsSync(targetPath)) {
-          console.log(`[Post-Pack] Copying @prisma/client package to ${locationName}...`);
-          if (fs.existsSync(sourcePrismaClient)) {
-            // Ensure @prisma directory exists
-            fs.ensureDirSync(path.dirname(targetPath));
-            
-            // Copy the entire @prisma/client package
-            fs.copySync(sourcePrismaClient, targetPath, {
-              overwrite: true,
-              filter: (src) => {
-                // Copy everything except test files
-                return !src.includes('test') && !src.includes('spec');
-              }
-            });
-            
-            // Verify the copy
-            const clientIndex = path.join(targetPath, 'index.js');
-            if (fs.existsSync(clientIndex)) {
-              console.log(`[Post-Pack] ✅ @prisma/client package copied to ${locationName}`);
-            } else {
-              console.warn(`[Post-Pack] ⚠️  @prisma/client package copied to ${locationName} but index.js not found`);
+      if (!fs.existsSync(targetPrismaClient)) {
+        console.log('[Post-Pack] Copying @prisma/client package...');
+        if (fs.existsSync(sourcePrismaClient)) {
+          // Ensure @prisma directory exists
+          fs.ensureDirSync(path.dirname(targetPrismaClient));
+          
+          // Copy the entire @prisma/client package
+          fs.copySync(sourcePrismaClient, targetPrismaClient, {
+            overwrite: true,
+            filter: (src) => {
+              // Copy everything except test files
+              return !src.includes('test') && !src.includes('spec');
             }
+          });
+          
+          // Verify the copy
+          const clientIndex = path.join(targetPrismaClient, 'index.js');
+          if (fs.existsSync(clientIndex)) {
+            console.log('[Post-Pack] ✅ @prisma/client package copied');
           } else {
-            console.warn('[Post-Pack] ⚠️  Source @prisma/client package not found at:', sourcePrismaClient);
-            console.warn('[Post-Pack] ⚠️  This might cause module resolution issues');
+            console.warn('[Post-Pack] ⚠️  @prisma/client package copied but index.js not found');
           }
         } else {
-          console.log(`[Post-Pack] ✅ @prisma/client package already exists in ${locationName}`);
+          console.warn('[Post-Pack] ⚠️  Source @prisma/client package not found at:', sourcePrismaClient);
+          console.warn('[Post-Pack] ⚠️  This might cause module resolution issues');
         }
-      };
-      
-      // Copy to ASAR location
-      copyPrismaClientPackage(targetPrismaClientAsar, 'ASAR location');
-      
-      // Copy to unpacked location (critical for runtime)
-      copyPrismaClientPackage(targetPrismaClientUnpacked, 'unpacked location');
+      } else {
+        console.log('[Post-Pack] ✅ @prisma/client package already exists');
+      }
     } else {
       console.error('[Post-Pack] ❌ Prisma client copy verification failed');
       throw new Error('Prisma client copy verification failed - critical files missing');

@@ -117,6 +117,7 @@
     },
     "asar": false,
     "compression": "normal",
+    "afterPack": "./scripts/copy-prisma-after-pack.js",
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -144,7 +145,14 @@
       "oneClick": true,
       "perMachine": false,
       "differentialPackage": false,
-      "artifactName": "grocery-pos-${version}.${ext}"
+      "artifactName": "grocery-pos-${version}.${ext}",
+      "allowToChangeInstallationDirectory": false,
+      "allowElevation": true,
+      "runAfterFinish": false,
+      "warningsAsErrors": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "include": "build/nsis-close-app.nsh"
     },
     "publish": [
       {
