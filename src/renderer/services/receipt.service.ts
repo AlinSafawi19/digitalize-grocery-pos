@@ -91,5 +91,54 @@ export class ReceiptService {
       };
     }
   }
+
+  /**
+   * Reprint receipt for a transaction
+   * Generates the receipt if it doesn't exist, then prints it
+   */
+  static async reprintReceipt(
+    transactionId: number,
+    requestedById: number,
+    printerName?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First, check if receipt already exists
+      const pathResult = await this.getReceiptPath(transactionId, requestedById);
+      
+      let filepath: string | null = null;
+      
+      if (pathResult.success && pathResult.filepath) {
+        // Receipt exists, use it
+        filepath = pathResult.filepath;
+      } else {
+        // Receipt doesn't exist, generate it
+        const generateResult = await this.generateReceipt(transactionId, requestedById);
+        if (!generateResult.success || !generateResult.filepath) {
+          return {
+            success: false,
+            error: generateResult.error || 'Failed to generate receipt',
+          };
+        }
+        filepath = generateResult.filepath;
+      }
+
+      // Now print the receipt
+      if (!filepath) {
+        return {
+          success: false,
+          error: 'Receipt file path not available',
+        };
+      }
+
+      const printResult = await this.printReceipt(filepath, printerName);
+      return printResult;
+    } catch (error) {
+      console.error('Error reprinting receipt:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  }
 }
 

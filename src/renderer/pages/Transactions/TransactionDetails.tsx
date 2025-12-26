@@ -20,10 +20,12 @@ import {
   TextField,
   Paper,
 } from '@mui/material';
-import { ArrowBack, Block } from '@mui/icons-material';
+import { ArrowBack, Block, Print } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { TransactionService, Transaction, TransactionItem, Payment } from '../../services/transaction.service';
+import { ReceiptService } from '../../services/receipt.service';
+import { SettingsService } from '../../services/settings.service';
 import MainLayout from '../../components/layout/MainLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { ROUTES } from '../../utils/constants';
@@ -43,6 +45,7 @@ const TransactionDetails: React.FC = () => {
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voiding, setVoiding] = useState(false);
+  const [reprintingReceipt, setReprintingReceipt] = useState(false);
 
   // Abort controller for request cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -190,6 +193,33 @@ const TransactionDetails: React.FC = () => {
   const handleVoidReasonChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setVoidReason(e.target.value);
   }, []);
+
+  const handleReprintReceipt = useCallback(async () => {
+    if (!transaction || !userId) return;
+
+    setReprintingReceipt(true);
+    try {
+      // Get printer settings
+      const printerResult = await SettingsService.getPrinterSettings(userId);
+      const printerName = printerResult.printerSettings?.printerName;
+
+      const result = await ReceiptService.reprintReceipt(
+        transaction.id,
+        userId,
+        printerName
+      );
+
+      if (result.success) {
+        showToast('Receipt printed successfully', 'success');
+      } else {
+        showToast(result.error || 'Failed to print receipt', 'error');
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to print receipt', 'error');
+    } finally {
+      setReprintingReceipt(false);
+    }
+  }, [transaction, userId, showToast]);
 
   // Memoize sx prop objects to avoid recreation on every render
   const loadingBoxSx = useMemo(() => ({
@@ -406,14 +436,25 @@ const TransactionDetails: React.FC = () => {
             </Typography>
           </Box>
           {transaction.status === 'completed' && (
-            <Button
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="text"
+                startIcon={<Print sx={{ fontSize: '18px' }} />}
+                onClick={handleReprintReceipt}
+                disabled={reprintingReceipt}
+                sx={voidButtonSx}
+              >
+                Reprint Receipt
+              </Button>
+              <Button
                 variant="text"
                 startIcon={<Block sx={{ fontSize: '18px' }} />}
-              onClick={handleVoid}
+                onClick={handleVoid}
                 sx={voidButtonSx}
-            >
-              Void Transaction
-            </Button>
+              >
+                Void Transaction
+              </Button>
+            </Box>
           )}
         </Box>
 

@@ -19,11 +19,13 @@ import {
   Checkbox,
   Tooltip,
 } from '@mui/material';
-import { Visibility, Block, Refresh } from '@mui/icons-material';
+import { Visibility, Block, Refresh, Print } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { TransactionService, Transaction, TransactionListOptions } from '../../services/transaction.service';
 import { UserService, User } from '../../services/user.service';
+import { ReceiptService } from '../../services/receipt.service';
+import { SettingsService } from '../../services/settings.service';
 import MainLayout from '../../components/layout/MainLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { formatLBPCurrency } from '../../utils/currency';
@@ -43,13 +45,15 @@ interface TransactionRowProps {
   onSelect: (id: number) => void;
   onView: (transaction: Transaction) => void;
   onVoid: (transaction: Transaction) => void;
+  onReprint: (transaction: Transaction) => void;
+  reprinting: boolean;
   getStatusColor: (status: string) => string;
   getTypeColor: (type: string) => string;
 }
 
 /* eslint-disable react/prop-types */
 const TransactionRow = memo<TransactionRowProps>(
-  ({ transaction, selected, canVoid, onSelect, onView, onVoid, getStatusColor, getTypeColor }) => {
+  ({ transaction, selected, canVoid, onSelect, onView, onVoid, onReprint, reprinting, getStatusColor, getTypeColor }) => {
     // Memoize sx prop objects
     const chipSx = useMemo(
       () => ({
@@ -170,18 +174,34 @@ const TransactionRow = memo<TransactionRowProps>(
           </Box>
         </TableCell>
         <TableCell align="center">
-          <Tooltip title={`View Transaction ${transaction.transactionNumber} - View detailed information including items, payments, and transaction history.`}>
-            <IconButton size="small" onClick={() => onView(transaction)} sx={{ padding: '8px', color: '#616161' }}>
-              <Visibility />
-            </IconButton>
-          </Tooltip>
-          {transaction.status === 'completed' && canVoid && (
-            <Tooltip title={`Void Transaction ${transaction.transactionNumber} - Cancel this transaction. This action cannot be undone and will reverse all transaction effects including inventory changes.`}>
-              <IconButton size="small" onClick={() => onVoid(transaction)} sx={{ padding: '8px', color: '#d32f2f' }}>
-                <Block />
+          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+            <Tooltip title={`View Transaction ${transaction.transactionNumber} - View detailed information including items, payments, and transaction history.`}>
+              <IconButton size="small" onClick={() => onView(transaction)} sx={{ padding: '8px', color: '#616161' }}>
+                <Visibility />
               </IconButton>
             </Tooltip>
-          )}
+            {transaction.status === 'completed' && (
+              <Tooltip title={`Reprint Receipt ${transaction.transactionNumber} - Generate and print a receipt for this transaction.`}>
+                <span>
+                  <IconButton 
+                    size="small" 
+                    onClick={() => onReprint(transaction)} 
+                    disabled={reprinting}
+                    sx={{ padding: '8px', color: '#1a237e' }}
+                  >
+                    <Print />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            )}
+            {transaction.status === 'completed' && canVoid && (
+              <Tooltip title={`Void Transaction ${transaction.transactionNumber} - Cancel this transaction. This action cannot be undone and will reverse all transaction effects including inventory changes.`}>
+                <IconButton size="small" onClick={() => onVoid(transaction)} sx={{ padding: '8px', color: '#d32f2f' }}>
+                  <Block />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         </TableCell>
       </TableRow>
     );
@@ -228,6 +248,7 @@ const TransactionList: React.FC = () => {
   const [selectedTransactions, setSelectedTransactions] = useState<Set<number>>(new Set());
   const [bulkVoidDialogOpen, setBulkVoidDialogOpen] = useState(false);
   const [bulkVoidReason, setBulkVoidReason] = useState('');
+  const [reprintingReceipt, setReprintingReceipt] = useState<number | null>(null);
 
   const loadUsers = useCallback(async (page: number, reset: boolean = false, search: string = '') => {
     if (!user?.id) return;
@@ -490,6 +511,33 @@ const TransactionList: React.FC = () => {
   const handleBulkVoidReasonChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setBulkVoidReason(e.target.value);
   }, []);
+
+  const handleReprintReceipt = useCallback(async (transaction: Transaction) => {
+    if (!user?.id) return;
+
+    setReprintingReceipt(transaction.id);
+    try {
+      // Get printer settings
+      const printerResult = await SettingsService.getPrinterSettings(user.id);
+      const printerName = printerResult.printerSettings?.printerName;
+
+      const result = await ReceiptService.reprintReceipt(
+        transaction.id,
+        user.id,
+        printerName
+      );
+
+      if (result.success) {
+        showToast('Receipt printed successfully', 'success');
+      } else {
+        showToast(result.error || 'Failed to print receipt', 'error');
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to print receipt', 'error');
+    } finally {
+      setReprintingReceipt(null);
+    }
+  }, [user?.id, showToast]);
 
   // Memoize cashier value to prevent unnecessary re-renders
   const cashierValue = useMemo(() => {
@@ -936,6 +984,8 @@ const TransactionList: React.FC = () => {
                         onSelect={handleSelectTransaction}
                         onView={handleViewDetails}
                         onVoid={handleVoid}
+                        onReprint={handleReprintReceipt}
+                        reprinting={reprintingReceipt === transaction.id}
                         getStatusColor={getStatusColor}
                         getTypeColor={getTypeColor}
                       />
