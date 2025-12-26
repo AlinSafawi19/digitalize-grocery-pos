@@ -12,7 +12,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { ArrowBack, Add } from '@mui/icons-material';
+import { ArrowBack, Add, Refresh, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -23,6 +23,7 @@ import { ProductService, Product, CreateProductInput, Category, Supplier } from 
 import { CategoryService } from '../../services/category.service';
 import { SupplierService } from '../../services/supplier.service';
 import { InventoryService } from '../../services/inventory.service';
+import { BarcodeService, BarcodeFormat } from '../../services/barcode.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
 import { usePermission } from '../../hooks/usePermission';
@@ -72,6 +73,16 @@ const ProductForm: React.FC = () => {
     price?: string;
     costPrice?: string;
   }>({});
+  
+  // Barcode validation state
+  const [barcodeValidation, setBarcodeValidation] = useState<{
+    valid: boolean;
+    format?: BarcodeFormat;
+    error?: string;
+    checking: boolean;
+  }>({ valid: false, checking: false });
+  
+  const [generatingBarcode, setGeneratingBarcode] = useState(false);
 
   // Category pagination state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -577,6 +588,73 @@ const ProductForm: React.FC = () => {
     });
   }, []);
 
+  // Barcode validation timeout ref
+  const barcodeValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Validate barcode with debouncing
+  const validateBarcodeDebounced = useCallback((barcode: string) => {
+    // Clear existing timeout
+    if (barcodeValidationTimeoutRef.current) {
+      clearTimeout(barcodeValidationTimeoutRef.current);
+    }
+
+    // Set new timeout
+    barcodeValidationTimeoutRef.current = setTimeout(async () => {
+      if (!barcode || barcode.trim() === '') {
+        setBarcodeValidation({ valid: false, checking: false });
+        return;
+      }
+
+      setBarcodeValidation((prev) => ({ ...prev, checking: true }));
+
+      // Check for duplicate barcode (only if not in edit mode or barcode changed)
+      if (!isEditMode || (product && product.barcode !== barcode)) {
+        try {
+          const existingProductResult = await ProductService.getProductByBarcode(barcode, user?.id || 0);
+          const existingProduct = existingProductResult.success ? existingProductResult.product : null;
+          if (existingProduct && existingProduct.id !== product?.id) {
+            setBarcodeValidation({
+              valid: false,
+              checking: false,
+              error: 'This barcode is already in use by another product',
+            });
+            setFieldErrors((prev) => ({ ...prev, barcode: 'Barcode already exists' }));
+            return;
+          }
+        } catch (error) {
+          // Ignore errors from duplicate check, continue with format validation
+        }
+      }
+
+      // Validate barcode format
+      const validationResult = await BarcodeService.validateBarcode(barcode);
+      if (validationResult.success && validationResult.result) {
+        setBarcodeValidation({
+          valid: validationResult.result.valid,
+          format: validationResult.result.format,
+          error: validationResult.result.error,
+          checking: false,
+        });
+        
+        if (!validationResult.result.valid && validationResult.result.error) {
+          setFieldErrors((prev) => ({ ...prev, barcode: validationResult.result?.error }));
+        } else {
+          setFieldErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors.barcode;
+            return newErrors;
+          });
+        }
+      } else {
+        setBarcodeValidation({
+          valid: false,
+          checking: false,
+          error: validationResult.error || 'Failed to validate barcode',
+        });
+      }
+    }, 500);
+  }, [isEditMode, product, user?.id]);
+
   const handleBarcodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData((prev) => ({ ...prev, barcode: value || null }));
@@ -586,7 +664,46 @@ const ProductForm: React.FC = () => {
       }
       return prev;
     });
-  }, []);
+    
+    // Reset validation state
+    setBarcodeValidation({ valid: false, checking: false });
+    
+    // Validate barcode with debouncing
+    if (value && value.trim() !== '') {
+      validateBarcodeDebounced(value);
+    }
+  }, [validateBarcodeDebounced]);
+  
+  const handleGenerateBarcode = useCallback(async (format: BarcodeFormat = 'EAN13') => {
+    if (!user?.id) return;
+    
+    setGeneratingBarcode(true);
+    try {
+      const result = await BarcodeService.generateRandomBarcode(format);
+      if (result.success && result.barcode) {
+        setFormData((prev) => ({ ...prev, barcode: result.barcode || '' }));
+        setFieldErrors((prev) => {
+          if (prev.barcode) {
+            return { ...prev, barcode: undefined };
+          }
+          return prev;
+        });
+        
+        // Validate the generated barcode
+        if (result.barcode) {
+          validateBarcodeDebounced(result.barcode);
+        }
+        
+        showToast(`Generated ${format} barcode`, 'success');
+      } else {
+        showToast(result.error || 'Failed to generate barcode', 'error');
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to generate barcode', 'error');
+    } finally {
+      setGeneratingBarcode(false);
+    }
+  }, [user?.id, showToast, validateBarcodeDebounced]);
 
   const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -610,6 +727,9 @@ const ProductForm: React.FC = () => {
     // Validate barcode
     if (!formData.barcode || formData.barcode.trim() === '') {
       errors.barcode = 'Barcode is required';
+    } else if (!barcodeValidation.valid && !barcodeValidation.checking) {
+      // If validation has completed and barcode is invalid, show error
+      errors.barcode = barcodeValidation.error || 'Invalid barcode format';
     }
 
     // Validate product name
@@ -629,7 +749,7 @@ const ProductForm: React.FC = () => {
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, barcodeValidation]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -827,6 +947,9 @@ const ProductForm: React.FC = () => {
       }
       if (productAbortControllerRef.current) {
         productAbortControllerRef.current.abort();
+      }
+      if (barcodeValidationTimeoutRef.current) {
+        clearTimeout(barcodeValidationTimeoutRef.current);
       }
       if (categoryScrollThrottle) {
         clearTimeout(categoryScrollThrottle);
@@ -1405,21 +1528,54 @@ const ProductForm: React.FC = () => {
                       </Tooltip>
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Tooltip title="Barcode - Enter a unique barcode (EAN, UPC, or custom) for this product. This barcode can be scanned at the POS to quickly add the product to a transaction. This is a required field.">
-                        <TextField
-                          fullWidth
-                          id="product-barcode"
-                          label="Barcode *"
-                          value={formData.barcode}
-                          onChange={handleBarcodeChange}
-                          onKeyDown={handleBarcodeKeyDown}
-                          error={!!fieldErrors.barcode}
-                          helperText={fieldErrors.barcode}
-                          disabled={loading}
-                          tabIndex={2}
-                          sx={textFieldSx}
-                        />
-                      </Tooltip>
+                      <Box>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Tooltip title="Barcode - Enter a unique barcode (EAN, UPC, or custom) for this product. This barcode can be scanned at the POS to quickly add the product to a transaction. This is a required field.">
+                              <TextField
+                                fullWidth
+                                id="product-barcode"
+                                label="Barcode *"
+                                value={formData.barcode}
+                                onChange={handleBarcodeChange}
+                                onKeyDown={handleBarcodeKeyDown}
+                                error={!!fieldErrors.barcode}
+                                helperText={
+                                  fieldErrors.barcode ||
+                                  (barcodeValidation.checking ? 'Validating...' : 
+                                   barcodeValidation.valid && barcodeValidation.format 
+                                     ? `Format: ${barcodeValidation.format}` 
+                                     : barcodeValidation.error || '')
+                                }
+                                disabled={loading}
+                                tabIndex={2}
+                                sx={textFieldSx}
+                                InputProps={{
+                                  endAdornment: barcodeValidation.checking ? (
+                                    <CircularProgress size={20} />
+                                  ) : barcodeValidation.valid ? (
+                                    <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
+                                  ) : formData.barcode && !barcodeValidation.checking ? (
+                                    <ErrorIcon sx={{ color: 'error.main', fontSize: 20 }} />
+                                  ) : null,
+                                }}
+                              />
+                            </Tooltip>
+                          </Box>
+                          <Tooltip title="Generate Barcode - Automatically generate a random EAN-13 barcode for this product. EAN-13 is the most common retail barcode format.">
+                            <span>
+                              <IconButton
+                                onClick={() => handleGenerateBarcode('EAN13')}
+                                disabled={loading || generatingBarcode}
+                                sx={{ mt: 1 }}
+                                color="primary"
+                              >
+                                {generatingBarcode ? <CircularProgress size={20} /> : <Refresh />}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </Box>
                     </Grid>
                     <Grid item xs={12}>
                       <Tooltip title="Description - Enter a detailed description of the product. This is optional but helpful for inventory management and product identification.">
