@@ -32,6 +32,7 @@ import {
   VpnKey,
   Image as ImageIcon,
   Delete as DeleteIcon,
+  Computer as ComputerIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -45,6 +46,7 @@ import { setBusinessRules as setBusinessRulesAction } from '../../store/slices/s
 import { ROUTES } from '../../utils/constants';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
+import SessionManagement from './SessionManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -889,6 +891,13 @@ export default function SettingsPage() {
               id="settings-tab-5"
               aria-controls="settings-tabpanel-5"
             />
+            <Tab
+              icon={<ComputerIcon />}
+              iconPosition="start"
+              label="Sessions"
+              id="settings-tab-6"
+              aria-controls="settings-tabpanel-6"
+            />
           </Tabs>
 
           {/* Store Information Tab */}
@@ -1447,6 +1456,11 @@ export default function SettingsPage() {
                 </Tooltip>
               </Grid>
             </Grid>
+          </TabPanel>
+
+          {/* Session Management Tab */}
+          <TabPanel value={activeTab} index={6}>
+            <SessionManagement />
           </TabPanel>
         </Paper>
       </Box>

@@ -30,6 +30,7 @@ model User {
   scheduledReports ScheduledReport[]
   backupSchedules  BackupSchedule[]
   userPermissions  UserPermission[]
+  sessions         Session[]
 
   @@index([username])
   @@index([phone])
@@ -76,6 +77,29 @@ model Setting {
   updatedAt   DateTime @updatedAt
 
   @@index([key])
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  userId        Int
+  token         String   @unique
+  ipAddress     String?
+  userAgent     String?
+  deviceInfo    String? // JSON string with device information
+  isActive      Boolean  @default(true)
+  lastActivity  DateTime @default(now())
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  terminatedAt  DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@index([lastActivity])
 }
 
 model AuditLog {

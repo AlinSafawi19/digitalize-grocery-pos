@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { SessionService, CreateSessionOptions } from '../session/session.service';
 
 export interface LoginCredentials {
   username: string;
@@ -19,6 +20,7 @@ export interface UserSession {
 export interface LoginResult {
   success: boolean;
   user?: UserSession;
+  sessionToken?: string;
   error?: string;
 }
 
@@ -27,14 +29,11 @@ export interface LoginResult {
  * Handles user authentication, session management, and authorization
  */
 export class AuthService {
-  // In-memory session storage (for desktop app, this is sufficient)
-  // In production, you might want to use encrypted storage
-  private static activeSessions: Map<number, { userId: number; lastActivity: Date }> = new Map();
 
   /**
    * Authenticate user with username and password
    */
-  static async login(credentials: LoginCredentials): Promise<LoginResult> {
+  static async login(credentials: LoginCredentials, sessionOptions?: Omit<CreateSessionOptions, 'userId'>): Promise<LoginResult> {
     try {
       // Validate required fields
       if (!credentials.username || credentials.username.trim() === '') {
@@ -86,10 +85,13 @@ export class AuthService {
         };
       }
 
-      // Create session
-      this.activeSessions.set(user.id, {
+      // Create session using SessionService
+      const session = await SessionService.createSession({
         userId: user.id,
-        lastActivity: new Date(),
+        ipAddress: sessionOptions?.ipAddress,
+        userAgent: sessionOptions?.userAgent,
+        deviceInfo: sessionOptions?.deviceInfo,
+        timeoutMinutes: credentials.rememberMe ? 1440 : 30, // 24 hours if remember me, else 30 minutes
       });
 
       // Log successful login
@@ -98,12 +100,17 @@ export class AuthService {
         action: 'login',
         entity: 'user',
         entityId: user.id,
-        details: JSON.stringify({ username: user.username, rememberMe: credentials.rememberMe || false }),
+        details: JSON.stringify({ 
+          username: user.username, 
+          rememberMe: credentials.rememberMe || false,
+          sessionId: session.id,
+        }),
       });
 
       logger.info('User logged in successfully', {
         userId: user.id,
         username: user.username,
+        sessionId: session.id,
       });
 
       return {
@@ -114,6 +121,7 @@ export class AuthService {
           phone: user.phone,
           isActive: user.isActive,
         },
+        sessionToken: session.token,
       };
     } catch (error) {
       logger.error('Error during login', error);
@@ -127,20 +135,29 @@ export class AuthService {
   /**
    * Logout user and clear session
    */
-  static async logout(userId: number): Promise<void> {
+  static async logout(userId: number, sessionToken?: string): Promise<void> {
     try {
+      // Terminate session if token provided
+      if (sessionToken) {
+        const session = await SessionService.getSessionByToken(sessionToken);
+        if (session && session.userId === userId) {
+          await SessionService.terminateSession(session.id, 'User logout');
+        }
+      } else {
+        // Terminate all user sessions
+        await SessionService.terminateAllUserSessions(userId);
+      }
+
       // Log logout action
       await AuditLogService.log({
         userId,
         action: 'logout',
         entity: 'user',
         entityId: userId,
+        details: JSON.stringify({ sessionToken: sessionToken || 'all_sessions' }),
       });
 
-      // Remove session
-      this.activeSessions.delete(userId);
-
-      logger.info('User logged out', { userId });
+      logger.info('User logged out', { userId, sessionToken: sessionToken || 'all_sessions' });
     } catch (error) {
       logger.error('Error during logout', error);
       throw error;
@@ -150,18 +167,24 @@ export class AuthService {
   /**
    * Get current user session
    */
-  static async getCurrentUser(userId: number): Promise<UserSession | null> {
+  static async getCurrentUser(sessionToken: string): Promise<UserSession | null> {
     try {
-      const prisma = databaseService.getClient();
+      // Get session by token
+      const session = await SessionService.getSessionByToken(sessionToken);
+      if (!session) {
+        return null;
+      }
 
-      // Check if session exists
-      if (!this.activeSessions.has(userId)) {
+      // Validate session
+      const isValid = await SessionService.validateSession(session.id);
+      if (!isValid) {
         return null;
       }
 
       // Get user from database
+      const prisma = databaseService.getClient();
       const user = await prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: session.userId },
         select: {
           id: true,
           username: true,
@@ -171,15 +194,9 @@ export class AuthService {
       });
 
       if (!user || !user.isActive) {
-        // Remove invalid session
-        this.activeSessions.delete(userId);
+        // Terminate invalid session
+        await SessionService.terminateSession(session.id, 'User inactive');
         return null;
-      }
-
-      // Update last activity
-      const session = this.activeSessions.get(userId);
-      if (session) {
-        session.lastActivity = new Date();
       }
 
       return {
@@ -195,52 +212,20 @@ export class AuthService {
   }
 
   /**
-   * Validate user session
+   * Validate user session by token
    */
-  static async validateSession(userId: number): Promise<boolean> {
+  static async validateSession(sessionToken: string): Promise<boolean> {
     try {
-      // Check if session exists
-      if (!this.activeSessions.has(userId)) {
+      const session = await SessionService.getSessionByToken(sessionToken);
+      if (!session) {
         return false;
       }
 
-      // Check if user still exists and is active
-      const prisma = databaseService.getClient();
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, isActive: true },
-      });
-
-      if (!user || !user.isActive) {
-        this.activeSessions.delete(userId);
-        return false;
-      }
-
-      return true;
+      return await SessionService.validateSession(session.id);
     } catch (error) {
       logger.error('Error validating session', error);
       return false;
     }
-  }
-
-  /**
-   * Clear inactive sessions (cleanup method)
-   */
-  static clearInactiveSessions(maxInactivityMinutes: number = 30): void {
-    const now = new Date();
-    const sessionsToRemove: number[] = [];
-
-    this.activeSessions.forEach((session, userId) => {
-      const inactivityMinutes = (now.getTime() - session.lastActivity.getTime()) / (1000 * 60);
-      if (inactivityMinutes > maxInactivityMinutes) {
-        sessionsToRemove.push(userId);
-      }
-    });
-
-    sessionsToRemove.forEach((userId) => {
-      this.activeSessions.delete(userId);
-      logger.info('Cleared inactive session', { userId });
-    });
   }
 }
 

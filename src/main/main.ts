@@ -59,6 +59,7 @@ import { ReportCacheService } from './services/reports/report-cache.service';
 import { ReportSchedulerService } from './services/reports/report-scheduler.service';
 import { BackupSchedulerService } from './services/backup/backup-scheduler.service';
 import { NotificationCountCronService } from './services/notifications/notification-count-cron.service';
+import { SessionCleanupService } from './services/session/session-cleanup.service';
 import { ensureSumatraPDF } from './ipc/file.handlers';
 import { UpdateService } from './services/update/update.service';
 
@@ -302,6 +303,10 @@ async function initializeApp() {
     // Start notification count cron service
     NotificationCountCronService.start();
     logger.info('Notification count cron service started');
+
+    // Start session cleanup service
+    SessionCleanupService.start();
+    logger.info('Session cleanup service started');
 
     // Initialize update service (non-blocking, checks in background)
     if (app.isPackaged) {

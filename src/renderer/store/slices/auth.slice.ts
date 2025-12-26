@@ -11,6 +11,7 @@ export interface User {
 
 export interface AuthState {
   user: User | null;
+  sessionToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -20,6 +21,7 @@ interface LoginResult {
   success: boolean;
   error?: string;
   user?: User;
+  sessionToken?: string;
 }
 
 interface LogoutResult {
@@ -41,6 +43,7 @@ interface ValidateSessionResult {
 
 const initialState: AuthState = {
   user: null,
+  sessionToken: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -54,32 +57,43 @@ export const login = createAsyncThunk(
     if (!result.success) {
       throw new Error(result.error || 'Login failed');
     }
-    // Store rememberMe preference in localStorage
+    // Store session token and rememberMe preference in localStorage
+    if (result.sessionToken) {
+      localStorage.setItem('sessionToken', result.sessionToken);
+    }
     if (credentials.rememberMe && result.user) {
       localStorage.setItem('rememberMe', 'true');
-      // Store userId for persistent session
+      // Store userId for reference (but use sessionToken for auth)
       localStorage.setItem('userId', result.user.id.toString());
     } else {
       localStorage.removeItem('rememberMe');
       localStorage.removeItem('userId');
     }
-    return { user: result.user!, rememberMe: credentials.rememberMe || false };
+    return { 
+      user: result.user!, 
+      sessionToken: result.sessionToken || null,
+      rememberMe: credentials.rememberMe || false 
+    };
   }
 );
 
-export const logout = createAsyncThunk('auth/logout', async (userId: number) => {
-  const result = await window.electron.ipcRenderer.invoke('auth:logout', userId) as LogoutResult;
+export const logout = createAsyncThunk('auth/logout', async (userId: number, { getState }) => {
+  const state = getState() as { auth: AuthState };
+  const sessionToken = state.auth.sessionToken;
+  
+  const result = await window.electron.ipcRenderer.invoke('auth:logout', userId, sessionToken) as LogoutResult;
   if (!result.success) {
     throw new Error(result.error || 'Logout failed');
   }
-  // Clear rememberMe preference and userId on logout
+  // Clear session token, rememberMe preference and userId on logout
+  localStorage.removeItem('sessionToken');
   localStorage.removeItem('rememberMe');
   localStorage.removeItem('userId');
   return true;
 });
 
-export const getCurrentUser = createAsyncThunk('auth/getCurrentUser', async (userId: number) => {
-  const result = await window.electron.ipcRenderer.invoke('auth:getCurrentUser', userId) as GetCurrentUserResult;
+export const getCurrentUser = createAsyncThunk('auth/getCurrentUser', async (sessionToken: string) => {
+  const result = await window.electron.ipcRenderer.invoke('auth:getCurrentUser', sessionToken) as GetCurrentUserResult;
   if (!result.success) {
     throw new Error(result.error || 'Failed to get current user');
   }
@@ -88,8 +102,8 @@ export const getCurrentUser = createAsyncThunk('auth/getCurrentUser', async (use
 
 export const validateSession = createAsyncThunk(
   'auth/validateSession',
-  async (userId: number) => {
-    const result = await window.electron.ipcRenderer.invoke('auth:validateSession', userId) as ValidateSessionResult;
+  async (sessionToken: string) => {
+    const result = await window.electron.ipcRenderer.invoke('auth:validateSession', sessionToken) as ValidateSessionResult;
     if (!result.success) {
       throw new Error(result.error || 'Session validation failed');
     }
@@ -110,6 +124,7 @@ const authSlice = createSlice({
     },
     clearAuth: (state) => {
       state.user = null;
+      state.sessionToken = null;
       state.isAuthenticated = false;
       state.error = null;
       // Clear permission caches when auth is cleared
@@ -127,6 +142,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
+        state.sessionToken = action.payload.sessionToken;
         state.isAuthenticated = true;
         state.error = null;
       })
@@ -144,6 +160,7 @@ const authSlice = createSlice({
       .addCase(logout.fulfilled, (state) => {
         state.isLoading = false;
         state.user = null;
+        state.sessionToken = null;
         state.isAuthenticated = false;
         state.error = null;
         // Clear permission caches on logout
@@ -180,11 +197,13 @@ const authSlice = createSlice({
       .addCase(validateSession.fulfilled, (state, action) => {
         if (!action.payload) {
           state.user = null;
+          state.sessionToken = null;
           state.isAuthenticated = false;
         }
       })
       .addCase(validateSession.rejected, (state) => {
         state.user = null;
+        state.sessionToken = null;
         state.isAuthenticated = false;
       });
   },

@@ -209,32 +209,32 @@ function AppContent() {
     if (isLicenseActivated === true) {
       // Only restore session if "Remember me" was checked
       const rememberMe = localStorage.getItem('rememberMe') === 'true';
-      const storedUserId = localStorage.getItem('userId');
+      const storedSessionToken = localStorage.getItem('sessionToken');
       
-      if (rememberMe && storedUserId) {
-        const userId = parseInt(storedUserId, 10);
-        if (!isNaN(userId)) {
-          // Validate session first
-          dispatch(validateSession(userId))
-            .unwrap()
-            .then((isValid) => {
-              if (isValid) {
-                // Get current user if session is valid
-                dispatch(getCurrentUser(userId));
-              } else {
-                // Clear invalid session
-                localStorage.removeItem('userId');
-                localStorage.removeItem('rememberMe');
-              }
-            })
-            .catch(() => {
+      if (rememberMe && storedSessionToken) {
+        // Validate session first
+        dispatch(validateSession(storedSessionToken))
+          .unwrap()
+          .then((isValid) => {
+            if (isValid) {
+              // Get current user if session is valid
+              dispatch(getCurrentUser(storedSessionToken));
+            } else {
               // Clear invalid session
+              localStorage.removeItem('sessionToken');
               localStorage.removeItem('userId');
               localStorage.removeItem('rememberMe');
-            });
-        }
+            }
+          })
+          .catch(() => {
+            // Clear invalid session
+            localStorage.removeItem('sessionToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('rememberMe');
+          });
       } else if (!rememberMe) {
-        // Clear userId if rememberMe is not set (user didn't check remember me)
+        // Clear session token and userId if rememberMe is not set (user didn't check remember me)
+        localStorage.removeItem('sessionToken');
         localStorage.removeItem('userId');
       }
     }

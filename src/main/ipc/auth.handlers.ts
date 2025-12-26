@@ -12,9 +12,24 @@ export function registerAuthHandlers(): void {
    * Login handler
    * IPC: auth:login
    */
-  ipcMain.handle('auth:login', async (_event, credentials: LoginCredentials) => {
+  ipcMain.handle('auth:login', async (event, credentials: LoginCredentials) => {
     try {
-      const result = await AuthService.login(credentials);
+      // Get IP address and user agent from the request
+      const ipAddress = event.sender.getURL() || 'localhost';
+      const userAgent = event.sender.getUserAgent() || 'Electron';
+      
+      // Get device info
+      const deviceInfo = {
+        platform: process.platform,
+        arch: process.arch,
+        userAgent,
+      };
+
+      const result = await AuthService.login(credentials, {
+        ipAddress,
+        userAgent,
+        deviceInfo,
+      });
       return result;
     } catch (error) {
       logger.error('Error in auth:login handler', error);
@@ -29,9 +44,9 @@ export function registerAuthHandlers(): void {
    * Logout handler
    * IPC: auth:logout
    */
-  ipcMain.handle('auth:logout', async (_event, userId: number) => {
+  ipcMain.handle('auth:logout', async (_event, userId: number, sessionToken?: string) => {
     try {
-      await AuthService.logout(userId);
+      await AuthService.logout(userId, sessionToken);
       return { success: true };
     } catch (error) {
       logger.error('Error in auth:logout handler', error);
@@ -46,9 +61,9 @@ export function registerAuthHandlers(): void {
    * Get current user handler
    * IPC: auth:getCurrentUser
    */
-  ipcMain.handle('auth:getCurrentUser', async (_event, userId: number) => {
+  ipcMain.handle('auth:getCurrentUser', async (_event, sessionToken: string) => {
     try {
-      const user = await AuthService.getCurrentUser(userId);
+      const user = await AuthService.getCurrentUser(sessionToken);
       if (!user) {
         return { success: false, error: 'User not found or session expired' };
       }
@@ -66,9 +81,9 @@ export function registerAuthHandlers(): void {
    * Validate session handler
    * IPC: auth:validateSession
    */
-  ipcMain.handle('auth:validateSession', async (_event, userId: number) => {
+  ipcMain.handle('auth:validateSession', async (_event, sessionToken: string) => {
     try {
-      const isValid = await AuthService.validateSession(userId);
+      const isValid = await AuthService.validateSession(sessionToken);
       return { success: true, isValid };
     } catch (error) {
       logger.error('Error in auth:validateSession handler', error);
