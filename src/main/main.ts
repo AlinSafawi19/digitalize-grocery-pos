@@ -57,6 +57,7 @@ import { logger } from './utils/logger';
 import { registerIpcHandlers } from './ipc';
 import { ReportCacheService } from './services/reports/report-cache.service';
 import { ReportSchedulerService } from './services/reports/report-scheduler.service';
+import { BackupSchedulerService } from './services/backup/backup-scheduler.service';
 import { NotificationCountCronService } from './services/notifications/notification-count-cron.service';
 import { ensureSumatraPDF } from './ipc/file.handlers';
 import { UpdateService } from './services/update/update.service';
@@ -293,6 +294,10 @@ async function initializeApp() {
     // Start report scheduler service
     ReportSchedulerService.start();
     logger.info('Report scheduler service started');
+
+    // Start backup scheduler service
+    BackupSchedulerService.start();
+    logger.info('Backup scheduler service started');
 
     // Start notification count cron service
     NotificationCountCronService.start();

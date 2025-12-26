@@ -649,8 +649,8 @@ export default function LicensePage() {
                         component="img"
                         src={
                           subscriptionInfo.nextPaymentFee === 350
-                            ? './qr-code-350.jpg'
-                            : './qr-code-50.jpg'
+                            ? 'https://downloads.digitalizepos.com/qr-code-350.jpg'
+                            : 'https://downloads.digitalizepos.com/qr-code-50.jpg'
                         }
                         alt={`QR Code for $${subscriptionInfo.nextPaymentFee.toFixed(2)} payment`}
                         sx={{

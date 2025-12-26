@@ -9,8 +9,18 @@ export interface BackupInfo {
 
 export interface CreateBackupOptions {
   description?: string;
-  destinationPath?: string; // Custom destination path for external drive backup
+  destinationPath: string; // REQUIRED: Destination path on external drive (backups must be on external drive)
   // Note: All backups are now always compressed
+}
+
+export interface ExternalDriveInfo {
+  driveLetter: string; // e.g., "D:"
+  path: string; // e.g., "D:\"
+  label: string; // Drive label/name
+  type: 'removable' | 'network' | 'external';
+  freeSpace: number; // Free space in bytes
+  totalSize: number; // Total size in bytes
+  isWritable: boolean;
 }
 
 export interface BackupListOptions {
@@ -56,10 +66,11 @@ export class BackupService {
 
   /**
    * Create backup to external drive (custom destination)
+   * NOTE: This is now the same as createBackup since all backups require external drive
    */
   static async createBackupToExternal(
     destinationPath: string,
-    options: CreateBackupOptions,
+    options: Omit<CreateBackupOptions, 'destinationPath'>,
     requestedById: number
   ): Promise<{ success: boolean; backup?: BackupInfo; error?: string }> {
     try {
@@ -74,6 +85,50 @@ export class BackupService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  }
+
+  /**
+   * Get available external drives
+   */
+  static async getAvailableExternalDrives(): Promise<{
+    success: boolean;
+    drives?: ExternalDriveInfo[];
+    error?: string;
+  }> {
+    try {
+      const result = await window.electron.ipcRenderer.invoke(
+        'backup:getAvailableExternalDrives'
+      ) as { success: boolean; drives?: ExternalDriveInfo[]; error?: string };
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+        drives: [],
+      };
+    }
+  }
+
+  /**
+   * Check if external drive is available
+   */
+  static async hasExternalDriveAvailable(): Promise<{
+    success: boolean;
+    hasDrive?: boolean;
+    error?: string;
+  }> {
+    try {
+      const result = await window.electron.ipcRenderer.invoke(
+        'backup:hasExternalDriveAvailable'
+      ) as { success: boolean; hasDrive?: boolean; error?: string };
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+        hasDrive: false,
       };
     }
   }

@@ -5,6 +5,11 @@ import {
   CreateBackupOptions,
   BackupListOptions,
 } from '../services/backup/backup.service';
+import {
+  getAvailableExternalDrives,
+  hasExternalDriveAvailable,
+  ExternalDriveInfo,
+} from '../utils/drive.util';
 
 /**
  * Register backup IPC handlers
@@ -17,6 +22,8 @@ export function registerBackupHandlers(): void {
    * IPC: backup:createBackup
    * PERFORMANCE FIX: Uses async operation with progress updates via IPC events
    * This prevents UI blocking and provides user feedback during backup operations
+   * 
+   * NOTE: All backups now require an external drive. The destinationPath in options is required.
    */
   ipcMain.handle(
     'backup:createBackup',
@@ -241,21 +248,42 @@ export function registerBackupHandlers(): void {
   /**
    * Create backup to external drive handler
    * IPC: backup:createBackupToExternal
+   * NOTE: This is now the same as createBackup since all backups require external drive
    */
   ipcMain.handle(
     'backup:createBackupToExternal',
-    async (_event, destinationPath: string, options: CreateBackupOptions, requestedById: number) => {
+    async (event, destinationPath: string, options: Omit<CreateBackupOptions, 'destinationPath'>, requestedById: number) => {
       try {
+        // Send initial progress
+        event.sender.send('backup:createBackup:progress', {
+          progress: 0,
+          message: 'Starting backup creation...',
+        });
+
         const backupInfo = await BackupService.createBackup(
           { ...options, destinationPath },
           requestedById
         );
+
+        // Send completion progress
+        event.sender.send('backup:createBackup:progress', {
+          progress: 100,
+          message: 'Backup created successfully',
+        });
+
         return {
           success: true,
           backup: backupInfo,
         };
       } catch (error) {
         logger.error('Error in backup:createBackupToExternal handler', error);
+        // Send error progress
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('backup:createBackup:progress', {
+            progress: -1,
+            message: `Backup failed: ${error instanceof Error ? error.message : 'An error occurred'}`,
+          });
+        }
         return {
           success: false,
           error: error instanceof Error ? error.message : 'An error occurred',
@@ -263,6 +291,48 @@ export function registerBackupHandlers(): void {
       }
     }
   );
+
+  /**
+   * Get available external drives handler
+   * IPC: backup:getAvailableExternalDrives
+   */
+  ipcMain.handle('backup:getAvailableExternalDrives', async () => {
+    try {
+      const drives = await getAvailableExternalDrives();
+      return {
+        success: true,
+        drives,
+      };
+    } catch (error) {
+      logger.error('Error in backup:getAvailableExternalDrives handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+        drives: [],
+      };
+    }
+  });
+
+  /**
+   * Check if external drive is available handler
+   * IPC: backup:hasExternalDriveAvailable
+   */
+  ipcMain.handle('backup:hasExternalDriveAvailable', async () => {
+    try {
+      const hasDrive = await hasExternalDriveAvailable();
+      return {
+        success: true,
+        hasDrive,
+      };
+    } catch (error) {
+      logger.error('Error in backup:hasExternalDriveAvailable handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+        hasDrive: false,
+      };
+    }
+  });
 
   logger.info('Backup IPC handlers registered');
 }

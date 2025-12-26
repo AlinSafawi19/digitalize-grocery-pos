@@ -28,6 +28,7 @@ model User {
   stockMovements   StockMovement[]
   priceHistory      PriceHistory[]  @relation("PriceHistoryChangedBy")
   scheduledReports ScheduledReport[]
+  backupSchedules  BackupSchedule[]
   userPermissions  UserPermission[]
 
   @@index([username])
@@ -489,6 +490,31 @@ model ScheduledReport {
   @@index([isActive])
   @@index([nextRunAt])
   @@index([reportType])
+}
+
+// Backup Scheduling
+model BackupSchedule {
+  id              Int      @id @default(autoincrement())
+  name            String
+  scheduleType    String // daily, weekly, monthly, custom
+  scheduleConfig  String // JSON string with schedule details (cron expression, day of week, day of month, time, etc.)
+  destinationPath String // Path on external drive where backups should be saved
+  isActive        Boolean  @default(true)
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  lastRunStatus   String? // success, failed, skipped (no external drive)
+  lastRunError    String? // Error message if last run failed
+  createdById     Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([isActive])
+  @@index([nextRunAt])
+  @@index([scheduleType])
 }
 
 // Sprint 9: Operation Queue for Offline Sync

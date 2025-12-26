@@ -44,25 +44,41 @@ This document outlines the planned features and enhancements for the DigitalizeP
 
 ## Backup & Recovery
 
-### Backup Scheduling
+### ✅ Backup Scheduling (COMPLETED)
 - **Description**: Configure automatic backup schedules (daily, weekly, monthly)
 - **Requirements**:
-  - Schedule configuration UI
-  - Background job scheduler
-  - Backup execution service
-  - Schedule persistence
+  - ✅ Schedule configuration UI
+  - ✅ Background job scheduler (node-cron)
+  - ✅ Backup execution service
+  - ✅ Schedule persistence (Prisma database)
+  - ✅ External drive requirement enforcement
+  - ✅ Timezone handling (Asia/Beirut)
 - **Priority**: High
 - **Dependencies**: Backup system
+- **Status**: ✅ **COMPLETED** - Full implementation with UI, scheduling, and timezone support
 
-### Automated Daily Backups
+### ✅ Automated Daily Backups (COMPLETED)
 - **Description**: Automatic daily backups without user intervention
 - **Requirements**:
-  - Scheduled task execution
-  - Backup file naming with timestamps
-  - Storage management
-  - Error handling and notifications
+  - ✅ Scheduled task execution
+  - ✅ Backup file naming with timestamps
+  - ✅ Storage management (external drive only)
+  - ✅ Error handling and notifications
+  - ✅ Skip handling when external drive unavailable
 - **Priority**: High
 - **Dependencies**: Backup scheduling, Backup system
+- **Status**: ✅ **COMPLETED** - Integrated with backup scheduling system
+
+### ✅ External Drive Detection (COMPLETED)
+- **Description**: Detect and validate external drives for backup storage
+- **Requirements**:
+  - ✅ List available external drives
+  - ✅ Detect when drives are connected/disconnected
+  - ✅ Validate drive availability
+  - ✅ Drive information display (label, free space)
+- **Priority**: High
+- **Dependencies**: File system access
+- **Status**: ✅ **COMPLETED** - Full external drive detection and validation
 
 ### Multiple Backup Locations
 - **Description**: Support backing up to multiple locations (local, network, cloud)
@@ -73,6 +89,7 @@ This document outlines the planned features and enhancements for the DigitalizeP
   - Location validation
 - **Priority**: Medium
 - **Dependencies**: Backup system
+- **Note**: Currently supports external drives only. Multiple locations per backup not yet implemented.
 
 ### Point-in-Time Recovery
 - **Description**: Restore database to a specific point in time
@@ -84,15 +101,17 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - **Priority**: Medium
 - **Dependencies**: Backup system, Transaction logging
 
-### Backup Verification
+### ✅ Backup Verification (COMPLETED & INTEGRATED)
 - **Description**: Verify backup integrity after creation
 - **Requirements**:
-  - Checksum generation
-  - Backup validation service
-  - Verification reports
-  - Alert on verification failure
+  - ✅ Checksum generation
+  - ✅ Backup validation service
+  - ✅ Verification reports
+  - ✅ Alert on verification failure
+  - ✅ Integrated with scheduled backups
 - **Priority**: High
 - **Dependencies**: Backup system
+- **Status**: ✅ **COMPLETED** - Already existed, now integrated with scheduled backup system
 
 ---
 
@@ -383,9 +402,10 @@ This document outlines the planned features and enhancements for the DigitalizeP
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure (High Priority)
-- Backup scheduling and automated daily backups
-- Backup verification
-- Multiple backup locations
+- ✅ Backup scheduling and automated daily backups (COMPLETED)
+- ✅ Backup verification (COMPLETED & INTEGRATED)
+- ✅ External drive detection (COMPLETED)
+- ⏳ Multiple backup locations (Partially - external drives supported, multiple locations per backup pending)
 - Session management
 - Secure license validation
 - Receipt reprinting
@@ -435,5 +455,10 @@ This document outlines the planned features and enhancements for the DigitalizeP
 
 ## Last Updated
 - Date: 2024-12-XX
-- Version: 1.0
+- Version: 1.1
+- **Recent Updates**:
+  - ✅ Completed Backup Scheduling with full UI, timezone support (Asia/Beirut), and external drive enforcement
+  - ✅ Completed Automated Daily Backups with skip handling and notifications
+  - ✅ Completed External Drive Detection and validation
+  - ✅ Integrated Backup Verification with scheduled backups
 

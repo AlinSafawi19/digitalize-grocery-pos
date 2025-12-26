@@ -163,3 +163,174 @@ export async function validateExternalDrive(destinationPath: string): Promise<vo
   }
 }
 
+/**
+ * External drive information
+ */
+export interface ExternalDriveInfo {
+  driveLetter: string; // e.g., "D:"
+  path: string; // e.g., "D:\"
+  label: string; // Drive label/name
+  type: 'removable' | 'network' | 'external';
+  freeSpace: number; // Free space in bytes
+  totalSize: number; // Total size in bytes
+  isWritable: boolean;
+}
+
+/**
+ * Get list of available external drives
+ * Returns all removable drives (USB, external HDD) and network drives
+ */
+export async function getAvailableExternalDrives(): Promise<ExternalDriveInfo[]> {
+  const drives: ExternalDriveInfo[] = [];
+  
+  try {
+    if (process.platform === 'win32') {
+      // Use PowerShell to get all removable and network drives
+      const command = `powershell -Command "Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DriveType -eq 2 -or $_.DriveType -eq 4 } | Select-Object DeviceID, VolumeName, DriveType, FreeSpace, Size | ConvertTo-Json"`;
+      
+      try {
+        const { stdout } = await execAsync(command, { timeout: 10000 });
+        const driveData = JSON.parse(stdout.trim());
+        
+        // Handle both single object and array
+        const drivesArray = Array.isArray(driveData) ? driveData : [driveData];
+        
+        for (const drive of drivesArray) {
+          if (!drive || !drive.DeviceID) continue;
+          
+          const driveLetter = drive.DeviceID; // e.g., "D:"
+          const drivePath = drive.DeviceID + '\\';
+          const label = drive.VolumeName || 'No Label';
+          const driveType = drive.DriveType === 2 ? 'removable' : 'network';
+          const freeSpace = parseInt(drive.FreeSpace || '0', 10);
+          const totalSize = parseInt(drive.Size || '0', 10);
+          
+          // Check if drive is writable
+          let isWritable = false;
+          try {
+            const testFile = path.join(drivePath, '.writable-test');
+            await fs.writeFile(testFile, 'test');
+            await fs.remove(testFile);
+            isWritable = true;
+          } catch {
+            isWritable = false;
+          }
+          
+          // Only include if it's actually external (not the app data drive)
+          const appDataRoot = getRootPath(USER_DATA_PATH);
+          if (driveLetter.toUpperCase() !== appDataRoot.toUpperCase()) {
+            drives.push({
+              driveLetter,
+              path: drivePath,
+              label,
+              type: driveType,
+              freeSpace,
+              totalSize,
+              isWritable,
+            });
+          }
+        }
+      } catch (execError) {
+        logger.warn('Could not get external drives via PowerShell, using fallback method', execError);
+        // Fallback: try to detect drives by checking common drive letters
+        await getExternalDrivesFallback(drives);
+      }
+    } else {
+      // For Linux/Mac, check mount points
+      // This is a simplified implementation
+      logger.warn('External drive detection for non-Windows platforms is not fully implemented');
+    }
+    
+    logger.info('External drives detected', {
+      count: drives.length,
+      drives: drives.map(d => ({ letter: d.driveLetter, label: d.label, writable: d.isWritable })),
+    });
+    
+    return drives;
+  } catch (error) {
+    logger.error('Error getting available external drives', error);
+    return [];
+  }
+}
+
+/**
+ * Fallback method to detect external drives on Windows
+ * Checks common drive letters (D-Z) for removable drives
+ */
+async function getExternalDrivesFallback(drives: ExternalDriveInfo[]): Promise<void> {
+  const systemDrive = process.env.SystemDrive || 'C:';
+  const systemDriveLetter = systemDrive.replace(':', '').toUpperCase();
+  
+  // Check drive letters from D to Z
+  for (let i = 68; i <= 90; i++) { // D=68, Z=90
+    const driveLetter = String.fromCharCode(i) + ':';
+    const drivePath = driveLetter + '\\';
+    
+    // Skip system drive
+    if (driveLetter.toUpperCase() === systemDrive.toUpperCase()) {
+      continue;
+    }
+    
+    try {
+      // Check if drive exists and is accessible
+      const stats = await fs.stat(drivePath);
+      if (stats.isDirectory()) {
+        // Try to determine if it's removable
+        const isRemovable = await isRemovableDriveWindows(drivePath);
+        
+        if (isRemovable) {
+          // Get drive info
+          let label = 'No Label';
+          let freeSpace = 0;
+          let totalSize = 0;
+          
+          try {
+            const command = `powershell -Command "Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DeviceID -eq '${driveLetter}' } | Select-Object VolumeName, FreeSpace, Size | ConvertTo-Json"`;
+            const { stdout } = await execAsync(command, { timeout: 5000 });
+            const driveData = JSON.parse(stdout.trim());
+            if (driveData) {
+              label = driveData.VolumeName || 'No Label';
+              freeSpace = parseInt(driveData.FreeSpace || '0', 10);
+              totalSize = parseInt(driveData.Size || '0', 10);
+            }
+          } catch {
+            // Use defaults
+          }
+          
+          // Check if writable
+          let isWritable = false;
+          try {
+            const testFile = path.join(drivePath, '.writable-test');
+            await fs.writeFile(testFile, 'test');
+            await fs.remove(testFile);
+            isWritable = true;
+          } catch {
+            isWritable = false;
+          }
+          
+          drives.push({
+            driveLetter,
+            path: drivePath,
+            label,
+            type: 'removable',
+            freeSpace,
+            totalSize,
+            isWritable,
+          });
+        }
+      }
+    } catch {
+      // Drive doesn't exist or is not accessible, skip
+      continue;
+    }
+  }
+}
+
+/**
+ * Check if any external drive is available
+ */
+export async function hasExternalDriveAvailable(): Promise<boolean> {
+  const drives = await getAvailableExternalDrives();
+  return drives.length > 0 && drives.some(d => d.isWritable);
+}
+

@@ -406,7 +406,7 @@ const LicenseActivation: React.FC = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
                 <Box
                   component="img"
-                  src="./logo.svg"
+                  src="https://downloads.digitalizepos.com/grocery-logo.svg"
                   alt="DigitalizePOS"
                   sx={logoBoxSx}
                 />
@@ -548,7 +548,7 @@ const LicenseActivation: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
               <Box
                 component="img"
-                src="./logo.svg"
+                src="https://downloads.digitalizepos.com/grocery-logo.svg"
                 alt="DigitalizePOS"
                 sx={logoBoxSx}
               />

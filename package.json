@@ -142,8 +142,8 @@
       "certificatePassword": null
     },
     "nsis": {
-      "oneClick": true,
-      "perMachine": false,
+      "oneClick": false,
+      "perMachine": true,
       "differentialPackage": false,
       "artifactName": "grocery-pos-${version}.${ext}",
       "allowToChangeInstallationDirectory": false,

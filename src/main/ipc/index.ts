@@ -17,6 +17,7 @@ import { registerReportSchedulerHandlers } from './report-scheduler.handlers';
 import { registerNotificationHandlers } from './notifications.handlers';
 import { registerSettingsHandlers } from './settings.handlers';
 import { registerBackupHandlers } from './backup.handlers';
+import { registerBackupSchedulerHandlers } from './backup-scheduler.handlers';
 import { registerCurrencyHandlers } from './currency.handlers';
 import { registerAuditLogHandlers } from './audit-log.handlers';
 import { registerPermissionHandlers } from './permission.handlers';
@@ -54,6 +55,7 @@ export function registerIpcHandlers(): void {
   registerNotificationHandlers();
   registerSettingsHandlers();
   registerBackupHandlers();
+  registerBackupSchedulerHandlers();
   registerCurrencyHandlers();
   registerAuditLogHandlers();
   registerPermissionHandlers();

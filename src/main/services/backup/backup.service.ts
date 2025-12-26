@@ -1,5 +1,5 @@
 import { logger } from '../../utils/logger';
-import { DATABASE_PATH, BACKUP_DIR } from '../../utils/constants';
+import { DATABASE_PATH } from '../../utils/constants';
 import fs from 'fs-extra';
 import path from 'path';
 import { createHash } from 'crypto';
@@ -23,11 +23,12 @@ export interface BackupListOptions {
   pageSize?: number;
   startDate?: Date;
   endDate?: Date;
+  backupDirectory?: string; // Optional: directory to search for backups (default: empty - backups are on external drives)
 }
 
 export interface CreateBackupOptions {
   description?: string;
-  destinationPath?: string; // Custom destination path for external drive backup
+  destinationPath: string; // REQUIRED: Destination path on external drive (backups must be on external drive)
   // Note: All backups are now always compressed
 }
 
@@ -36,18 +37,7 @@ export interface CreateBackupOptions {
  * Handles database backup and restore operations
  */
 export class BackupService {
-  /**
-   * Ensure backup directory exists
-   */
-  private static async ensureBackupDir(): Promise<void> {
-    try {
-      await fs.ensureDir(BACKUP_DIR);
-      logger.info(`Backup directory ensured: ${BACKUP_DIR}`);
-    } catch (error) {
-      logger.error('Error ensuring backup directory', error);
-      throw error;
-    }
-  }
+  // Note: Backup directory management removed - all backups now require external drive
 
   /**
    * Generate backup filename with timestamp
@@ -108,16 +98,28 @@ export class BackupService {
    * The backup includes all tables, data, indexes, and schema - everything in the database.
    * All backups are automatically compressed using gzip to save disk space.
    * 
-   * @param options - Backup options (description, destination path)
+   * IMPORTANT: All backups MUST be saved to an external drive (USB drive or external hard disk).
+   * Backups cannot be saved to the computer's main hard disk.
+   * 
+   * @param options - Backup options (description, destination path - REQUIRED)
    * @param userId - Optional user ID for notifications
    * @returns BackupInfo with details about the created backup
    */
   static async createBackup(
-    options: CreateBackupOptions = {},
+    options: CreateBackupOptions,
     userId?: number
   ): Promise<BackupInfo> {
     try {
-      await this.ensureBackupDir();
+      // Validate that destination path is provided
+      if (!options.destinationPath || !options.destinationPath.trim()) {
+        throw new Error(
+          'Backup destination path is required. ' +
+          'Please select a folder on an external drive (USB drive or external hard disk).'
+        );
+      }
+
+      // Validate that destination is on an external drive
+      await validateExternalDrive(options.destinationPath);
 
       // Check if database file exists
       if (!(await fs.pathExists(DATABASE_PATH))) {
@@ -126,19 +128,11 @@ export class BackupService {
 
       const filename = this.generateBackupFilename();
       
-      // Use custom destination path if provided (for external drive backup)
-      // Otherwise use default backup directory
-      const backupPath = options.destinationPath
-        ? path.join(options.destinationPath, filename)
-        : path.join(BACKUP_DIR, filename);
+      // Use the provided destination path (must be on external drive)
+      const backupPath = path.join(options.destinationPath, filename);
 
-      // If destination path is provided, validate it's on an external drive
-      if (options.destinationPath) {
-        await validateExternalDrive(options.destinationPath);
-      }
-
-      // Ensure destination directory exists
-      const destinationDir = path.dirname(backupPath);
+      // Ensure destination directory exists (on external drive)
+      const destinationDir = options.destinationPath;
       await fs.ensureDir(destinationDir);
 
       // Backup and compress the entire database file
@@ -208,6 +202,7 @@ export class BackupService {
 
   /**
    * Get list of backups
+   * NOTE: Backups are now stored on external drives. Provide backupDirectory to search a specific location.
    */
   static async getBackups(
     options: BackupListOptions = {}
@@ -218,14 +213,35 @@ export class BackupService {
     pageSize: number;
   }> {
     try {
-      await this.ensureBackupDir();
-
       const page = options.page || 1;
       const pageSize = options.pageSize || 20;
+      const backupDirectory = options.backupDirectory;
+
+      // If no backup directory provided, return empty (backups are on external drives)
+      if (!backupDirectory) {
+        logger.info('No backup directory provided - backups are stored on external drives');
+        return {
+          backups: [],
+          total: 0,
+          page,
+          pageSize,
+        };
+      }
+
+      // Ensure directory exists
+      if (!(await fs.pathExists(backupDirectory))) {
+        logger.warn('Backup directory does not exist', { backupDirectory });
+        return {
+          backups: [],
+          total: 0,
+          page,
+          pageSize,
+        };
+      }
 
       // Read all files in backup directory
       // Support both compressed (.db.gz) and uncompressed (.db) for backward compatibility
-      const files = await fs.readdir(BACKUP_DIR);
+      const files = await fs.readdir(backupDirectory);
       const backupFiles = files.filter((file) => 
         file.startsWith('digitalizePOS-backup-') && (file.endsWith('.db.gz') || file.endsWith('.db'))
       );
@@ -234,7 +250,7 @@ export class BackupService {
       const backups: BackupInfo[] = [];
       for (const file of backupFiles) {
         try {
-          const filePath = path.join(BACKUP_DIR, file);
+          const filePath = path.join(backupDirectory, file);
           const backupInfo = await this.getBackupInfo(filePath);
 
           // Apply date filters
@@ -274,12 +290,21 @@ export class BackupService {
   /**
    * Get backup by ID
    * Supports both compressed (.db.gz) and uncompressed (.db) backups
+   * NOTE: Backups are now stored on external drives. Provide backupDirectory to search a specific location.
    */
-  static async getBackupById(id: string): Promise<BackupInfo | null> {
+  static async getBackupById(id: string, backupDirectory?: string): Promise<BackupInfo | null> {
     try {
-      await this.ensureBackupDir();
+      // If no backup directory provided, return null (backups are on external drives)
+      if (!backupDirectory) {
+        logger.info('No backup directory provided - backups are stored on external drives');
+        return null;
+      }
 
-      const files = await fs.readdir(BACKUP_DIR);
+      if (!(await fs.pathExists(backupDirectory))) {
+        return null;
+      }
+
+      const files = await fs.readdir(backupDirectory);
       // Try compressed first, then uncompressed for backward compatibility
       const backupFile = files.find((file) => 
         file.startsWith(`digitalizePOS-backup-${id}`) && (file.endsWith('.db.gz') || file.endsWith('.db'))
@@ -289,7 +314,7 @@ export class BackupService {
         return null;
       }
 
-      const filePath = path.join(BACKUP_DIR, backupFile);
+      const filePath = path.join(backupDirectory, backupFile);
       return await this.getBackupInfo(filePath);
     } catch (error) {
       logger.error('Error getting backup by ID', error);
@@ -388,10 +413,9 @@ export class BackupService {
         throw new Error('Backup file is invalid or corrupted');
       }
 
-      // Create a backup of current database before restore (safety measure)
-      logger.info('Creating pre-restore backup of current database');
-      const currentBackup = await this.createBackup({ description: 'Pre-restore backup' }, userId);
-      logger.info('Pre-restore backup created', { filename: currentBackup.filename });
+      // Skip pre-restore backup since all backups now require external drive
+      // The user should have already created a backup before attempting restore
+      logger.info('Skipping pre-restore backup (all backups require external drive). User should have backup before restore.');
 
       // Close database connection to ensure no file locks
       logger.info('Closing database connection before restore');
@@ -514,15 +538,20 @@ export class BackupService {
 
   /**
    * Delete old backups (retention policy)
+   * NOTE: Backups are now stored on external drives. Provide backupDirectory to search a specific location.
    */
-  static async deleteOldBackups(daysToKeep: number = 30): Promise<{ count: number }> {
+  static async deleteOldBackups(daysToKeep: number = 30, backupDirectory?: string): Promise<{ count: number }> {
     try {
-      await this.ensureBackupDir();
+      // If no backup directory provided, return 0 (backups are on external drives)
+      if (!backupDirectory) {
+        logger.info('No backup directory provided - backups are stored on external drives');
+        return { count: 0 };
+      }
 
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-      const result = await this.getBackups({ page: 1, pageSize: 1000 });
+      const result = await this.getBackups({ page: 1, pageSize: 1000, backupDirectory });
       let deletedCount = 0;
 
       for (const backup of result.backups) {
@@ -536,7 +565,7 @@ export class BackupService {
         }
       }
 
-      logger.info('Old backups deleted', { count: deletedCount, daysToKeep });
+      logger.info('Old backups deleted', { count: deletedCount, daysToKeep, backupDirectory });
 
       return { count: deletedCount };
     } catch (error) {
@@ -547,17 +576,27 @@ export class BackupService {
 
   /**
    * Get backup statistics
+   * NOTE: Backups are now stored on external drives. Provide backupDirectory to search a specific location.
    */
-  static async getBackupStats(): Promise<{
+  static async getBackupStats(backupDirectory?: string): Promise<{
     totalBackups: number;
     totalSize: number;
     oldestBackup: Date | null;
     newestBackup: Date | null;
   }> {
     try {
-      await this.ensureBackupDir();
+      // If no backup directory provided, return empty stats (backups are on external drives)
+      if (!backupDirectory) {
+        logger.info('No backup directory provided - backups are stored on external drives');
+        return {
+          totalBackups: 0,
+          totalSize: 0,
+          oldestBackup: null,
+          newestBackup: null,
+        };
+      }
 
-      const result = await this.getBackups({ page: 1, pageSize: 1000 });
+      const result = await this.getBackups({ page: 1, pageSize: 1000, backupDirectory });
 
       let totalSize = 0;
       let oldestDate: Date | null = null;

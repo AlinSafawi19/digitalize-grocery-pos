@@ -11,11 +11,14 @@ import {
   DialogContentText,
   DialogActions,
   Grid,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Usb,
   FolderOpen,
   Info as InfoIcon,
+  Schedule,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../store';
@@ -29,6 +32,7 @@ import {
   completeBackupOperation,
   setBackupOperationError,
 } from '../../store/slices/backup.slice';
+import BackupScheduleList from './BackupScheduleList';
 
 export default function BackupPage() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -38,6 +42,7 @@ export default function BackupPage() {
   const [restoreFromExternalDialogOpen, setRestoreFromExternalDialogOpen] = useState(false);
   const [selectedBackupPath, setSelectedBackupPath] = useState<string | null>(null);
   const [selectedBackupFilename, setSelectedBackupFilename] = useState<string>('');
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleBackupToExternal = useCallback(async () => {
     if (!user?.id) return;
@@ -329,6 +334,10 @@ export default function BackupPage() {
     setSelectedBackupFilename('');
   }, []);
 
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  }, []);
+
   return (
     <MainLayout>
       <Box sx={containerBoxSx}>
@@ -336,21 +345,43 @@ export default function BackupPage() {
           <Typography sx={titleTypographySx}>Backup & Restore</Typography>
         </Box>
 
-        {/* Information Alert */}
-        <Alert severity="warning" icon={<InfoIcon />} sx={infoAlertSx}>
-          <Typography sx={infoTitleTypographySx}>
-            ⚠️ External Drive Required for Backup
-          </Typography>
-          <Typography sx={infoBodyTypographySx}>
-            <strong>Important:</strong> Backups must be saved to an external drive (USB flash drive or external hard disk). 
-            Backups cannot be saved to the same drive where the application is installed. 
-            This ensures your data is safe if your computer&apos;s hard disk fails. 
-            Please connect a USB drive or external hard disk before creating a backup.
-          </Typography>
-        </Alert>
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          sx={{
+            mb: 3,
+            borderBottom: '1px solid #c0c0c0',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '14px',
+              minHeight: 48,
+            },
+          }}
+        >
+          <Tab icon={<Usb />} iconPosition="start" label="Manual Backup" />
+          <Tab icon={<Schedule />} iconPosition="start" label="Scheduled Backups" />
+        </Tabs>
 
-        {/* Action Buttons */}
-        <Grid container spacing={3} sx={gridContainerSx}>
+        {/* Tab Content */}
+        {activeTab === 0 && (
+          <>
+            {/* Information Alert */}
+            <Alert severity="warning" icon={<InfoIcon />} sx={infoAlertSx}>
+              <Typography sx={infoTitleTypographySx}>
+                ⚠️ External Drive Required for Backup
+              </Typography>
+              <Typography sx={infoBodyTypographySx}>
+                <strong>Important:</strong> Backups must be saved to an external drive (USB flash drive or external hard disk). 
+                Backups cannot be saved to the same drive where the application is installed. 
+                This ensures your data is safe if your computer&apos;s hard disk fails. 
+                Please connect a USB drive or external hard disk before creating a backup.
+              </Typography>
+            </Alert>
+
+            {/* Action Buttons */}
+            <Grid container spacing={3} sx={gridContainerSx}>
           <Grid item xs={12} md={6}>
             <Paper sx={paperSx}>
               <Usb sx={backupIconSx} />
@@ -397,6 +428,24 @@ export default function BackupPage() {
             </Paper>
           </Grid>
         </Grid>
+          </>
+        )}
+
+        {activeTab === 1 && (
+          <>
+            <Alert severity="info" icon={<InfoIcon />} sx={infoAlertSx}>
+              <Typography sx={infoTitleTypographySx}>
+                📅 Automated Backup Schedules
+              </Typography>
+              <Typography sx={infoBodyTypographySx}>
+                Configure automated backups that run at scheduled times. Scheduled backups require an external drive to be connected when they run.
+                If no external drive is available, the backup will be skipped and you&apos;ll receive a notification.
+                You can create multiple schedules (e.g., daily, weekly) and enable/disable them as needed.
+              </Typography>
+            </Alert>
+            <BackupScheduleList />
+          </>
+        )}
 
         {/* Restore from External Drive Dialog */}
         <Dialog

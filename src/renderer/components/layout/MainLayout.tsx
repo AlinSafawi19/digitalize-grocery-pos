@@ -532,7 +532,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <Toolbar sx={toolbarSx}>
           <Box
             component="img"
-            src="./logo-white.svg"
+            src="https://downloads.digitalizepos.com/grocery-logo-white.svg"
             alt="DigitalizePOS"
             sx={logoBoxSx}
             onClick={handleNavigateToHome}
