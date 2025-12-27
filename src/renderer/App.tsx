@@ -35,6 +35,7 @@ const InventoryList = lazy(() => import('./pages/Inventory/InventoryList'));
 const StockMovementHistory = lazy(() => import('./pages/Inventory/StockMovementHistory'));
 const LowStockAlerts = lazy(() => import('./pages/Inventory/LowStockAlerts'));
 const AdjustStock = lazy(() => import('./pages/Inventory/AdjustStock'));
+const ReorderSuggestions = lazy(() => import('./pages/Inventory/ReorderSuggestions'));
 const PurchaseOrderList = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderList'));
 const PurchaseOrderForm = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderForm'));
 const PurchaseOrderDetails = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderDetails'));
@@ -585,6 +586,14 @@ function AppContent() {
           element={
             <PermissionProtectedRoute>
               <AdjustStock />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.INVENTORY_REORDER_SUGGESTIONS}
+          element={
+            <PermissionProtectedRoute>
+              <ReorderSuggestions />
             </PermissionProtectedRoute>
           }
         />

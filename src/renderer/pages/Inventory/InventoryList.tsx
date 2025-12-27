@@ -16,7 +16,7 @@ import {
   CircularProgress,
   Tooltip,
 } from '@mui/material';
-import { Edit, Warning, CheckCircle, Cancel, History, Refresh } from '@mui/icons-material';
+import { Edit, Warning, CheckCircle, Cancel, History, Refresh, ShoppingCart } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -134,6 +134,10 @@ const InventoryList: React.FC = () => {
 
   const handleNavigateToMovements = useCallback(() => {
     navigate(ROUTES.INVENTORY_MOVEMENTS);
+  }, [navigate]);
+
+  const handleNavigateToReorderSuggestions = useCallback(() => {
+    navigate(ROUTES.INVENTORY_REORDER_SUGGESTIONS);
   }, [navigate]);
 
   const getStockStatus = useCallback((item: InventoryItem): { color: 'success' | 'warning' | 'error'; label: string; icon: React.ReactElement } => {
@@ -429,6 +433,18 @@ const InventoryList: React.FC = () => {
                   sx={movementsButtonSx}
                 >
                   Movement History
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title="Reorder Suggestions - View AI-powered reorder suggestions based on sales velocity and stock levels.">
+              <span>
+                <Button
+                  variant="outlined"
+                  startIcon={<ShoppingCart sx={{ fontSize: '18px' }} />}
+                  onClick={handleNavigateToReorderSuggestions}
+                  sx={movementsButtonSx}
+                >
+                  Reorder Suggestions
                 </Button>
               </span>
             </Tooltip>
