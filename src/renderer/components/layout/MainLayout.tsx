@@ -12,7 +12,7 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz } from '@mui/icons-material';
 import NotificationCenter from '../NotificationCenter/NotificationCenter';
 import BackupOperationBanner from '../common/BackupOperationBanner';
 import HelpersPanel from '../helpers/HelpersPanel';
@@ -48,6 +48,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Cashiers page is only accessible by main user (ID = 1)
   const canAccessCashiers = user?.id === 1;
   const canAccessPurchaseOrders = useRoutePermission(ROUTES.PURCHASE_ORDERS);
+  const canAccessStockTransfers = useRoutePermission(ROUTES.STOCK_TRANSFERS);
   const canAccessPricing = useRoutePermission(ROUTES.PRICING_RULES);
   const canAccessAnalytics = useRoutePermission(ROUTES.ANALYTICS);
   const canAccessSettings = useRoutePermission(ROUTES.SETTINGS);
@@ -251,6 +252,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
     handleMoreMenuClose();
   }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
 
+  const handleNavigateToStockTransfers = useCallback(() => {
+    if (shouldBlockNavigation()) {
+      navigate(getExpiredLicenseRoute(), { replace: true });
+      return;
+    }
+    navigate(ROUTES.STOCK_TRANSFERS);
+    handleMoreMenuClose();
+  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
+
   const handleNavigateToPricing = useCallback(() => {
     if (shouldBlockNavigation()) {
       navigate(getExpiredLicenseRoute(), { replace: true });
@@ -337,6 +347,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     isSuppliersActive: isActiveRoute(ROUTES.SUPPLIERS),
     isCashiersActive: isActiveRoute(ROUTES.CASHIERS),
     isPurchaseOrdersActive: isActiveRoute(ROUTES.PURCHASE_ORDERS),
+    isStockTransfersActive: isActiveRoute(ROUTES.STOCK_TRANSFERS),
     isPricingActive: isPricingRoute(),
     isAnalyticsActive: isActiveRoute(ROUTES.ANALYTICS),
     isLogsActive: isActiveRoute(ROUTES.LOGS),
@@ -845,6 +856,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 <ShoppingCart sx={{ mr: 1, fontSize: '24px' }} />
                 Purchase Orders
+              </MenuItem>
+            )}
+            {canAccessStockTransfers && (
+              <MenuItem
+                onClick={handleNavigateToStockTransfers}
+                selected={routeStates.isStockTransfersActive}
+              >
+                <SwapHoriz sx={{ mr: 1, fontSize: '24px' }} />
+                Stock Transfers
               </MenuItem>
             )}
             {canAccessPricing && (

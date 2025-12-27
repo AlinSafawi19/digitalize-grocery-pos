@@ -32,6 +32,9 @@ model User {
   userPermissions        UserPermission[]
   sessions               Session[]
   purchaseOrderTemplates PurchaseOrderTemplate[]
+  stockTransfersRequested StockTransfer[] @relation("TransferRequester")
+  stockTransfersApproved  StockTransfer[] @relation("TransferApprover")
+  stockTransfersCompleted StockTransfer[] @relation("TransferCompleter")
 
   @@index([username])
   @@index([phone])
@@ -204,6 +207,8 @@ model Product {
   purchaseOrderItems       PurchaseOrderItem[]
   purchaseOrderTemplateItems PurchaseOrderTemplateItem[]
   pricingRules             PricingRule[]
+  inventoryLocations       InventoryLocation[]
+  stockTransferItems       StockTransferItem[]
 
   @@index([code])
   @@index([barcode])
@@ -624,4 +629,100 @@ model QueuedOperation {
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+model Location {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  code        String?  @unique // Optional location code (e.g., "WH-001", "STORE-A")
+  address     String?
+  phone       String?
+  email       String?
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false) // Only one location can be default
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  inventoryLocations InventoryLocation[]
+  stockTransfersFrom StockTransfer[] @relation("TransferFromLocation")
+  stockTransfersTo   StockTransfer[] @relation("TransferToLocation")
+
+  @@index([name])
+  @@index([code])
+  @@index([isActive])
+  @@index([isDefault])
+}
+
+model InventoryLocation {
+  id           Int       @id @default(autoincrement())
+  productId    Int
+  locationId   Int
+  quantity     Float     @default(0)
+  reorderLevel Float     @default(0) // Minimum stock level before reorder alert for this location
+  expiryDate   DateTime? // Expiry date for current stock at this location
+  lastUpdated  DateTime  @default(now()) @updatedAt
+
+  // Relations
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locationId]) // One inventory record per product per location
+  @@index([productId])
+  @@index([locationId])
+  @@index([quantity])
+  @@index([reorderLevel])
+  @@index([expiryDate])
+  @@index([productId, locationId]) // Composite index for common queries
+  @@index([locationId, quantity]) // For location-specific low stock queries
+}
+
+model StockTransfer {
+  id              Int       @id @default(autoincrement())
+  transferNumber  String    @unique // Format: ST-YYYYMMDD-XXXXX
+  fromLocationId  Int
+  toLocationId    Int
+  status          String    @default("pending") // pending, in_transit, completed, cancelled
+  notes           String?
+  requestedById   Int       // User who requested the transfer
+  approvedById    Int?      // User who approved the transfer (if approval workflow is enabled)
+  completedById   Int?      // User who completed the transfer
+  requestedAt     DateTime  @default(now())
+  approvedAt      DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  fromLocation Location  @relation("TransferFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocation   Location  @relation("TransferToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+  items        StockTransferItem[]
+  requester    User      @relation("TransferRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  approver     User?     @relation("TransferApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  completer    User?     @relation("TransferCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@index([transferNumber])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+  @@index([status])
+  @@index([requestedAt])
+  @@index([requestedById])
+  @@index([status, requestedAt]) // For filtering transfers by status and date
+}
+
+model StockTransferItem {
+  id              Int   @id @default(autoincrement())
+  stockTransferId  Int
+  productId        Int
+  quantity         Float
+  receivedQuantity Float @default(0) // Quantity actually received at destination
+  notes            String?
+
+  // Relations
+  stockTransfer StockTransfer @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([stockTransferId])
+  @@index([productId])
 }

@@ -31,6 +31,8 @@ import { registerReorderSuggestionHandlers } from './reorder-suggestion.handlers
 import { registerBatchBarcodeScanHandlers } from './batch-barcode-scan.handlers';
 import { registerBarcodeValidationEnhancedHandlers } from './barcode-validation-enhanced.handlers';
 import { registerPurchaseOrderTemplateHandlers } from './purchase-order-template.handlers';
+import { registerStockTransferHandlers } from './stock-transfer.handlers';
+import { registerLocationHandlers } from './location.handlers';
 
 /**
  * Register all IPC handlers
@@ -76,6 +78,8 @@ export function registerIpcHandlers(): void {
   registerBatchBarcodeScanHandlers();
   registerBarcodeValidationEnhancedHandlers();
   registerPurchaseOrderTemplateHandlers();
+  registerStockTransferHandlers();
+  registerLocationHandlers();
 
   logger.info('IPC handlers registered');
 }

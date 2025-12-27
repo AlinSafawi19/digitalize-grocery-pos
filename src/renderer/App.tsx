@@ -44,6 +44,9 @@ const PurchaseOrderList = lazy(() => import('./pages/PurchaseOrders/PurchaseOrde
 const PurchaseOrderForm = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderForm'));
 const PurchaseOrderDetails = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderDetails'));
 const ReceiveGoods = lazy(() => import('./pages/PurchaseOrders/ReceiveGoods'));
+const StockTransferList = lazy(() => import('./pages/StockTransfers/StockTransferList'));
+const StockTransferForm = lazy(() => import('./pages/StockTransfers/StockTransferForm'));
+const StockTransferDetails = lazy(() => import('./pages/StockTransfers/StockTransferDetails'));
 const PricingRuleList = lazy(() => import('./pages/Pricing/PricingRuleList'));
 const PricingRuleForm = lazy(() => import('./pages/Pricing/PricingRuleForm'));
 const PricingRuleDetails = lazy(() => import('./pages/Pricing/PricingRuleDetails'));
@@ -646,6 +649,30 @@ function AppContent() {
           element={
             <PermissionProtectedRoute>
               <ReceiveGoods />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.STOCK_TRANSFERS}
+          element={
+            <PermissionProtectedRoute>
+              <StockTransferList />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.STOCK_TRANSFERS_NEW}
+          element={
+            <PermissionProtectedRoute>
+              <StockTransferForm />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.STOCK_TRANSFERS_VIEW}
+          element={
+            <PermissionProtectedRoute>
+              <StockTransferDetails />
             </PermissionProtectedRoute>
           }
         />
