@@ -22,15 +22,16 @@ model User {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  transactions     Transaction[]
-  auditLogs        AuditLog[]
-  notifications    Notification[]
-  stockMovements   StockMovement[]
-  priceHistory      PriceHistory[]  @relation("PriceHistoryChangedBy")
-  scheduledReports ScheduledReport[]
-  backupSchedules  BackupSchedule[]
-  userPermissions  UserPermission[]
-  sessions         Session[]
+  transactions           Transaction[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+  stockMovements         StockMovement[]
+  priceHistory           PriceHistory[]  @relation("PriceHistoryChangedBy")
+  scheduledReports       ScheduledReport[]
+  backupSchedules        BackupSchedule[]
+  userPermissions        UserPermission[]
+  sessions               Session[]
+  purchaseOrderTemplates PurchaseOrderTemplate[]
 
   @@index([username])
   @@index([phone])
@@ -169,9 +170,10 @@ model Supplier {
   updatedAt DateTime @updatedAt
 
   // Relations
-  products       Product[]
-  purchaseOrders PurchaseOrder[]
-  payments       SupplierPayment[]
+  products              Product[]
+  purchaseOrders        PurchaseOrder[]
+  payments              SupplierPayment[]
+  purchaseOrderTemplates PurchaseOrderTemplate[]
 
   @@index([name])
   @@index([email])
@@ -193,14 +195,15 @@ model Product {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  category           Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  supplier           Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  transactionItems   TransactionItem[]
-  inventory          Inventory?
-  stockMovements     StockMovement[]
-  priceHistory       PriceHistory[]
-  purchaseOrderItems PurchaseOrderItem[]
-  pricingRules       PricingRule[]
+  category                 Category?                   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier                 Supplier?                  @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  transactionItems         TransactionItem[]
+  inventory                Inventory?
+  stockMovements           StockMovement[]
+  priceHistory             PriceHistory[]
+  purchaseOrderItems       PurchaseOrderItem[]
+  purchaseOrderTemplateItems PurchaseOrderTemplateItem[]
+  pricingRules             PricingRule[]
 
   @@index([code])
   @@index([barcode])
@@ -413,6 +416,42 @@ model PurchaseOrderItem {
   product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@index([purchaseOrderId])
+  @@index([productId])
+}
+
+model PurchaseOrderTemplate {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  supplierId  Int
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById Int       // User who created the template
+
+  // Relations
+  supplier  Supplier                    @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items     PurchaseOrderTemplateItem[]
+  creator   User                        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([supplierId])
+  @@index([isActive])
+  @@index([createdById])
+}
+
+model PurchaseOrderTemplateItem {
+  id                        Int    @id @default(autoincrement())
+  purchaseOrderTemplateId   Int
+  productId                 Int
+  quantity                  Float
+  unitPrice                 Float? // Optional - can use current product cost price if null
+  notes                     String?
+
+  // Relations
+  template PurchaseOrderTemplate @relation(fields: [purchaseOrderTemplateId], references: [id], onDelete: Cascade)
+  product  Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderTemplateId])
   @@index([productId])
 }
 

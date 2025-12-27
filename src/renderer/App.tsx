@@ -37,6 +37,9 @@ const LowStockAlerts = lazy(() => import('./pages/Inventory/LowStockAlerts'));
 const AdjustStock = lazy(() => import('./pages/Inventory/AdjustStock'));
 const ReorderSuggestions = lazy(() => import('./pages/Inventory/ReorderSuggestions'));
 const BatchBarcodeScan = lazy(() => import('./pages/Inventory/BatchBarcodeScan'));
+const PurchaseOrderTemplateList = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderTemplateList'));
+const PurchaseOrderTemplateForm = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderTemplateForm'));
+const PurchaseOrderTemplateDetails = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderTemplateDetails'));
 const PurchaseOrderList = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderList'));
 const PurchaseOrderForm = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderForm'));
 const PurchaseOrderDetails = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderDetails'));
@@ -643,6 +646,38 @@ function AppContent() {
           element={
             <PermissionProtectedRoute>
               <ReceiveGoods />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.PURCHASE_ORDER_TEMPLATES}
+          element={
+            <PermissionProtectedRoute>
+              <PurchaseOrderTemplateList />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.PURCHASE_ORDER_TEMPLATES_NEW}
+          element={
+            <PermissionProtectedRoute>
+              <PurchaseOrderTemplateForm />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.PURCHASE_ORDER_TEMPLATES_EDIT}
+          element={
+            <PermissionProtectedRoute>
+              <PurchaseOrderTemplateForm />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.PURCHASE_ORDER_TEMPLATES_VIEW}
+          element={
+            <PermissionProtectedRoute>
+              <PurchaseOrderTemplateDetails />
             </PermissionProtectedRoute>
           }
         />

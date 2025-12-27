@@ -18,6 +18,8 @@ import { SupplierPaymentService, CreateSupplierPaymentInput } from '../../servic
 import { Supplier } from '../../services/product.service';
 import { PurchaseOrderService } from '../../services/purchase-order.service';
 import { useToast } from '../../hooks/useToast';
+import { fromBeirutToUTC, toBeirutTime } from '../../utils/dateUtils';
+import moment from 'moment-timezone';
 
 interface SupplierPaymentFormProps {
   open: boolean;
@@ -130,7 +132,12 @@ export default function SupplierPaymentForm({
 
     setLoading(true);
     try {
-      const result = await SupplierPaymentService.createPayment(formData, userId);
+      // Convert paymentDate from Beirut timezone to UTC for database storage
+      const paymentData: CreateSupplierPaymentInput = {
+        ...formData,
+        paymentDate: fromBeirutToUTC(formData.paymentDate) || formData.paymentDate,
+      };
+      const result = await SupplierPaymentService.createPayment(paymentData, userId);
       if (result.success) {
         showToast('Payment recorded successfully', 'success');
         onSuccess();
@@ -231,8 +238,22 @@ export default function SupplierPaymentForm({
           <TextField
             label="Payment Date *"
             type="date"
-            value={formData.paymentDate ? (formData.paymentDate instanceof Date ? formData.paymentDate.toISOString().split('T')[0] : new Date(formData.paymentDate).toISOString().split('T')[0]) : ''}
-            onChange={(e) => handleChange('paymentDate', e.target.value ? new Date(e.target.value) : new Date())}
+            value={formData.paymentDate ? (() => {
+              // Convert Date to Beirut timezone and format as YYYY-MM-DD for date input
+              const beirutTime = toBeirutTime(formData.paymentDate);
+              return beirutTime ? beirutTime.format('YYYY-MM-DD') : '';
+            })() : ''}
+            onChange={(e) => {
+              // Date input gives YYYY-MM-DD string
+              // We treat this as Beirut timezone and convert to Date object
+              if (e.target.value) {
+                // Parse as Beirut timezone date at midnight
+                const beirutMoment = moment.tz(e.target.value + 'T00:00:00', 'Asia/Beirut');
+                handleChange('paymentDate', beirutMoment.toDate());
+              } else {
+                handleChange('paymentDate', new Date());
+              }
+            }}
             error={!!errors.paymentDate}
             helperText={errors.paymentDate}
             fullWidth

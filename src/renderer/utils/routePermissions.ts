@@ -39,6 +39,10 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   [ROUTES.PURCHASE_ORDERS_NEW]: 'purchase_orders.create',
   [ROUTES.PURCHASE_ORDERS_VIEW]: 'purchase_orders.view',
   [ROUTES.PURCHASE_ORDERS_RECEIVE]: 'purchase_orders.update',
+  [ROUTES.PURCHASE_ORDER_TEMPLATES]: 'purchase_orders.view',
+  [ROUTES.PURCHASE_ORDER_TEMPLATES_NEW]: 'purchase_orders.create',
+  [ROUTES.PURCHASE_ORDER_TEMPLATES_EDIT]: 'purchase_orders.update',
+  [ROUTES.PURCHASE_ORDER_TEMPLATES_VIEW]: 'purchase_orders.view',
 
   // Suppliers
   [ROUTES.SUPPLIERS]: 'suppliers.view',

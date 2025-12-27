@@ -21,9 +21,9 @@ import {
 import { Add, Delete, ArrowBack } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { RootState } from '../../store';
-import { fromBeirutToUTC, utcDateToDate } from '../../utils/dateUtils';
+import { fromBeirutToUTC, utcDateToDate, toBeirutTime } from '../../utils/dateUtils';
 import {
   PurchaseOrderService,
   UpdatePurchaseOrderInput,
@@ -54,6 +54,7 @@ interface PurchaseOrderItemInput {
 const PurchaseOrderForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
 
@@ -199,6 +200,36 @@ const PurchaseOrderForm: React.FC = () => {
       setSupplierLoading(false);
     }
   }, [user?.id]);
+
+  // Load template data if provided via location state
+  useEffect(() => {
+    if (!id && location.state?.templateData && user?.id) {
+      const templateData = location.state.templateData;
+      setSupplierId(templateData.supplierId);
+      if (templateData.expectedDate) {
+        // Convert UTC date from template to local Date object for date picker
+        // The date picker expects a Date object in local timezone
+        const beirutTime = toBeirutTime(templateData.expectedDate);
+        if (beirutTime) {
+          setExpectedDate(beirutTime.toDate());
+        } else {
+          setExpectedDate(new Date(templateData.expectedDate));
+        }
+      }
+      setItems(
+        templateData.items.map((item: any) => ({
+          productId: item.productId,
+          productName: '', // Will be loaded when products are fetched
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.quantity * item.unitPrice,
+        }))
+      );
+      if (location.state.templateName) {
+        showToast(`Template "${location.state.templateName}" loaded`, 'success');
+      }
+    }
+  }, [id, location.state, user?.id, showToast]);
 
   // Debounce supplier search
   useEffect(() => {

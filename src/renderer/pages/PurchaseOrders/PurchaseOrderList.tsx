@@ -25,6 +25,7 @@ import {
   Cancel,
   HourglassEmpty,
   Refresh,
+  FileCopy,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -40,6 +41,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import { usePermission } from '../../hooks/usePermission';
+import { ROUTES } from '../../utils/constants';
 
 // Move formatCurrency outside component to avoid recreating on each render
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -267,7 +269,11 @@ const PurchaseOrderList: React.FC = () => {
   }, []);
 
   const handleAddPurchaseOrder = useCallback(() => {
-    navigate('/purchase-orders/new');
+    navigate(ROUTES.PURCHASE_ORDERS_NEW);
+  }, [navigate]);
+
+  const handleManageTemplates = useCallback(() => {
+    navigate(ROUTES.PURCHASE_ORDER_TEMPLATES);
   }, [navigate]);
 
   // Memoize filter options to prevent recreating on every render
@@ -462,6 +468,16 @@ const PurchaseOrderList: React.FC = () => {
                   sx={addButtonSx}
                 >
                   New Purchase Order
+                </Button>
+              </Tooltip>
+              <Tooltip title="Manage Templates - Create and manage reusable purchase order templates.">
+                <Button
+                  variant="outlined"
+                  startIcon={<FileCopy sx={{ fontSize: '18px' }} />}
+                  onClick={handleManageTemplates}
+                  sx={addButtonSx}
+                >
+                  Templates
                 </Button>
               </Tooltip>
             )}

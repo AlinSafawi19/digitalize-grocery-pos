@@ -30,6 +30,7 @@ import { registerSupplierPaymentHandlers } from './supplier-payment.handlers';
 import { registerReorderSuggestionHandlers } from './reorder-suggestion.handlers';
 import { registerBatchBarcodeScanHandlers } from './batch-barcode-scan.handlers';
 import { registerBarcodeValidationEnhancedHandlers } from './barcode-validation-enhanced.handlers';
+import { registerPurchaseOrderTemplateHandlers } from './purchase-order-template.handlers';
 
 /**
  * Register all IPC handlers
@@ -74,6 +75,7 @@ export function registerIpcHandlers(): void {
   registerReorderSuggestionHandlers();
   registerBatchBarcodeScanHandlers();
   registerBarcodeValidationEnhancedHandlers();
+  registerPurchaseOrderTemplateHandlers();
 
   logger.info('IPC handlers registered');
 }

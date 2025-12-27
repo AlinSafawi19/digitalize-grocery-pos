@@ -39,7 +39,6 @@ import { SupplierPaymentService, SupplierPayment, SupplierBalanceSummary } from 
 import SupplierPaymentForm from './SupplierPaymentForm';
 import MainLayout from '../../components/layout/MainLayout';
 import { formatDate } from '../../utils/formatters';
-import { formatDate as formatDateBeirut } from '../../utils/dateUtils';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 
@@ -1224,7 +1223,7 @@ const SupplierDetails: React.FC = () => {
                                 ) : (
                                   payments.map((payment) => (
                                     <TableRow key={payment.id}>
-                                      <TableCell>{formatDateBeirut(payment.paymentDate)}</TableCell>
+                                      <TableCell>{formatDate(payment.paymentDate)}</TableCell>
                                       <TableCell align="right">{formatCurrency(payment.amount)}</TableCell>
                                       <TableCell>{payment.currency}</TableCell>
                                       <TableCell>
