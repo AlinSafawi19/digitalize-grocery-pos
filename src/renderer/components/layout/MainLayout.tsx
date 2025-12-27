@@ -12,7 +12,7 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz, Build } from '@mui/icons-material';
 import NotificationCenter from '../NotificationCenter/NotificationCenter';
 import BackupOperationBanner from '../common/BackupOperationBanner';
 import HelpersPanel from '../helpers/HelpersPanel';
@@ -324,6 +324,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
     handleMoreMenuClose();
   }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute, user?.id]);
 
+  const handleNavigateToSystemMaintenance = useCallback(() => {
+    // Only main user (ID = 1) can access system maintenance page
+    if (user?.id !== 1) {
+      navigate(ROUTES.ACCESS_DENIED, { replace: true });
+      handleMoreMenuClose();
+      return;
+    }
+    if (shouldBlockNavigation()) {
+      navigate(getExpiredLicenseRoute(), { replace: true });
+      return;
+    }
+    navigate(ROUTES.SYSTEM_MAINTENANCE);
+    handleMoreMenuClose();
+  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute, user?.id]);
+
   const handleNavigateToLicenseFromMenu = useCallback(() => {
     // Only main user can access license page
     const isMainUser = user?.id === 1;
@@ -354,6 +369,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     isSettingsActive: isActiveRoute(ROUTES.SETTINGS),
     isBackupActive: isActiveRoute(ROUTES.BACKUP),
     isLicenseActive: isActiveRoute(ROUTES.LICENSE),
+    isSystemMaintenanceActive: isActiveRoute(ROUTES.SYSTEM_MAINTENANCE),
   }), [isActiveRoute, isPricingRoute]);
 
   // Memoize getHeaderButtonStyles function
@@ -910,6 +926,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 <BackupIcon sx={{ mr: 1, fontSize: '24px' }} />
                 Backup & Restore
+              </MenuItem>
+            )}
+            {user?.id === 1 && (
+              <MenuItem
+                onClick={handleNavigateToSystemMaintenance}
+                selected={routeStates.isSystemMaintenanceActive}
+              >
+                <Build sx={{ mr: 1, fontSize: '24px' }} />
+                System Maintenance
               </MenuItem>
             )}
             {user?.id === 1 && (

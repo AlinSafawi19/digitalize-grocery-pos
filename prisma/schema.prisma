@@ -36,6 +36,7 @@ model User {
   stockTransfersApproved  StockTransfer[] @relation("TransferApprover")
   stockTransfersCompleted StockTransfer[] @relation("TransferCompleter")
   productImagesUploaded   ProductImage[]  @relation("ProductImageUploader")
+  maintenanceOperations  SystemMaintenance[] @relation("MaintenancePerformer")
 
   @@index([username])
   @@index([phone])
@@ -800,4 +801,26 @@ model StockTransferItem {
 
   @@index([stockTransferId])
   @@index([productId])
+}
+
+model SystemMaintenance {
+  id          Int      @id @default(autoincrement())
+  operationType String // e.g., "database_optimization", "data_cleanup", "vacuum", "analyze"
+  status      String   @default("pending") // pending, running, completed, failed
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  duration    Int?     // Duration in milliseconds
+  result      String?  // JSON string with operation results
+  error       String?  // Error message if failed
+  performedBy Int      // User who initiated the maintenance
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  performer   User     @relation("MaintenancePerformer", fields: [performedBy], references: [id], onDelete: Restrict)
+
+  @@index([operationType])
+  @@index([status])
+  @@index([startedAt])
+  @@index([performedBy])
 }

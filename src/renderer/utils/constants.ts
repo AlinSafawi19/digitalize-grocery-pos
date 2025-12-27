@@ -76,5 +76,6 @@ export const ROUTES = {
   CASHIERS: '/cashiers',
   CASHIERS_NEW: '/cashiers/new',
   CASHIERS_EDIT: '/cashiers/edit/:id',
+  SYSTEM_MAINTENANCE: '/system/maintenance',
 } as const;
 

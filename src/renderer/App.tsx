@@ -67,6 +67,7 @@ const BackupPage = lazy(() => import('./pages/Backup/BackupPage'));
 const LogsPage = lazy(() => import('./pages/Logs/LogsPage'));
 const LogDetails = lazy(() => import('./pages/Logs/LogDetails'));
 const CashierList = lazy(() => import('./pages/Cashiers/CashierList'));
+const SystemMaintenancePage = lazy(() => import('./pages/System/SystemMaintenance'));
 const CashierForm = lazy(() => import('./pages/Cashiers/CashierForm'));
 
 // Loading component for Suspense fallback
@@ -876,7 +877,23 @@ function AppContent() {
             // Only main user (ID = 1) can access backup page
             isAuthenticated && isMainUser ? (
               <ProtectedRoute>
-                <BackupPage />
+              <BackupPage />
+              </ProtectedRoute>
+            ) : isAuthenticated ? (
+              // Non-main users are redirected to access denied page
+              <Navigate to={ROUTES.ACCESS_DENIED} replace />
+            ) : (
+              <Navigate to={ROUTES.LOGIN} replace />
+            )
+          }
+        />
+        <Route
+          path={ROUTES.SYSTEM_MAINTENANCE}
+          element={
+            // Only main user (ID = 1) can access system maintenance page
+            isAuthenticated && isMainUser ? (
+              <ProtectedRoute>
+              <SystemMaintenancePage />
               </ProtectedRoute>
             ) : isAuthenticated ? (
               // Non-main users are redirected to access denied page
