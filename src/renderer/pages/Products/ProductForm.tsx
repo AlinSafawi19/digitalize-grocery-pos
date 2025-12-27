@@ -24,6 +24,7 @@ import { CategoryService } from '../../services/category.service';
 import { SupplierService } from '../../services/supplier.service';
 import { InventoryService } from '../../services/inventory.service';
 import { BarcodeService, BarcodeFormat } from '../../services/barcode.service';
+import { BarcodeValidationEnhancedService } from '../../services/barcode-validation-enhanced.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
 import { usePermission } from '../../hooks/usePermission';
@@ -79,6 +80,9 @@ const ProductForm: React.FC = () => {
     valid: boolean;
     format?: BarcodeFormat;
     error?: string;
+    warnings?: string[];
+    suggestions?: string[];
+    confidence?: number;
     checking: boolean;
   }>({ valid: false, checking: false });
   
@@ -626,18 +630,27 @@ const ProductForm: React.FC = () => {
         }
       }
 
-      // Validate barcode format
-      const validationResult = await BarcodeService.validateBarcode(barcode);
-      if (validationResult.success && validationResult.result) {
+      // Validate barcode format using enhanced validation
+      const enhancedResult = await BarcodeValidationEnhancedService.validate(barcode, {
+        checkDuplicates: !isEditMode || (product && product.barcode !== barcode),
+        context: 'product_form',
+        validatedBy: user?.id,
+        saveHistory: true,
+      });
+
+      if (enhancedResult.success && enhancedResult.result) {
         setBarcodeValidation({
-          valid: validationResult.result.valid,
-          format: validationResult.result.format,
-          error: validationResult.result.error,
+          valid: enhancedResult.result.valid,
+          format: enhancedResult.result.format,
+          error: enhancedResult.result.error,
+          warnings: enhancedResult.result.warnings,
+          suggestions: enhancedResult.result.suggestions,
+          confidence: enhancedResult.result.confidence,
           checking: false,
         });
         
-        if (!validationResult.result.valid && validationResult.result.error) {
-          setFieldErrors((prev) => ({ ...prev, barcode: validationResult.result?.error }));
+        if (!enhancedResult.result.valid && enhancedResult.result.error) {
+          setFieldErrors((prev) => ({ ...prev, barcode: enhancedResult.result?.error }));
         } else {
           setFieldErrors((prev) => {
             const newErrors = { ...prev };
@@ -646,11 +659,32 @@ const ProductForm: React.FC = () => {
           });
         }
       } else {
-        setBarcodeValidation({
-          valid: false,
-          checking: false,
-          error: validationResult.error || 'Failed to validate barcode',
-        });
+        // Fallback to basic validation if enhanced fails
+        const validationResult = await BarcodeService.validateBarcode(barcode);
+        if (validationResult.success && validationResult.result) {
+          setBarcodeValidation({
+            valid: validationResult.result.valid,
+            format: validationResult.result.format,
+            error: validationResult.result.error,
+            checking: false,
+          });
+          
+          if (!validationResult.result.valid && validationResult.result.error) {
+            setFieldErrors((prev) => ({ ...prev, barcode: validationResult.result?.error }));
+          } else {
+            setFieldErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.barcode;
+              return newErrors;
+            });
+          }
+        } else {
+          setBarcodeValidation({
+            valid: false,
+            checking: false,
+            error: enhancedResult.error || validationResult.error || 'Failed to validate barcode',
+          });
+        }
       }
     }, 500);
   }, [isEditMode, product, user?.id]);
@@ -1544,7 +1578,7 @@ const ProductForm: React.FC = () => {
                                   fieldErrors.barcode ||
                                   (barcodeValidation.checking ? 'Validating...' : 
                                    barcodeValidation.valid && barcodeValidation.format 
-                                     ? `Format: ${barcodeValidation.format}` 
+                                     ? `Format: ${barcodeValidation.format}${barcodeValidation.warnings && barcodeValidation.warnings.length > 0 ? ' • ' + barcodeValidation.warnings.join(', ') : ''}${barcodeValidation.confidence && barcodeValidation.confidence < 100 ? ` (Confidence: ${barcodeValidation.confidence}%)` : ''}` 
                                      : barcodeValidation.error || '')
                                 }
                                 disabled={loading}
@@ -1562,6 +1596,30 @@ const ProductForm: React.FC = () => {
                               />
                             </Tooltip>
                           </Box>
+                          {/* Show warnings and suggestions */}
+                          {barcodeValidation.warnings && barcodeValidation.warnings.length > 0 && (
+                            <Box sx={{ mt: 1, width: '100%' }}>
+                              <Alert severity="warning" sx={{ fontSize: '0.875rem' }}>
+                                {barcodeValidation.warnings.map((warning, idx) => (
+                                  <Typography key={idx} variant="body2">
+                                    {warning}
+                                  </Typography>
+                                ))}
+                              </Alert>
+                            </Box>
+                          )}
+                          {barcodeValidation.suggestions && barcodeValidation.suggestions.length > 0 && (
+                            <Box sx={{ mt: 1, width: '100%' }}>
+                              <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                                <AlertTitle>Suggestions</AlertTitle>
+                                {barcodeValidation.suggestions.map((suggestion, idx) => (
+                                  <Typography key={idx} variant="body2" sx={{ mb: 0.5 }}>
+                                    {suggestion}
+                                  </Typography>
+                                ))}
+                              </Alert>
+                            </Box>
+                          )}
                           <Tooltip title="Generate Barcode - Automatically generate a random EAN-13 barcode for this product. EAN-13 is the most common retail barcode format.">
                             <span>
                               <IconButton
