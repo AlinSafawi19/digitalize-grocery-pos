@@ -35,6 +35,7 @@ import { registerStockTransferHandlers } from './stock-transfer.handlers';
 import { registerLocationHandlers } from './location.handlers';
 import { registerProductImageHandlers } from './product-image.handlers';
 import { registerSupplierContactHandlers } from './supplier-contact.handlers';
+import { registerSupplierDocumentHandlers } from './supplier-document.handlers';
 
 /**
  * Register all IPC handlers
@@ -84,6 +85,7 @@ export function registerIpcHandlers(): void {
   registerLocationHandlers();
   registerProductImageHandlers();
   registerSupplierContactHandlers();
+  registerSupplierDocumentHandlers();
 
   logger.info('IPC handlers registered');
 }

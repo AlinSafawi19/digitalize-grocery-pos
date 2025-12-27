@@ -30,6 +30,7 @@ import {
   TrendingUp,
   Add,
   Contacts,
+  Description,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -39,6 +40,7 @@ import { PurchaseOrder, PurchaseInvoice } from '../../services/purchase-order.se
 import { SupplierPaymentService, SupplierPayment, SupplierBalanceSummary } from '../../services/supplier-payment.service';
 import SupplierPaymentForm from './SupplierPaymentForm';
 import SupplierContactList from '../../components/supplier/SupplierContactList';
+import SupplierDocumentList from '../../components/supplier/SupplierDocumentList';
 import MainLayout from '../../components/layout/MainLayout';
 import { formatDate } from '../../utils/formatters';
 import { useToast } from '../../hooks/useToast';
@@ -987,6 +989,7 @@ const SupplierDetails: React.FC = () => {
                       <Tab icon={<ShoppingCart sx={{ fontSize: '18px' }} />} label="Purchase History" />
                       <Tab icon={<Receipt sx={{ fontSize: '18px' }} />} label="Payment History" />
                       <Tab icon={<Contacts sx={{ fontSize: '18px' }} />} label="Contacts" />
+                      <Tab icon={<Description sx={{ fontSize: '18px' }} />} label="Documents" />
                     </Tabs>
                     {activeTab === 2 && (
                       <Button
@@ -1340,6 +1343,16 @@ const SupplierDetails: React.FC = () => {
                     <Box sx={{ p: 3 }}>
                       {id && userId && (
                         <SupplierContactList
+                          supplierId={parseInt(id, 10)}
+                          userId={userId}
+                        />
+                      )}
+                    </Box>
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={4}>
+                    <Box sx={{ p: 3 }}>
+                      {id && userId && (
+                        <SupplierDocumentList
                           supplierId={parseInt(id, 10)}
                           userId={userId}
                         />

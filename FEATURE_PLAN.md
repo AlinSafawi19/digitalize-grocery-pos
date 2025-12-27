@@ -367,16 +367,25 @@ This document outlines the planned features and enhancements for the DigitalizeP
   - Automatic unsetting of other primary contacts when setting a new primary contact
   - Support for contact roles, email, phone, and notes fields
 
-### Supplier Document Management
+### ✅ Supplier Document Management (COMPLETED)
 - **Description**: Store and manage supplier-related documents (contracts, invoices, certificates)
 - **Requirements**:
-  - Document upload functionality
-  - Document storage system
-  - Document categorization
-  - Document search and retrieval
-  - Document expiration tracking
+  - ✅ Document upload functionality - File selection dialog, upload with progress tracking
+  - ✅ Document storage system - Organized storage in userData/documents/suppliers with per-supplier directories
+  - ✅ Document categorization - Support for contract, invoice, certificate, license, agreement, other categories
+  - ✅ Document search and retrieval - Search by file name, description, category with filtering
+  - ✅ Document expiration tracking - Expiry date tracking with expired/expiring soon indicators
 - **Priority**: Medium
 - **Dependencies**: Supplier management, File storage
+- **Status**: ✅ **COMPLETED** - Full implementation with database schema, services, IPC handlers, UI components, and integration into SupplierDetails page
+- **Implementation Notes**:
+  - Created SupplierDocument model in Prisma schema with support for multiple documents per supplier
+  - Implemented SupplierDocumentService with CRUD operations, file upload, and expiration tracking
+  - Built SupplierDocumentList component with table view, upload dialog, edit/delete functionality, and download support
+  - Integrated document management into SupplierDetails page as a new "Documents" tab
+  - Support for PDF, images, Word, and Excel file types (up to 50MB)
+  - Expiration tracking with visual indicators for expired and expiring soon documents
+  - File organization by supplier ID in separate directories
 
 ---
 
@@ -577,6 +586,7 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - Date: 2024-12-27
 - Version: 1.0.2
 - **Recent Updates**:
+  - ✅ Completed Supplier Document Management with document upload, categorization, expiration tracking, and integration into SupplierDetails page
   - ✅ Completed Multiple Contact Persons with contact management UI, primary contact designation, and integration into SupplierDetails page
   - ✅ Completed Product Image Management with upload, optimization, thumbnail generation, gallery UI, and integration with product forms
   - ✅ Completed Stock Transfer Between Locations with full multi-location support, transfer workflow, UI components, and navigation integration

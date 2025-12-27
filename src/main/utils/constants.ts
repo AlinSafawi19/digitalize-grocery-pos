@@ -16,6 +16,7 @@ export const RECEIPTS_DIR = path.join(USER_DATA_PATH, 'receipts');
 export const REPORTS_DIR = path.join(USER_DATA_PATH, 'reports');
 export const LOGS_DIR = path.join(USER_DATA_PATH, 'logs');
 export const IMAGES_DIR = path.join(USER_DATA_PATH, 'images', 'products');
+export const SUPPLIER_DOCUMENTS_DIR = path.join(USER_DATA_PATH, 'documents', 'suppliers');
 
 // License Server
 // Default to production URL for packaged apps, localhost for development
