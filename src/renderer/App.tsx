@@ -36,6 +36,7 @@ const StockMovementHistory = lazy(() => import('./pages/Inventory/StockMovementH
 const LowStockAlerts = lazy(() => import('./pages/Inventory/LowStockAlerts'));
 const AdjustStock = lazy(() => import('./pages/Inventory/AdjustStock'));
 const ReorderSuggestions = lazy(() => import('./pages/Inventory/ReorderSuggestions'));
+const BatchBarcodeScan = lazy(() => import('./pages/Inventory/BatchBarcodeScan'));
 const PurchaseOrderList = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderList'));
 const PurchaseOrderForm = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderForm'));
 const PurchaseOrderDetails = lazy(() => import('./pages/PurchaseOrders/PurchaseOrderDetails'));
@@ -594,6 +595,14 @@ function AppContent() {
           element={
             <PermissionProtectedRoute>
               <ReorderSuggestions />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.INVENTORY_BATCH_SCAN}
+          element={
+            <PermissionProtectedRoute>
+              <BatchBarcodeScan />
             </PermissionProtectedRoute>
           }
         />

@@ -36,6 +36,7 @@ export const ROUTES = {
   INVENTORY_LOW_STOCK: '/inventory/low-stock',
   INVENTORY_ADJUST_STOCK: '/inventory/adjust/:productId',
   INVENTORY_REORDER_SUGGESTIONS: '/inventory/reorder-suggestions',
+  INVENTORY_BATCH_SCAN: '/inventory/batch-scan',
   PURCHASE_ORDERS: '/purchase-orders',
   PURCHASE_ORDERS_NEW: '/purchase-orders/new',
   PURCHASE_ORDERS_VIEW: '/purchase-orders/:id',

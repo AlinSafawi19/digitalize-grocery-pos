@@ -16,7 +16,7 @@ import {
   CircularProgress,
   Tooltip,
 } from '@mui/material';
-import { Edit, Warning, CheckCircle, Cancel, History, Refresh, ShoppingCart } from '@mui/icons-material';
+import { Edit, Warning, CheckCircle, Cancel, History, Refresh, ShoppingCart, QrCodeScanner } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -138,6 +138,10 @@ const InventoryList: React.FC = () => {
 
   const handleNavigateToReorderSuggestions = useCallback(() => {
     navigate(ROUTES.INVENTORY_REORDER_SUGGESTIONS);
+  }, [navigate]);
+
+  const handleNavigateToBatchScan = useCallback(() => {
+    navigate(ROUTES.INVENTORY_BATCH_SCAN);
   }, [navigate]);
 
   const getStockStatus = useCallback((item: InventoryItem): { color: 'success' | 'warning' | 'error'; label: string; icon: React.ReactElement } => {
@@ -445,6 +449,18 @@ const InventoryList: React.FC = () => {
                   sx={movementsButtonSx}
                 >
                   Reorder Suggestions
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title="Batch Barcode Scan - Scan multiple barcodes in sequence for bulk operations like inventory counts and stock adjustments.">
+              <span>
+                <Button
+                  variant="outlined"
+                  startIcon={<QrCodeScanner sx={{ fontSize: '18px' }} />}
+                  onClick={handleNavigateToBatchScan}
+                  sx={movementsButtonSx}
+                >
+                  Batch Scan
                 </Button>
               </span>
             </Tooltip>

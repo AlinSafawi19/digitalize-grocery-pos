@@ -32,6 +32,7 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   [ROUTES.INVENTORY_LOW_STOCK]: 'inventory.view',
   [ROUTES.INVENTORY_ADJUST_STOCK]: 'inventory.update',
   [ROUTES.INVENTORY_REORDER_SUGGESTIONS]: 'inventory.view',
+  [ROUTES.INVENTORY_BATCH_SCAN]: 'inventory.view',
 
   // Purchase Orders
   [ROUTES.PURCHASE_ORDERS]: 'purchase_orders.view',
