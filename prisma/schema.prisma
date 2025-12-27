@@ -37,6 +37,8 @@ model User {
   stockTransfersCompleted StockTransfer[] @relation("TransferCompleter")
   productImagesUploaded   ProductImage[]  @relation("ProductImageUploader")
   maintenanceOperations  SystemMaintenance[] @relation("MaintenancePerformer")
+  receiptTemplatesCreated ReceiptTemplate[] @relation("ReceiptTemplateCreator")
+  receiptTemplatesUpdated ReceiptTemplate[] @relation("ReceiptTemplateUpdater")
 
   @@index([username])
   @@index([phone])
@@ -823,4 +825,26 @@ model SystemMaintenance {
   @@index([status])
   @@index([startedAt])
   @@index([performedBy])
+}
+
+model ReceiptTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  template    String   // JSON string containing template structure and content
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy   Int      // User who created the template
+  updatedBy   Int?     // User who last updated the template
+
+  // Relations
+  creator     User     @relation("ReceiptTemplateCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  updater     User?    @relation("ReceiptTemplateUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([name])
+  @@index([isDefault])
+  @@index([isActive])
+  @@index([createdBy])
 }

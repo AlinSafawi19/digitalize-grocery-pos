@@ -77,5 +77,9 @@ export const ROUTES = {
   CASHIERS_NEW: '/cashiers/new',
   CASHIERS_EDIT: '/cashiers/edit/:id',
   SYSTEM_MAINTENANCE: '/system/maintenance',
+  RECEIPT_TEMPLATES: '/receipts/templates',
+  RECEIPT_TEMPLATES_NEW: '/receipts/templates/new',
+  RECEIPT_TEMPLATES_EDIT: '/receipts/templates/:id/edit',
+  RECEIPT_TEMPLATES_PREVIEW: '/receipts/templates/:id/preview',
 } as const;
 

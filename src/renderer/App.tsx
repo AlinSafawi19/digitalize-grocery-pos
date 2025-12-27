@@ -68,6 +68,8 @@ const LogsPage = lazy(() => import('./pages/Logs/LogsPage'));
 const LogDetails = lazy(() => import('./pages/Logs/LogDetails'));
 const CashierList = lazy(() => import('./pages/Cashiers/CashierList'));
 const SystemMaintenancePage = lazy(() => import('./pages/System/SystemMaintenance'));
+const ReceiptTemplateList = lazy(() => import('./pages/Receipts/ReceiptTemplateList'));
+const ReceiptTemplateEditor = lazy(() => import('./pages/Receipts/ReceiptTemplateEditor'));
 const CashierForm = lazy(() => import('./pages/Cashiers/CashierForm'));
 
 // Loading component for Suspense fallback
@@ -901,6 +903,30 @@ function AppContent() {
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />
             )
+          }
+        />
+        <Route
+          path={ROUTES.RECEIPT_TEMPLATES}
+          element={
+            <ProtectedRoute>
+              <ReceiptTemplateList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.RECEIPT_TEMPLATES_NEW}
+          element={
+            <ProtectedRoute>
+              <ReceiptTemplateEditor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.RECEIPT_TEMPLATES_EDIT}
+          element={
+            <ProtectedRoute>
+              <ReceiptTemplateEditor />
+            </ProtectedRoute>
           }
         />
         <Route
