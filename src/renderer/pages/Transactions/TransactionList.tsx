@@ -125,6 +125,30 @@ const TransactionRow = memo<TransactionRowProps>(
             {transaction.cashier?.username || 'N/A'}
           </Typography>
         </TableCell>
+        <TableCell>
+          {transaction.notes ? (
+            <Tooltip title={transaction.notes} arrow>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '14px',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  color: '#616161',
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {transaction.notes}
+              </Typography>
+            </Tooltip>
+          ) : (
+            <Typography variant="body2" sx={{ fontSize: '14px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#9e9e9e' }}>
+              -
+            </Typography>
+          )}
+        </TableCell>
         <TableCell align="right">
           <Box>
             <Typography variant="body2" sx={{ fontSize: '16px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a237e' }}>
@@ -773,7 +797,7 @@ const TransactionList: React.FC = () => {
 
         {/* Filters */}
         <FilterHeader
-          searchPlaceholder="Search by transaction number..."
+          searchPlaceholder="Search by transaction number or notes..."
           searchValue={search}
           onSearchChange={handleSearchChange}
           onClear={handleClearFilters}
@@ -954,6 +978,7 @@ const TransactionList: React.FC = () => {
                     <TableCell>Type</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Cashier</TableCell>
+                    <TableCell>Notes</TableCell>
                     <TableCell align="right">Subtotal</TableCell>
                     <TableCell align="right">Tax</TableCell>
                     <TableCell align="right">Discount</TableCell>
@@ -964,7 +989,7 @@ const TransactionList: React.FC = () => {
                 <TableBody>
                   {transactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canVoid ? 11 : 10} align="center">
+                      <TableCell colSpan={canVoid ? 12 : 11} align="center">
                         <Typography
                           variant="body2"
                           color="text.secondary"

@@ -22,6 +22,7 @@ export interface CreateTransactionInput {
   items: TransactionItemInput[];
   discount?: number; // Transaction-level discount
   cashierId: number;
+  notes?: string | null; // Optional notes/comments for the transaction
 }
 
 export interface PaymentInput {
@@ -425,6 +426,7 @@ export class TransactionService {
               totalUsd: applyRounding(finalTotalUsd, roundingMethod),
               totalLbp: applyRounding(finalTotalLbp, roundingMethod),
               cashierId,
+              notes: input.notes || null,
               items: {
                 create: transactionItems,
               },
@@ -783,7 +785,10 @@ export class TransactionService {
       // Build where clause
       const where: Prisma.TransactionWhereInput = {};
       if (search) {
-        where.transactionNumber = { contains: search };
+        where.OR = [
+          { transactionNumber: { contains: search } },
+          { notes: { contains: search } },
+        ];
       }
       if (status) {
         where.status = status;
@@ -835,6 +840,7 @@ export class TransactionService {
             totalUsd: true,
             totalLbp: true,
             cashierId: true,
+            notes: true,
             createdAt: true,
             updatedAt: true,
             cashier: {

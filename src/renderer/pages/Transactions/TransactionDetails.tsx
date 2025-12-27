@@ -518,6 +518,16 @@ const TransactionDetails: React.FC = () => {
                       {transaction.cashier?.username || 'N/A'}
                     </Typography>
                   </Grid>
+                  {transaction.notes && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary" sx={labelTypographySx}>
+                        Notes
+                      </Typography>
+                      <Typography variant="body1" sx={bodyTypographySx} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {transaction.notes}
+                      </Typography>
+                    </Grid>
+                  )}
                 </Grid>
               </CardContent>
             </Card>

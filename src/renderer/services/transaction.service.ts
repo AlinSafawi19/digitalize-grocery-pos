@@ -11,6 +11,7 @@ export interface CreateTransactionInput {
   items: TransactionItemInput[];
   discount?: number;
   cashierId: number;
+  notes?: string | null;
 }
 
 export interface PaymentInput {
@@ -92,6 +93,7 @@ export interface Transaction {
   totalUsd?: number;
   totalLbp?: number;
   cashierId: number;
+  notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
   cashier?: User;

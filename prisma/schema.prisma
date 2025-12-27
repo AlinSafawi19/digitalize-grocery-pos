@@ -236,6 +236,7 @@ model Transaction {
   totalUsd           Float    @default(0)
   totalLbp            Float    @default(0)
   cashierId         Int
+  notes             String?  // Optional notes/comments for the transaction
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -249,6 +250,7 @@ model Transaction {
   @@index([cashierId])
   @@index([status])
   @@index([type])
+  @@index([notes]) // Index for note search functionality
   // PERFORMANCE FIX: Composite indexes for common query patterns
   @@index([status, createdAt]) // For date range queries with status filter (reports)
   @@index([cashierId, status, createdAt]) // For cashier-specific reports
