@@ -349,15 +349,23 @@ This document outlines the planned features and enhancements for the DigitalizeP
   - Payment form supports linking to specific invoices or general payments
   - Full payment history with invoice details in supplier details page
 
-### Multiple Contact Persons
+### ✅ Multiple Contact Persons (COMPLETED)
 - **Description**: Store and manage multiple contact persons per supplier
 - **Requirements**:
-  - Contact person data model
-  - Contact management UI
-  - Primary contact designation
-  - Contact role/function assignment
+  - ✅ Contact person data model - SupplierContact model with name, email, phone, role, isPrimary fields
+  - ✅ Contact management UI - SupplierContactList component with full CRUD operations
+  - ✅ Primary contact designation - Support for setting one primary contact per supplier
+  - ✅ Contact role/function assignment - Role field for contact designation (e.g., Sales Manager, Account Manager)
 - **Priority**: Medium
 - **Dependencies**: Supplier management
+- **Status**: ✅ **COMPLETED** - Full implementation with database schema, services, IPC handlers, UI components, and integration into SupplierDetails page
+- **Implementation Notes**:
+  - Created SupplierContact model in Prisma schema with support for multiple contacts per supplier
+  - Implemented SupplierContactService with CRUD operations and primary contact management
+  - Built SupplierContactList component with table view, add/edit dialogs, and delete confirmation
+  - Integrated contact management into SupplierDetails page as a new "Contacts" tab
+  - Automatic unsetting of other primary contacts when setting a new primary contact
+  - Support for contact roles, email, phone, and notes fields
 
 ### Supplier Document Management
 - **Description**: Store and manage supplier-related documents (contracts, invoices, certificates)
@@ -569,6 +577,7 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - Date: 2024-12-27
 - Version: 1.0.2
 - **Recent Updates**:
+  - ✅ Completed Multiple Contact Persons with contact management UI, primary contact designation, and integration into SupplierDetails page
   - ✅ Completed Product Image Management with upload, optimization, thumbnail generation, gallery UI, and integration with product forms
   - ✅ Completed Stock Transfer Between Locations with full multi-location support, transfer workflow, UI components, and navigation integration
   - ✅ Completed Transaction Notes and Comments with database schema, backend service, UI display, and search functionality

@@ -178,9 +178,30 @@ model Supplier {
   purchaseOrders        PurchaseOrder[]
   payments              SupplierPayment[]
   purchaseOrderTemplates PurchaseOrderTemplate[]
+  contacts              SupplierContact[]
 
   @@index([name])
   @@index([email])
+}
+
+model SupplierContact {
+  id          Int      @id @default(autoincrement())
+  supplierId  Int
+  name        String
+  email       String?
+  phone       String?
+  role        String?  // e.g., "Sales Manager", "Account Manager", "Technical Support"
+  isPrimary   Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([isPrimary])
+  @@index([supplierId, isPrimary])
 }
 
 model Product {

@@ -29,6 +29,7 @@ import {
   Receipt,
   TrendingUp,
   Add,
+  Contacts,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -37,6 +38,7 @@ import { Supplier } from '../../services/product.service';
 import { PurchaseOrder, PurchaseInvoice } from '../../services/purchase-order.service';
 import { SupplierPaymentService, SupplierPayment, SupplierBalanceSummary } from '../../services/supplier-payment.service';
 import SupplierPaymentForm from './SupplierPaymentForm';
+import SupplierContactList from '../../components/supplier/SupplierContactList';
 import MainLayout from '../../components/layout/MainLayout';
 import { formatDate } from '../../utils/formatters';
 import { useToast } from '../../hooks/useToast';
@@ -984,6 +986,7 @@ const SupplierDetails: React.FC = () => {
                       <Tab icon={<TrendingUp sx={{ fontSize: '18px' }} />} label="Overview" />
                       <Tab icon={<ShoppingCart sx={{ fontSize: '18px' }} />} label="Purchase History" />
                       <Tab icon={<Receipt sx={{ fontSize: '18px' }} />} label="Payment History" />
+                      <Tab icon={<Contacts sx={{ fontSize: '18px' }} />} label="Contacts" />
                     </Tabs>
                     {activeTab === 2 && (
                       <Button
@@ -1331,6 +1334,16 @@ const SupplierDetails: React.FC = () => {
                           </>
                         )}
                       </Box>
+                    </Box>
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={3}>
+                    <Box sx={{ p: 3 }}>
+                      {id && userId && (
+                        <SupplierContactList
+                          supplierId={parseInt(id, 10)}
+                          userId={userId}
+                        />
+                      )}
                     </Box>
                   </TabPanel>
                 </Paper>
