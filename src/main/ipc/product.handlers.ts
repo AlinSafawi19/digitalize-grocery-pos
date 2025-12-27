@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import { logger } from '../utils/logger';
 import {
   ProductService,
@@ -6,6 +6,9 @@ import {
   UpdateProductInput,
   ProductListOptions,
 } from '../services/product/product.service';
+import { ProductImportExportService } from '../services/product/product-import-export.service';
+import path from 'path';
+import fs from 'fs-extra';
 
 /**
  * Register product management IPC handlers
@@ -260,11 +263,212 @@ export function registerProductHandlers(): void {
     try {
       const result = await ProductService.bulkDelete(productIds, userId);
       return {
-        success: true,
         ...result,
+        success: true,
       };
     } catch (error) {
       logger.error('Error in product:bulkDelete handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  });
+
+  /**
+   * Generate import preview handler
+   * IPC: product:generateImportPreview
+   */
+  ipcMain.handle('product:generateImportPreview', async (_event, filePath: string) => {
+    try {
+      const preview = await ProductImportExportService.generateImportPreview(filePath);
+      return {
+        success: true,
+        preview,
+      };
+    } catch (error) {
+      logger.error('Error in product:generateImportPreview handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  });
+
+  /**
+   * Import products from file handler
+   * IPC: product:importFromFile
+   */
+  ipcMain.handle('product:importFromFile', async (event, filePath: string, userId: number) => {
+    try {
+      // Parse and prepare import data
+      const rows = await ProductImportExportService.parseImportFile(filePath);
+      const prepared = await ProductImportExportService.prepareImportData(rows);
+
+      if (prepared.validRows === 0) {
+        return {
+          success: false,
+          error: 'No valid products to import',
+          errors: prepared.errors,
+        };
+      }
+
+      // Send progress update
+      event.sender.send('product:import:progress', {
+        stage: 'importing',
+        message: `Importing ${prepared.validRows} products...`,
+      });
+
+      // Import products using bulk create
+      const result = await ProductService.bulkCreate(prepared.products, userId);
+
+      // Send completion update
+      event.sender.send('product:import:progress', {
+        stage: 'completed',
+        message: `Import completed: ${result.success} succeeded, ${result.failed} failed`,
+      });
+
+      return {
+        ...result,
+        success: true,
+        totalRows: prepared.totalRows,
+        invalidRows: prepared.invalidRows,
+        validationErrors: prepared.errors,
+      };
+    } catch (error) {
+      logger.error('Error in product:importFromFile handler', error);
+      event.sender.send('product:import:progress', {
+        stage: 'error',
+        message: `Import failed: ${error instanceof Error ? error.message : 'An error occurred'}`,
+      });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  });
+
+  /**
+   * Export products to file handler
+   * IPC: product:exportToFile
+   */
+  ipcMain.handle('product:exportToFile', async (_event, filePath: string, format: 'csv' | 'xlsx' = 'xlsx') => {
+    try {
+      // Get all products
+      const products = await ProductService.getAllForExport();
+
+      // Export based on format
+      let exportedPath: string;
+      if (format === 'csv') {
+        exportedPath = await ProductImportExportService.exportToCSV(products, filePath);
+      } else {
+        exportedPath = await ProductImportExportService.exportToExcel(products, filePath);
+      }
+
+      return {
+        success: true,
+        filePath: exportedPath,
+        count: products.length,
+      };
+    } catch (error) {
+      logger.error('Error in product:exportToFile handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  });
+
+  /**
+   * Generate export template handler
+   * IPC: product:generateTemplate
+   */
+  ipcMain.handle('product:generateTemplate', async (_event, filePath: string, format: 'csv' | 'xlsx' = 'xlsx') => {
+    try {
+      const templatePath = await ProductImportExportService.generateTemplate(filePath, format);
+      return {
+        success: true,
+        filePath: templatePath,
+      };
+    } catch (error) {
+      logger.error('Error in product:generateTemplate handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  });
+
+  /**
+   * Show file dialog for import
+   * IPC: product:showImportDialog
+   */
+  ipcMain.handle('product:showImportDialog', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Select Product Import File',
+        filters: [
+          { name: 'CSV Files', extensions: ['csv'] },
+          { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+        properties: ['openFile'],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return {
+          success: false,
+          canceled: true,
+        };
+      }
+
+      return {
+        success: true,
+        filePath: result.filePaths[0],
+      };
+    } catch (error) {
+      logger.error('Error in product:showImportDialog handler', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      };
+    }
+  });
+
+  /**
+   * Show file dialog for export
+   * IPC: product:showExportDialog
+   */
+  ipcMain.handle('product:showExportDialog', async (_event, defaultFileName: string = 'products') => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Save Product Export File',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'Excel Files', extensions: ['xlsx'] },
+          { name: 'CSV Files', extensions: ['csv'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return {
+          success: false,
+          canceled: true,
+        };
+      }
+
+      // Determine format from file extension
+      const ext = path.extname(result.filePath).toLowerCase();
+      const format = ext === '.csv' ? 'csv' : 'xlsx';
+
+      return {
+        success: true,
+        filePath: result.filePath,
+        format,
+      };
+    } catch (error) {
+      logger.error('Error in product:showExportDialog handler', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'An error occurred',

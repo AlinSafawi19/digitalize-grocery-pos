@@ -17,7 +17,7 @@ import {
   Checkbox,
   Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility, Refresh } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, Refresh, Upload, Download, FileDownload } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -35,6 +35,8 @@ import Toast from '../../components/common/Toast';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { usePermission } from '../../hooks/usePermission';
 import VirtualizedTableBody from '../../components/common/VirtualizedTableBody';
+import ProductImportDialog from './ProductImportDialog';
+import { ProductImportExportService } from '../../services/product-import-export.service';
 
 // Memoized ProductRow component to prevent unnecessary re-renders
 interface ProductRowProps {
@@ -251,6 +253,8 @@ const ProductList: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -672,6 +676,73 @@ const ProductList: React.FC = () => {
       setBulkDeleteDialogOpen(false);
     }
   }, [deleting]);
+
+  const handleImport = useCallback(() => {
+    setImportDialogOpen(true);
+  }, []);
+
+  const handleImportComplete = useCallback(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      setExporting(true);
+      const result = await ProductImportExportService.showExportDialog('products-export');
+      
+      if (result.canceled || !result.success || !result.filePath) {
+        setExporting(false);
+        return;
+      }
+
+      const exportResult = await ProductImportExportService.exportToFile(
+        result.filePath,
+        result.format || 'xlsx'
+      );
+
+      if (exportResult.success) {
+        showToast(
+          `Exported ${exportResult.count || 0} products successfully`,
+          'success'
+        );
+      } else {
+        showToast(exportResult.error || 'Export failed', 'error');
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'An error occurred',
+        'error'
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, [showToast]);
+
+  const handleDownloadTemplate = useCallback(async () => {
+    try {
+      const result = await ProductImportExportService.showExportDialog('products-template');
+      
+      if (result.canceled || !result.success || !result.filePath) {
+        return;
+      }
+
+      const templateResult = await ProductImportExportService.generateTemplate(
+        result.filePath,
+        result.format || 'xlsx'
+      );
+
+      if (templateResult.success) {
+        showToast('Template downloaded successfully', 'success');
+      } else {
+        showToast(templateResult.error || 'Failed to generate template', 'error');
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'An error occurred',
+        'error'
+      );
+    }
+  }, [showToast]);
 
   const handleEdit = useCallback((product: Product) => {
     navigate(`${ROUTES.PRODUCTS}/edit/${product.id}`);
@@ -1123,18 +1194,59 @@ const ProductList: React.FC = () => {
               </span>
             </Tooltip>
             {canCreate && (
-              <Tooltip title="Add Product - Create a new product with details like name, price, barcode, category, and supplier information.">
-                <span>
-                  <Button
-                    variant="contained"
-                    startIcon={<Add sx={{ fontSize: '18px' }} />}
-                    onClick={handleAddProduct}
-                    sx={addButtonSx}
-                  >
-                    Add Product
-                  </Button>
-                </span>
-              </Tooltip>
+              <>
+                <Tooltip title="Import Products - Import multiple products from a CSV or Excel file. You can download a template to see the required format.">
+                  <span>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Upload sx={{ fontSize: '18px' }} />}
+                      onClick={handleImport}
+                      disabled={exporting}
+                      sx={refreshButtonSx}
+                    >
+                      Import
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Export Products - Export all products to a CSV or Excel file for backup or external use.">
+                  <span>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Download sx={{ fontSize: '18px' }} />}
+                      onClick={handleExport}
+                      disabled={exporting}
+                      sx={refreshButtonSx}
+                    >
+                      {exporting ? 'Exporting...' : 'Export'}
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Download Template - Download an empty Excel template with the correct column headers for importing products.">
+                  <span>
+                    <Button
+                      variant="outlined"
+                      startIcon={<FileDownload sx={{ fontSize: '18px' }} />}
+                      onClick={handleDownloadTemplate}
+                      disabled={exporting}
+                      sx={refreshButtonSx}
+                    >
+                      Template
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Add Product - Create a new product with details like name, price, barcode, category, and supplier information.">
+                  <span>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add sx={{ fontSize: '18px' }} />}
+                      onClick={handleAddProduct}
+                      sx={addButtonSx}
+                    >
+                      Add Product
+                    </Button>
+                  </span>
+                </Tooltip>
+              </>
             )}
           </Box>
         </Box>
@@ -1240,6 +1352,12 @@ const ProductList: React.FC = () => {
         cancelLabel="Cancel"
         confirmColor="error"
         loading={deleting}
+      />
+      <ProductImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportComplete={handleImportComplete}
+        userId={user?.id || 0}
       />
       <Toast toast={toast} onClose={hideToast} />
     </MainLayout>
