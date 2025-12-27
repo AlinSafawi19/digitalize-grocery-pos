@@ -28,14 +28,18 @@ import {
   ShoppingCart,
   Receipt,
   TrendingUp,
+  Add,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { SupplierService } from '../../services/supplier.service';
 import { Supplier } from '../../services/product.service';
 import { PurchaseOrder, PurchaseInvoice } from '../../services/purchase-order.service';
+import { SupplierPaymentService, SupplierPayment, SupplierBalanceSummary } from '../../services/supplier-payment.service';
+import SupplierPaymentForm from './SupplierPaymentForm';
 import MainLayout from '../../components/layout/MainLayout';
 import { formatDate } from '../../utils/formatters';
+import { formatDate as formatDateBeirut } from '../../utils/dateUtils';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 
@@ -248,6 +252,20 @@ const SupplierDetails: React.FC = () => {
   const [invoicesPageSize, setInvoicesPageSize] = useState(20);
   const [invoicesTotal, setInvoicesTotal] = useState(0);
 
+  // Supplier payments
+  const [payments, setPayments] = useState<SupplierPayment[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsPage, setPaymentsPage] = useState(0);
+  const [paymentsPageSize, setPaymentsPageSize] = useState(20);
+  const [paymentsTotal, setPaymentsTotal] = useState(0);
+
+  // Balance summary
+  const [balance, setBalance] = useState<SupplierBalanceSummary | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+
+  // Payment form
+  const [paymentFormOpen, setPaymentFormOpen] = useState(false);
+
   const loadSupplier = useCallback(async () => {
     if (!id || !userId) return;
 
@@ -340,6 +358,53 @@ const SupplierDetails: React.FC = () => {
     }
   }, [id, userId, invoicesPage, invoicesPageSize]);
 
+  const loadPayments = useCallback(async () => {
+    if (!id) return;
+
+    setPaymentsLoading(true);
+    try {
+      const supplierId = parseInt(id, 10);
+      const result = await SupplierPaymentService.getList({
+        supplierId,
+        page: paymentsPage + 1,
+        pageSize: paymentsPageSize,
+        sortBy: 'paymentDate',
+        sortOrder: 'desc',
+      });
+      if (result.success && result.payments) {
+        setPayments(result.payments);
+        setPaymentsTotal(result.total || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load payments:', err);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  }, [id, paymentsPage, paymentsPageSize]);
+
+  const loadBalance = useCallback(async () => {
+    if (!id) return;
+
+    setBalanceLoading(true);
+    try {
+      const supplierId = parseInt(id, 10);
+      const result = await SupplierPaymentService.getSupplierBalance(supplierId);
+      if (result.success && result.balance) {
+        setBalance(result.balance);
+      }
+    } catch (err) {
+      console.error('Failed to load balance:', err);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [id]);
+
+  const handlePaymentSuccess = useCallback(() => {
+    loadPayments();
+    loadBalance();
+    loadPaymentHistory(); // Reload invoices to update status
+  }, [loadPayments, loadBalance, loadPaymentHistory]);
+
   // Fix useEffect dependencies - remove callbacks from dependencies to prevent unnecessary re-renders
   useEffect(() => {
     if (id && userId) {
@@ -362,8 +427,15 @@ const SupplierDetails: React.FC = () => {
   useEffect(() => {
     if (activeTab === 2 && id && userId) {
       loadPaymentHistory();
+      loadPayments();
     }
-  }, [activeTab, id, userId, invoicesPage, invoicesPageSize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, id, userId, invoicesPage, invoicesPageSize, paymentsPage, paymentsPageSize]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (id && activeTab === 0) {
+      loadBalance();
+    }
+  }, [id, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Memoize formatCurrency to prevent recreation on every render
   const formatCurrency = useCallback((amount: number) => {
@@ -815,18 +887,120 @@ const SupplierDetails: React.FC = () => {
                 </Card>
               </Grid>
 
+              {/* Balance Summary */}
+              {(balance || balanceLoading) && (
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={overviewCardSx}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="subtitle1" gutterBottom sx={overviewSubtitleTypographySx}>
+                          Payment Balance
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<Add />}
+                          onClick={() => setPaymentFormOpen(true)}
+                          disabled={balanceLoading}
+                          sx={{
+                            backgroundColor: '#1a237e',
+                            '&:hover': { backgroundColor: '#534bae' },
+                          }}
+                        >
+                          Record Payment
+                        </Button>
+                      </Box>
+                      <Divider sx={dividerSx} />
+                      {balanceLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                          <CircularProgress size={24} />
+                        </Box>
+                      ) : balance ? (
+                      <Box sx={overviewStatsBoxSx}>
+                        <Box sx={overviewRowBoxSx}>
+                          <Typography variant="body2" sx={bodyTypographySx}>
+                            Total Invoices:
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium" sx={bodyTypographySx}>
+                            {balance.totalInvoices}
+                          </Typography>
+                        </Box>
+                        <Box sx={overviewRowBoxSx}>
+                          <Typography variant="body2" sx={bodyTypographySx}>
+                            Total Invoice Amount:
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium" sx={bodyTypographySx}>
+                            {formatCurrency(balance.totalInvoiceAmount)}
+                          </Typography>
+                        </Box>
+                        <Box sx={overviewRowBoxSx}>
+                          <Typography variant="body2" sx={bodyTypographySx}>
+                            Total Payments:
+                          </Typography>
+                          <Typography variant="body2" fontWeight="medium" sx={bodyTypographySx}>
+                            {formatCurrency(balance.totalPayments)}
+                          </Typography>
+                        </Box>
+                        <Box sx={overviewRowBoxSx}>
+                          <Typography variant="body2" fontWeight="bold" sx={bodyTypographySx}>
+                            Outstanding Balance:
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            fontWeight="bold"
+                            sx={{
+                              ...bodyTypographySx,
+                              color: balance.outstandingBalance > 0 ? '#d32f2f' : '#2e7d32',
+                            }}
+                          >
+                            {formatCurrency(balance.outstandingBalance)}
+                          </Typography>
+                        </Box>
+                        {balance.overdueAmount > 0 && (
+                          <Box sx={overviewRowBoxSx}>
+                            <Typography variant="body2" sx={{ ...bodyTypographySx, color: '#d32f2f' }}>
+                              Overdue Amount:
+                            </Typography>
+                            <Typography variant="body2" fontWeight="bold" sx={{ ...bodyTypographySx, color: '#d32f2f' }}>
+                              {formatCurrency(balance.overdueAmount)} ({balance.overdueInvoices} invoices)
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+
               {/* Tabs */}
               <Grid item xs={12}>
                 <Paper sx={cardSx}>
-                  <Tabs
-                    value={activeTab}
-                    onChange={handleTabChange}
-                    sx={tabsSx}
-                  >
-                    <Tab icon={<TrendingUp sx={{ fontSize: '18px' }} />} label="Overview" />
-                    <Tab icon={<ShoppingCart sx={{ fontSize: '18px' }} />} label="Purchase History" />
-                    <Tab icon={<Receipt sx={{ fontSize: '18px' }} />} label="Payment History" />
-                  </Tabs>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid #e0e0e0' }}>
+                    <Tabs
+                      value={activeTab}
+                      onChange={handleTabChange}
+                      sx={tabsSx}
+                    >
+                      <Tab icon={<TrendingUp sx={{ fontSize: '18px' }} />} label="Overview" />
+                      <Tab icon={<ShoppingCart sx={{ fontSize: '18px' }} />} label="Purchase History" />
+                      <Tab icon={<Receipt sx={{ fontSize: '18px' }} />} label="Payment History" />
+                    </Tabs>
+                    {activeTab === 2 && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<Add />}
+                        onClick={() => setPaymentFormOpen(true)}
+                        sx={{
+                          backgroundColor: '#1a237e',
+                          '&:hover': { backgroundColor: '#534bae' },
+                        }}
+                      >
+                        Record Payment
+                      </Button>
+                    )}
+                  </Box>
 
                   <TabPanel value={activeTab} index={0}>
                     <Box sx={{ p: 3 }}>
@@ -1009,7 +1183,13 @@ const SupplierDetails: React.FC = () => {
 
                   <TabPanel value={activeTab} index={2}>
                     <Box sx={{ p: 3 }}>
-                      {invoicesLoading ? (
+                      <Tabs value={0} sx={{ mb: 2, minHeight: 'auto' }}>
+                        <Tab label="Payments" />
+                        <Tab label="Invoices" />
+                      </Tabs>
+                      
+                      {/* Payments Table */}
+                      {paymentsLoading ? (
                         <Box sx={loadingTableBoxSx}>
                           <CircularProgress />
                         </Box>
@@ -1019,35 +1199,59 @@ const SupplierDetails: React.FC = () => {
                             <Table sx={tableSx}>
                               <TableHead>
                                 <TableRow>
-                                  <TableCell>Invoice Number</TableCell>
-                                  <TableCell>Order Number</TableCell>
-                                  <TableCell align="right">Amount</TableCell>
-                                  <TableCell>Due Date</TableCell>
-                                  <TableCell>Paid Date</TableCell>
-                                  <TableCell>Status</TableCell>
+                                  <TableCell>Payment Date</TableCell>
+                                  <TableCell>Amount</TableCell>
+                                  <TableCell>Currency</TableCell>
+                                  <TableCell>Payment Method</TableCell>
+                                  <TableCell>Invoice</TableCell>
+                                  <TableCell>Reference</TableCell>
+                                  <TableCell>Notes</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
-                                {invoices.length === 0 ? (
+                                {payments.length === 0 ? (
                                   <TableRow>
-                                    <TableCell colSpan={6} align="center">
+                                    <TableCell colSpan={7} align="center">
                                       <Typography
                                         variant="body2"
                                         color="text.secondary"
                                         sx={emptyStateTypographySx}
                                       >
-                                        No invoices found
+                                        No payments found
                                       </Typography>
                                     </TableCell>
                                   </TableRow>
                                 ) : (
-                                  invoices.map((invoice) => (
-                                    <InvoiceRow
-                                      key={invoice.id}
-                                      invoice={invoice}
-                                      formatCurrency={formatCurrency}
-                                      getStatusChip={getStatusChip}
-                                    />
+                                  payments.map((payment) => (
+                                    <TableRow key={payment.id}>
+                                      <TableCell>{formatDateBeirut(payment.paymentDate)}</TableCell>
+                                      <TableCell align="right">{formatCurrency(payment.amount)}</TableCell>
+                                      <TableCell>{payment.currency}</TableCell>
+                                      <TableCell>
+                                        <Chip
+                                          label={payment.paymentMethod.replace('_', ' ').toUpperCase()}
+                                          size="small"
+                                          sx={chipSx}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        {payment.purchaseInvoice ? (
+                                          <Typography variant="body2" sx={bodyTypographySx}>
+                                            {payment.purchaseInvoice.invoiceNumber}
+                                          </Typography>
+                                        ) : (
+                                          <Typography variant="body2" color="text.secondary" sx={bodyTypographySx}>
+                                            General Payment
+                                          </Typography>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>{payment.referenceNumber || '-'}</TableCell>
+                                      <TableCell>
+                                        <Typography variant="body2" sx={bodyTypographySx} noWrap>
+                                          {payment.notes || '-'}
+                                        </Typography>
+                                      </TableCell>
+                                    </TableRow>
                                   ))
                                 )}
                               </TableBody>
@@ -1055,16 +1259,79 @@ const SupplierDetails: React.FC = () => {
                           </TableContainer>
                           <TablePagination
                             component="div"
-                            count={invoicesTotal}
-                            page={invoicesPage}
-                            onPageChange={handleInvoicesPageChange}
-                            rowsPerPage={invoicesPageSize}
-                            onRowsPerPageChange={handleInvoicesPageSizeChange}
+                            count={paymentsTotal}
+                            page={paymentsPage}
+                            onPageChange={(_, newPage) => setPaymentsPage(newPage)}
+                            rowsPerPage={paymentsPageSize}
+                            onRowsPerPageChange={(e) => setPaymentsPageSize(parseInt(e.target.value, 10))}
                             rowsPerPageOptions={[10, 20, 50, 100]}
                             sx={paginationSx}
                           />
                         </>
                       )}
+
+                      {/* Invoices Table */}
+                      <Box sx={{ mt: 4 }}>
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                          Invoices
+                        </Typography>
+                        {invoicesLoading ? (
+                          <Box sx={loadingTableBoxSx}>
+                            <CircularProgress />
+                          </Box>
+                        ) : (
+                          <>
+                            <TableContainer>
+                              <Table sx={tableSx}>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell>Invoice Number</TableCell>
+                                    <TableCell>Order Number</TableCell>
+                                    <TableCell align="right">Amount</TableCell>
+                                    <TableCell>Due Date</TableCell>
+                                    <TableCell>Paid Date</TableCell>
+                                    <TableCell>Status</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {invoices.length === 0 ? (
+                                    <TableRow>
+                                      <TableCell colSpan={6} align="center">
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                          sx={emptyStateTypographySx}
+                                        >
+                                          No invoices found
+                                        </Typography>
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    invoices.map((invoice) => (
+                                      <InvoiceRow
+                                        key={invoice.id}
+                                        invoice={invoice}
+                                        formatCurrency={formatCurrency}
+                                        getStatusChip={getStatusChip}
+                                      />
+                                    ))
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                            <TablePagination
+                              component="div"
+                              count={invoicesTotal}
+                              page={invoicesPage}
+                              onPageChange={handleInvoicesPageChange}
+                              rowsPerPage={invoicesPageSize}
+                              onRowsPerPageChange={handleInvoicesPageSizeChange}
+                              rowsPerPageOptions={[10, 20, 50, 100]}
+                              sx={paginationSx}
+                            />
+                          </>
+                        )}
+                      </Box>
                     </Box>
                   </TabPanel>
                 </Paper>
@@ -1073,6 +1340,13 @@ const SupplierDetails: React.FC = () => {
           </Box>
         </Paper>
       </Box>
+      <SupplierPaymentForm
+        open={paymentFormOpen}
+        onClose={() => setPaymentFormOpen(false)}
+        onSuccess={handlePaymentSuccess}
+        supplier={supplier}
+        userId={userId || 0}
+      />
       <Toast toast={toast} onClose={hideToast} />
     </MainLayout>
   );

@@ -16,7 +16,7 @@ import {
   Checkbox,
   Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility, Refresh } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, Refresh, Payment } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -29,6 +29,7 @@ import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { usePermission } from '../../hooks/usePermission';
+import SupplierPaymentForm from './SupplierPaymentForm';
 
 // Memoized SupplierRow component to prevent unnecessary re-renders
 interface SupplierRowProps {
@@ -36,6 +37,7 @@ interface SupplierRowProps {
   onView: (supplier: Supplier) => void;
   onEdit: (supplier: Supplier) => void;
   onDelete: (supplier: Supplier) => void;
+  onRecordPayment: (supplier: Supplier) => void;
   selected: boolean;
   onSelect: (supplierId: number) => void;
   canUpdate: boolean;
@@ -43,7 +45,7 @@ interface SupplierRowProps {
 }
 
 /* eslint-disable react/prop-types */
-const SupplierRow = memo<SupplierRowProps>(({ supplier, onView, onEdit, onDelete, selected, onSelect, canUpdate, canDelete }) => {
+const SupplierRow = memo<SupplierRowProps>(({ supplier, onView, onEdit, onDelete, onRecordPayment, selected, onSelect, canUpdate, canDelete }) => {
   // Memoize sx prop objects
   const nameTypographySx = useMemo(() => ({
     fontSize: '16px',
@@ -146,14 +148,35 @@ const SupplierRow = memo<SupplierRowProps>(({ supplier, onView, onEdit, onDelete
           </IconButton>
         </Tooltip>
         {canUpdate && (
-          <Tooltip title={`Edit ${supplier.name} - Modify supplier details such as name, contact information, and address.`}>
-            <IconButton
-              onClick={() => onEdit(supplier)}
-              sx={editIconButtonSx}
-            >
-              <Edit />
-            </IconButton>
-          </Tooltip>
+          <>
+            <Tooltip title={`Edit ${supplier.name} - Modify supplier details such as name, contact information, and address.`}>
+              <IconButton
+                onClick={() => onEdit(supplier)}
+                sx={editIconButtonSx}
+              >
+                <Edit />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={`Record Payment for ${supplier.name} - Record a payment made to this supplier.`}>
+              <IconButton
+                onClick={() => onRecordPayment(supplier)}
+                sx={{
+                  padding: '8px',
+                  width: '48px',
+                  height: '48px',
+                  color: '#2e7d32',
+                  '&:hover': {
+                    backgroundColor: '#f5f5f5',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '28px',
+                  },
+                }}
+              >
+                <Payment />
+              </IconButton>
+            </Tooltip>
+          </>
         )}
         {canDelete && (
           <Tooltip title={`Delete ${supplier.name} - Permanently remove this supplier from the system. Products associated with this supplier will need to be updated. This action cannot be undone.`}>
@@ -196,6 +219,8 @@ const SupplierList: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [selectedSuppliers, setSelectedSuppliers] = useState<Set<number>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [paymentFormOpen, setPaymentFormOpen] = useState(false);
+  const [paymentSupplier, setPaymentSupplier] = useState<Supplier | null>(null);
 
   // Debounced search timeout ref
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -284,6 +309,15 @@ const SupplierList: React.FC = () => {
   const handleView = useCallback((supplier: Supplier) => {
     navigate(`/suppliers/${supplier.id}`);
   }, [navigate]);
+
+  const handleRecordPayment = useCallback((supplier: Supplier) => {
+    setPaymentSupplier(supplier);
+    setPaymentFormOpen(true);
+  }, []);
+
+  const handlePaymentSuccess = useCallback(() => {
+    loadSuppliers();
+  }, [loadSuppliers]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -605,6 +639,7 @@ const SupplierList: React.FC = () => {
                         onView={handleView}
                         onEdit={handleEdit}
                         onDelete={handleDeleteClick}
+                        onRecordPayment={handleRecordPayment}
                         selected={selectedSuppliers.has(supplier.id)}
                         onSelect={handleSelectSupplier}
                         canUpdate={canUpdate}
@@ -656,6 +691,16 @@ const SupplierList: React.FC = () => {
           loading={deleting}
         />
       </Box>
+      <SupplierPaymentForm
+        open={paymentFormOpen}
+        onClose={() => {
+          setPaymentFormOpen(false);
+          setPaymentSupplier(null);
+        }}
+        onSuccess={handlePaymentSuccess}
+        supplier={paymentSupplier}
+        userId={userId || 0}
+      />
       <Toast toast={toast} onClose={hideToast} />
     </MainLayout>
   );

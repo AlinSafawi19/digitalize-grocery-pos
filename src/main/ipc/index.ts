@@ -26,6 +26,7 @@ import { registerSyncHandlers } from './sync.handlers';
 import { registerUpdateHandlers } from './update.handlers';
 import { registerSessionHandlers } from './session.handlers';
 import { registerBarcodeHandlers } from './barcode.handlers';
+import { registerSupplierPaymentHandlers } from './supplier-payment.handlers';
 
 /**
  * Register all IPC handlers
@@ -66,6 +67,7 @@ export function registerIpcHandlers(): void {
   registerUpdateHandlers();
   registerSessionHandlers();
   registerBarcodeHandlers();
+  registerSupplierPaymentHandlers();
 
   logger.info('IPC handlers registered');
 }

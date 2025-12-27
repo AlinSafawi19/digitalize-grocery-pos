@@ -171,6 +171,7 @@ model Supplier {
   // Relations
   products       Product[]
   purchaseOrders PurchaseOrder[]
+  payments       SupplierPayment[]
 
   @@index([name])
   @@index([email])
@@ -428,6 +429,7 @@ model PurchaseInvoice {
 
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  payments      SupplierPayment[]
 
   @@index([purchaseOrderId])
   @@index([invoiceNumber])
@@ -435,6 +437,32 @@ model PurchaseInvoice {
   @@index([dueDate])
   // PERFORMANCE FIX: Composite index for supplier payment reports
   @@index([status, dueDate]) // For filtering invoices by status and due date
+}
+
+model SupplierPayment {
+  id              Int       @id @default(autoincrement())
+  supplierId      Int
+  purchaseInvoiceId Int?    // Optional - can be a general payment not tied to specific invoice
+  amount          Float
+  currency        String   @default("USD")
+  paymentDate     DateTime @default(now())
+  paymentMethod   String   @default("cash") // cash, bank_transfer, check, credit_card, other
+  referenceNumber String?  // Check number, transaction ID, etc.
+  notes           String?
+  recordedById    Int      // User who recorded the payment
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  supplier        Supplier        @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseInvoice PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([supplierId])
+  @@index([purchaseInvoiceId])
+  @@index([paymentDate])
+  @@index([recordedById])
+  // PERFORMANCE FIX: Composite index for supplier payment reports
+  @@index([supplierId, paymentDate]) // For supplier payment history queries
 }
 
 // Sprint 7: Pricing, Discounts & Promotions Tables

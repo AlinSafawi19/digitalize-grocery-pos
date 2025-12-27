@@ -47,6 +47,7 @@ import { useToast } from '../hooks/useToast';
 import Toast from '../components/common/Toast';
 import { usePermission } from '../hooks/usePermission';
 import { PermissionService } from '../services/permission.service';
+import PaymentReminders from './Suppliers/PaymentReminders';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ const Dashboard: React.FC = () => {
   const canViewPurchaseOrders = usePermission('purchase_orders.view');
   const canViewProducts = usePermission('products.view');
   const canViewReports = usePermission('reports.view');
+  const canViewSuppliers = usePermission('suppliers.view');
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,7 +195,7 @@ const Dashboard: React.FC = () => {
 
       // Process results based on indices
       if (promiseIndices.todayStats !== undefined) {
-        const todayStatsResult = results[promiseIndices.todayStats];
+        const todayStatsResult = results[promiseIndices.todayStats] as any;
         if (todayStatsResult.success && todayStatsResult.data && todayStatsResult.data.length > 0) {
           setTodayStats(todayStatsResult.data[0]);
         } else {
@@ -208,7 +210,7 @@ const Dashboard: React.FC = () => {
       }
 
       if (promiseIndices.yesterdayStats !== undefined) {
-        const yesterdayStatsResult = results[promiseIndices.yesterdayStats];
+        const yesterdayStatsResult = results[promiseIndices.yesterdayStats] as any;
         if (yesterdayStatsResult.success && yesterdayStatsResult.data && yesterdayStatsResult.data.length > 0) {
           setYesterdayStats(yesterdayStatsResult.data[0]);
         } else {
@@ -223,42 +225,42 @@ const Dashboard: React.FC = () => {
       }
 
       if (promiseIndices.recentTransactions !== undefined) {
-        const recentTransactionsResult = results[promiseIndices.recentTransactions];
+        const recentTransactionsResult = results[promiseIndices.recentTransactions] as any;
         if (recentTransactionsResult.success && recentTransactionsResult.transactions) {
           setRecentTransactions(recentTransactionsResult.transactions);
         }
       }
 
       if (promiseIndices.lowStockCount !== undefined) {
-        const lowStockCountResult = results[promiseIndices.lowStockCount];
+        const lowStockCountResult = results[promiseIndices.lowStockCount] as any;
         if (lowStockCountResult.success && lowStockCountResult.count !== undefined) {
           setLowStockCount(lowStockCountResult.count);
         }
       }
 
       if (promiseIndices.inventoryReport !== undefined) {
-        const inventoryReportResult = results[promiseIndices.inventoryReport];
+        const inventoryReportResult = results[promiseIndices.inventoryReport] as any;
         if (inventoryReportResult.success && inventoryReportResult.data) {
           setOutOfStockCount(inventoryReportResult.data.outOfStockItems || 0);
         }
       }
 
       if (promiseIndices.topProducts !== undefined) {
-        const topProductsResult = results[promiseIndices.topProducts];
+        const topProductsResult = results[promiseIndices.topProducts] as any;
         if (topProductsResult.success && topProductsResult.data) {
           setTopProducts(topProductsResult.data);
         }
       }
 
       if (promiseIndices.purchaseOrders !== undefined) {
-        const purchaseOrdersResult = results[promiseIndices.purchaseOrders];
+        const purchaseOrdersResult = results[promiseIndices.purchaseOrders] as any;
         if (purchaseOrdersResult.success && purchaseOrdersResult.total !== undefined) {
           setPendingPurchaseOrders(purchaseOrdersResult.total);
         }
       }
 
       if (promiseIndices.promotions !== undefined) {
-        const promotionsResult = results[promiseIndices.promotions];
+        const promotionsResult = results[promiseIndices.promotions] as any;
         if (promotionsResult.success && promotionsResult.promotions) {
           setActivePromotions(promotionsResult.promotions.length);
         }
@@ -1043,7 +1045,7 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Alerts Section */}
-        {(canViewInventory || canViewPurchaseOrders) && (
+        {(canViewInventory || canViewPurchaseOrders || canViewSuppliers) && (
           <Box sx={{ mb: 3 }}>
           <Typography
             variant="h6"
@@ -1053,6 +1055,11 @@ const Dashboard: React.FC = () => {
             Alerts & Notifications
           </Typography>
           <Grid container spacing={3}>
+            {canViewSuppliers && (
+              <Grid item xs={12}>
+                <PaymentReminders maxItems={5} showActions={true} />
+              </Grid>
+            )}
             {canViewInventory && (
               <>
                 <Grid item xs={12} md={4}>
