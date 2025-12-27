@@ -33,6 +33,7 @@ import { registerBarcodeValidationEnhancedHandlers } from './barcode-validation-
 import { registerPurchaseOrderTemplateHandlers } from './purchase-order-template.handlers';
 import { registerStockTransferHandlers } from './stock-transfer.handlers';
 import { registerLocationHandlers } from './location.handlers';
+import { registerProductImageHandlers } from './product-image.handlers';
 
 /**
  * Register all IPC handlers
@@ -80,6 +81,7 @@ export function registerIpcHandlers(): void {
   registerPurchaseOrderTemplateHandlers();
   registerStockTransferHandlers();
   registerLocationHandlers();
+  registerProductImageHandlers();
 
   logger.info('IPC handlers registered');
 }

@@ -17,6 +17,9 @@ import { ArrowBack, Edit } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { ProductService, Product } from '../../services/product.service';
+import ProductImageGallery from '../../components/product-image/ProductImageGallery';
+import ProductImageUpload from '../../components/product-image/ProductImageUpload';
+import { ProductImageService } from '../../services/product-image.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { ROUTES } from '../../utils/constants';
 import { formatDateTime } from '../../utils/dateUtils';
@@ -32,6 +35,8 @@ const ProductDetails: React.FC = () => {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageCount, setImageCount] = useState(0);
+  const [imageRefreshKey, setImageRefreshKey] = useState(0);
 
   // Abort controller for request cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -74,7 +79,12 @@ const ProductDetails: React.FC = () => {
       }
 
       if (result.success && result.product) {
-        setProduct(result.product);
+        const prod = result.product;
+        setProduct(prod);
+        // Load image count
+        ProductImageService.getByProductId(prod.id).then((images) => {
+          setImageCount(images.length);
+        });
       } else {
         showToast(result.error || 'Failed to load product', 'error');
       }
@@ -456,6 +466,41 @@ const ProductDetails: React.FC = () => {
                         <Typography variant="body2" sx={bodyTypographySx}>
                           {formattedUpdatedAt}
                         </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+
+                {/* Product Images */}
+                <Card sx={metadataCardSx}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom sx={sectionTitleTypographySx}>
+                      Product Images
+                    </Typography>
+                    <Divider sx={sectionDividerSx} />
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <ProductImageUpload
+                          productId={product.id}
+                          onUploadComplete={() => {
+                            setImageRefreshKey((prev) => prev + 1);
+                            setImageCount((prev) => prev + 1);
+                          }}
+                          currentImageCount={imageCount}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <ProductImageGallery
+                          key={imageRefreshKey}
+                          productId={product.id}
+                          onImageChange={() => {
+                            setImageRefreshKey((prev) => prev + 1);
+                            // Reload image count
+                            ProductImageService.getByProductId(product.id).then((images) => {
+                              setImageCount(images.length);
+                            });
+                          }}
+                        />
                       </Grid>
                     </Grid>
                   </CardContent>

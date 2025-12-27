@@ -35,6 +35,7 @@ model User {
   stockTransfersRequested StockTransfer[] @relation("TransferRequester")
   stockTransfersApproved  StockTransfer[] @relation("TransferApprover")
   stockTransfersCompleted StockTransfer[] @relation("TransferCompleter")
+  productImagesUploaded   ProductImage[]  @relation("ProductImageUploader")
 
   @@index([username])
   @@index([phone])
@@ -209,6 +210,7 @@ model Product {
   pricingRules             PricingRule[]
   inventoryLocations       InventoryLocation[]
   stockTransferItems       StockTransferItem[]
+  images                   ProductImage[]
 
   @@index([code])
   @@index([barcode])
@@ -629,6 +631,35 @@ model QueuedOperation {
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+// Sprint 11: Product Image Management
+model ProductImage {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  fileName    String   // Original file name
+  filePath    String   // Relative path to image file
+  fileSize    Int      // File size in bytes
+  mimeType    String   // MIME type (image/jpeg, image/png, etc.)
+  width       Int?     // Image width in pixels
+  height      Int?     // Image height in pixels
+  thumbnailPath String? // Path to thumbnail version
+  isPrimary   Boolean  @default(false) // Primary image for product
+  displayOrder Int     @default(0) // Order for display in gallery
+  altText     String? // Alt text for accessibility
+  uploadedById Int     // User who uploaded the image
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  uploader User    @relation("ProductImageUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@index([isPrimary])
+  @@index([displayOrder])
+  @@index([productId, isPrimary]) // For finding primary image
+  @@index([productId, displayOrder]) // For ordered gallery display
 }
 
 model Location {

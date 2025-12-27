@@ -25,6 +25,9 @@ import { SupplierService } from '../../services/supplier.service';
 import { InventoryService } from '../../services/inventory.service';
 import { BarcodeService, BarcodeFormat } from '../../services/barcode.service';
 import { BarcodeValidationEnhancedService } from '../../services/barcode-validation-enhanced.service';
+import ProductImageGallery from '../../components/product-image/ProductImageGallery';
+import ProductImageUpload from '../../components/product-image/ProductImageUpload';
+import { ProductImageService } from '../../services/product-image.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
 import { usePermission } from '../../hooks/usePermission';
@@ -68,6 +71,8 @@ const ProductForm: React.FC = () => {
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
+  const [imageCount, setImageCount] = useState(0);
+  const [imageRefreshKey, setImageRefreshKey] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<{
     barcode?: string;
     name?: string;
@@ -239,6 +244,11 @@ const ProductForm: React.FC = () => {
             };
             setFormData(loadedFormData);
             setInitialFormData(loadedFormData);
+
+            // Load image count
+            ProductImageService.getByProductId(prod.id).then((images) => {
+              setImageCount(images.length);
+            });
 
             // If editing and has a category, ensure the category is loaded
             if (prod.categoryId && prod.category) {
@@ -1945,6 +1955,40 @@ const ProductForm: React.FC = () => {
                             sx={textFieldSx}
                           />
                         </Tooltip>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                )}
+
+                {/* Product Images - Only show in edit mode or after product is created */}
+                {isEditMode && product && (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom sx={sectionTitleTypographySx}>
+                      Product Images
+                    </Typography>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <ProductImageUpload
+                          productId={product.id}
+                          onUploadComplete={() => {
+                            setImageRefreshKey((prev) => prev + 1);
+                            setImageCount((prev) => prev + 1);
+                          }}
+                          currentImageCount={imageCount}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <ProductImageGallery
+                          key={imageRefreshKey}
+                          productId={product.id}
+                          onImageChange={() => {
+                            setImageRefreshKey((prev) => prev + 1);
+                            // Reload image count
+                            ProductImageService.getByProductId(product.id).then((images) => {
+                              setImageCount(images.length);
+                            });
+                          }}
+                        />
                       </Grid>
                     </Grid>
                   </Grid>
