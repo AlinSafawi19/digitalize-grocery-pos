@@ -57,6 +57,7 @@ import Toast from '../../../components/common/Toast';
 interface FinancialReportTabProps {
   dateRange: DateRange;
   userId: number;
+  currency?: 'USD' | 'LBP' | 'ALL';
 }
 
 interface TabPanelProps {
@@ -77,7 +78,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
   );
 };
 
-const FinancialReportTab: React.FC<FinancialReportTabProps> = ({ dateRange, userId }) => {
+const FinancialReportTab: React.FC<FinancialReportTabProps> = ({ dateRange, userId, currency = 'ALL' }) => {
   const { toast, showToast, hideToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<FinancialReportData | null>(null);
@@ -115,7 +116,8 @@ const FinancialReportTab: React.FC<FinancialReportTabProps> = ({ dateRange, user
 
       const result = await ReportService.getFinancialReport(
         { startDate: startDateUTC!, endDate: endDateUTC! },
-        userId
+        userId,
+        currency
       );
 
       if (result.success && result.data) {

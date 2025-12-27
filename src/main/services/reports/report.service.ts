@@ -12,6 +12,7 @@ export interface SalesReportOptions extends DateRange {
   cashierId?: number;
   productId?: number;
   categoryId?: number;
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   groupBy?: 'day' | 'week' | 'month' | 'year';
   salesByCashierPage?: number;
   salesByCashierPageSize?: number;
@@ -230,7 +231,8 @@ export interface SupplierPaymentReport {
   };
 }
 
-export interface ReceivingReportOptions {
+export interface ReceivingReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   page?: number;
   pageSize?: number;
 }
@@ -277,22 +279,26 @@ export interface ReceivingReportData {
 }
 
 export interface CashFlowReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   openingBalance?: number;
   dailyFlowPage?: number;
   dailyFlowPageSize?: number;
 }
 
 export interface ProfitByCategoryReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter
   page?: number;
   pageSize?: number;
 }
 
 export interface ProductPerformanceReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   page?: number;
   pageSize?: number;
 }
 
 export interface PurchaseOrderReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   ordersByStatusPage?: number;
   ordersByStatusPageSize?: number;
   ordersPage?: number;
@@ -300,6 +306,7 @@ export interface PurchaseOrderReportOptions extends DateRange {
 }
 
 export interface SupplierPerformanceReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   page?: number;
   pageSize?: number;
 }
@@ -458,6 +465,7 @@ export interface SalesComparisonReportData {
 }
 
 export interface VoidReturnTransactionReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   voidedPage?: number;
   voidedPageSize?: number;
   returnedPage?: number;
@@ -537,7 +545,12 @@ export class ReportService {
       }
 
       const prisma = databaseService.getClient();
-      const { startDate, endDate, cashierId, productId, categoryId, groupBy } = options;
+      const { startDate, endDate, cashierId, productId, categoryId, groupBy, currency = 'ALL' } = options;
+
+      // Determine which currency field to use
+      const currencyField = currency === 'USD' ? 't.totalUsd' : currency === 'LBP' ? 't.totalLbp' : 't.total';
+      const discountField = currency === 'USD' ? 't.discountUsd' : currency === 'LBP' ? 't.discountLbp' : 't.discount';
+      const taxField = currency === 'USD' ? 't.taxUsd' : currency === 'LBP' ? 't.taxLbp' : 't.tax';
 
       // Build base WHERE conditions for SQL
       const whereConditions: string[] = [
@@ -548,6 +561,12 @@ export class ReportService {
 
       if (cashierId) {
         whereConditions.push(`t.cashierId = ${cashierId}`);
+      }
+
+      // Add currency filter if specified (filter by product currency)
+      if (currency !== 'ALL') {
+        // We need to filter by product currency, so we'll add this to the join clause
+        // This will be handled in the join conditions below
       }
 
       const whereClause = whereConditions.join(' AND ');
@@ -564,15 +583,30 @@ export class ReportService {
         itemWhereClause = `AND p.categoryId = ${categoryId}`;
       }
 
+      // Add currency filter to item where clause if needed
+      if (currency !== 'ALL' && (productId || categoryId)) {
+        // Currency filter is already applied through product join
+        // We need to ensure we're only counting items with matching currency
+        if (!itemWhereClause.includes('p.currency')) {
+          itemWhereClause += ` AND p.currency = '${currency}'`;
+        }
+      } else if (currency !== 'ALL') {
+        // Need to join Product table to filter by currency
+        if (!joinClause.includes('Product')) {
+          joinClause += ' INNER JOIN `Product` p ON ti.productId = p.id';
+        }
+        itemWhereClause += ` AND p.currency = '${currency}'`;
+      }
+
       // PERFORMANCE FIX: Use SQL aggregation instead of loading all transactions
       // Calculate totals using SQL aggregation (single query instead of loading all data)
       const totalsQuery = `
         SELECT 
-          COALESCE(SUM(t.total), 0) as totalSales,
+          COALESCE(SUM(${currencyField}), 0) as totalSales,
           COUNT(DISTINCT t.id) as totalTransactions,
           COALESCE(SUM(CASE WHEN (t.type != 'return' OR t.type IS NULL) AND ti.id IS NOT NULL THEN ti.quantity ELSE 0 END), 0) as totalItems,
-          COALESCE(SUM(t.discount), 0) as totalDiscount,
-          COALESCE(SUM(t.tax), 0) as totalTax
+          COALESCE(SUM(${discountField}), 0) as totalDiscount,
+          COALESCE(SUM(${taxField}), 0) as totalTax
         FROM \`Transaction\` t
         ${joinClause}
         WHERE ${whereClause}
@@ -965,21 +999,43 @@ export class ReportService {
    */
   static async getFinancialReport(
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    currency: 'USD' | 'LBP' | 'ALL' = 'ALL'
   ): Promise<FinancialReportData> {
     try {
       const prisma = databaseService.getClient();
 
+      // Determine which currency field to use
+      const currencyField = currency === 'USD' ? 'totalUsd' : currency === 'LBP' ? 'totalLbp' : 'total';
+      const discountField = currency === 'USD' ? 'discountUsd' : currency === 'LBP' ? 'discountLbp' : 'discount';
+      const taxField = currency === 'USD' ? 'taxUsd' : currency === 'LBP' ? 'taxLbp' : 'tax';
+
+      // Build currency filter for products if currency is specified
+      let currencyFilter = '';
+      if (currency !== 'ALL') {
+        // We need to filter transactions by product currency
+        // This requires joining with TransactionItem and Product
+        currencyFilter = `
+          AND EXISTS (
+            SELECT 1 FROM \`TransactionItem\` ti
+            INNER JOIN \`Product\` p ON ti.productId = p.id
+            WHERE ti.transactionId = \`Transaction\`.id
+            AND p.currency = '${currency}'
+          )
+        `;
+      }
+
       // PERFORMANCE FIX: Use SQL aggregation for revenue, discounts, and tax
       const financialQuery = `
         SELECT 
-          COALESCE(SUM(total), 0) as revenue,
-          COALESCE(SUM(discount), 0) as totalDiscounts,
-          COALESCE(SUM(tax), 0) as totalTax
+          COALESCE(SUM(${currencyField}), 0) as revenue,
+          COALESCE(SUM(${discountField}), 0) as totalDiscounts,
+          COALESCE(SUM(${taxField}), 0) as totalTax
         FROM \`Transaction\`
         WHERE status = 'completed'
           AND createdAt >= '${startDate.toISOString()}'
           AND createdAt <= '${endDate.toISOString()}'
+          ${currencyFilter}
       `;
 
       const financialResult = await prisma.$queryRawUnsafe<Array<{
@@ -1004,6 +1060,9 @@ export class ReportService {
       const costOfGoodsSold = await (async () => {
         const { CurrencyService } = await import('../currency/currency.service');
         
+        // Build currency filter for COGS
+        const cogsCurrencyFilter = currency !== 'ALL' ? `AND p.currency = '${currency}'` : '';
+        
         // Calculate COGS by currency using SQL aggregation
         const cogsQuery = `
           SELECT 
@@ -1017,6 +1076,7 @@ export class ReportService {
             AND t.createdAt <= '${endDate.toISOString()}'
             AND p.costPrice IS NOT NULL
             AND ti.productId IS NOT NULL
+            ${cogsCurrencyFilter}
           GROUP BY p.currency
         `;
 
@@ -1025,7 +1085,13 @@ export class ReportService {
           totalCost: number;
         }>>(cogsQuery);
 
-        // Convert currencies in parallel (batch by currency)
+        // If currency is specified, return the cost directly (no conversion needed)
+        if (currency !== 'ALL') {
+          const totalCost = cogsResults.reduce((sum, row) => sum + Number(row.totalCost), 0);
+          return totalCost;
+        }
+
+        // Convert currencies in parallel (batch by currency) - only when currency is 'ALL'
         let totalCogsUsd = 0;
         const conversionPromises = cogsResults.map(async (row) => {
           const cost = Number(row.totalCost);

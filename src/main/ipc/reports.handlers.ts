@@ -163,11 +163,12 @@ export function registerReportsHandlers(): void {
    */
   ipcMain.handle(
     'reports:getFinancialReport',
-    async (_event, dateRange: DateRange) => {
+    async (_event, dateRange: DateRange, currency: 'USD' | 'LBP' | 'ALL' = 'ALL') => {
       try {
         const result = await ReportService.getFinancialReport(
           dateRange.startDate,
-          dateRange.endDate
+          dateRange.endDate,
+          currency
         );
         return {
           success: true,

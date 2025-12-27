@@ -10,11 +10,10 @@ This document outlines the planned features and enhancements for the DigitalizeP
 4. [Inventory Management](#inventory-management)
 5. [Purchase & Supplier Management](#purchase--supplier-management)
 6. [Transaction Management](#transaction-management)
-7. [Customer Management](#customer-management)
-8. [System Management](#system-management)
-9. [License Management](#license-management)
-10. [Reporting & Analytics](#reporting--analytics)
-11. [Alerts & Notifications](#alerts--notifications)
+7. [System Management](#system-management)
+8. [License Management](#license-management)
+9. [Reporting & Analytics](#reporting--analytics)
+10. [Alerts & Notifications](#alerts--notifications)
 
 ---
 
@@ -430,21 +429,6 @@ This document outlines the planned features and enhancements for the DigitalizeP
 
 ---
 
-## Customer Management
-
-### Customer Purchase Patterns
-- **Description**: Analyze and display customer purchase patterns and preferences
-- **Requirements**:
-  - Purchase history analysis
-  - Pattern recognition algorithms
-  - Customer insights dashboard
-  - Trend visualization
-  - Personalized recommendations
-- **Priority**: Medium
-- **Dependencies**: Customer management, Sales analytics
-
----
-
 ## System Management
 
 ### ✅ Session Management (COMPLETED)
@@ -520,15 +504,23 @@ This document outlines the planned features and enhancements for the DigitalizeP
 
 ## Reporting & Analytics
 
-### Currency-Based Reporting
+### ✅ Currency-Based Reporting (COMPLETED)
 - **Description**: Generate reports filtered and grouped by currency
 - **Requirements**:
-  - Multi-currency support
-  - Currency filtering in reports
-  - Currency conversion utilities
-  - Currency-specific report templates
+  - ✅ Multi-currency support - System supports USD and LBP currencies
+  - ✅ Currency filtering in reports - Added currency filter dropdown to all report tabs
+  - ✅ Currency conversion utilities - Uses existing CurrencyService for conversions
+  - ✅ Currency-specific report templates - Reports filter by currency when specified
 - **Priority**: Medium
 - **Dependencies**: Reporting system, Multi-currency support
+- **Status**: ✅ **COMPLETED** - Full implementation with currency filtering in sales, financial, product, and purchase/supplier reports
+- **Implementation Notes**:
+  - Added currency parameter to all report options interfaces (SalesReportOptions, FinancialReportOptions, etc.)
+  - Updated backend report service to filter by currency using dual currency fields (totalUsd, totalLbp)
+  - Updated SQL queries to use appropriate currency fields based on filter selection
+  - Added currency filter dropdown to ReportsPage filter header
+  - Updated report tab components to accept and use currency prop
+  - Currency filter supports: USD, LBP, or ALL (default - shows all currencies)
 
 ---
 
@@ -575,7 +567,6 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - ✅ Transaction notes and comments (COMPLETED)
 - Multiple contact persons
 - Supplier document management
-- Customer purchase patterns
 - Currency-based reporting
 - Category-based alert rules
 

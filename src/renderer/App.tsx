@@ -879,7 +879,7 @@ function AppContent() {
             // Only main user (ID = 1) can access backup page
             isAuthenticated && isMainUser ? (
               <ProtectedRoute>
-              <BackupPage />
+                <BackupPage />
               </ProtectedRoute>
             ) : isAuthenticated ? (
               // Non-main users are redirected to access denied page

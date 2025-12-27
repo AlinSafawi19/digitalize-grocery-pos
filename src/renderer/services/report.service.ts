@@ -13,6 +13,7 @@ export interface SalesReportOptions extends DateRange {
   cashierId?: number;
   productId?: number;
   categoryId?: number;
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter: USD, LBP, or ALL (default)
   groupBy?: 'day' | 'week' | 'month' | 'year';
   salesByCashierPage?: number;
   salesByCashierPageSize?: number;
@@ -151,6 +152,7 @@ export interface FinancialReportResult {
 }
 
 export interface ProductPerformanceReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter
   page?: number;
   pageSize?: number;
 }
@@ -205,6 +207,7 @@ export interface PriceHistoryReport {
 }
 
 export interface PurchaseOrderReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter
   ordersByStatusPage?: number;
   ordersByStatusPageSize?: number;
   ordersPage?: number;
@@ -243,6 +246,7 @@ export interface PurchaseOrderReportData {
 }
 
 export interface SupplierPerformanceReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter
   page?: number;
   pageSize?: number;
 }
@@ -353,6 +357,7 @@ export interface CashFlowReportData {
 }
 
 export interface ProfitByCategoryReportOptions extends DateRange {
+  currency?: 'USD' | 'LBP' | 'ALL'; // Currency filter
   page?: number;
   pageSize?: number;
 }
@@ -658,13 +663,15 @@ export class ReportService {
    */
   static async getFinancialReport(
     dateRange: DateRange,
-    userId: number
+    userId: number,
+    currency: 'USD' | 'LBP' | 'ALL' = 'ALL'
   ): Promise<FinancialReportResult> {
     try {
       const result = await window.electron.ipcRenderer.invoke(
         'reports:getFinancialReport',
         dateRange,
-        userId
+        userId,
+        currency
       ) as FinancialReportResult;
       return result;
     } catch (error) {

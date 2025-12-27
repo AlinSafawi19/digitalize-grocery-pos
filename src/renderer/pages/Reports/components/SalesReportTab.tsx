@@ -52,6 +52,7 @@ import Toast from '../../../components/common/Toast';
 interface SalesReportTabProps {
   dateRange: DateRange;
   userId: number;
+  currency?: 'USD' | 'LBP' | 'ALL';
 }
 
 interface TabPanelProps {
@@ -72,7 +73,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
   );
 };
 
-const SalesReportTab: React.FC<SalesReportTabProps> = ({ dateRange, userId }) => {
+const SalesReportTab: React.FC<SalesReportTabProps> = ({ dateRange, userId, currency = 'ALL' }) => {
   const { toast, showToast, hideToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<SalesReportData | null>(null);
@@ -102,6 +103,7 @@ const SalesReportTab: React.FC<SalesReportTabProps> = ({ dateRange, userId }) =>
         {
           startDate: startDateUTC!,
           endDate: endDateUTC!,
+          currency,
           groupBy: 'day',
           salesByCashierPage: salesByCashierPage + 1, // Convert from 0-based to 1-based
           salesByCashierPageSize,

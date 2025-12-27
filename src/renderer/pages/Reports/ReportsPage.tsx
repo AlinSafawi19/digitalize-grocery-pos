@@ -131,6 +131,7 @@ const ReportsPage: React.FC = () => {
   const initialRange = getRelativeDateRange('last30days');
   const [dateRange, setDateRange] = useState<DateRange>(initialRange);
   const [quickRange, setQuickRange] = useState<string>('30days');
+  const [currency, setCurrency] = useState<'USD' | 'LBP' | 'ALL'>('ALL');
   // Initialize with empty date ranges
   const [period1Range, setPeriod1Range] = useState<OptionalDateRange>({
     startDate: null,
@@ -282,6 +283,7 @@ const ReportsPage: React.FC = () => {
     const defaultRange = getRelativeDateRange('last30days');
     setDateRange(defaultRange);
     setQuickRange('30days');
+    setCurrency('ALL');
   }, []);
 
   const handleClearComparisonFilters = useCallback(() => {
@@ -410,6 +412,10 @@ const ReportsPage: React.FC = () => {
     setPeriod2Range((prev) => ({ ...prev, endDate: value as Date | null }));
   }, []);
 
+  const handleCurrencyChange = useCallback((value: unknown) => {
+    setCurrency(value as 'USD' | 'LBP' | 'ALL');
+  }, []);
+
   // Memoize filterFields arrays
   const dateRangeFilterFields = useMemo(() => [
     {
@@ -443,7 +449,19 @@ const ReportsPage: React.FC = () => {
       onChange: handleEndDateChange,
       gridSize: { xs: 12, sm: 6, md: 2 },
     },
-  ], [quickRange, dateRange, handleQuickRangeSelectChange, handleStartDateChange, handleEndDateChange]);
+    {
+      type: 'select' as const,
+      label: 'Currency',
+      value: currency,
+      onChange: handleCurrencyChange,
+      options: [
+        { value: 'ALL', label: 'All Currencies' },
+        { value: 'USD', label: 'USD' },
+        { value: 'LBP', label: 'LBP' },
+      ],
+      gridSize: { xs: 12, sm: 6, md: 2 },
+    },
+  ], [quickRange, dateRange, currency, handleQuickRangeSelectChange, handleStartDateChange, handleEndDateChange, handleCurrencyChange]);
 
   const comparisonFilterFields = useMemo(() => [
     {
@@ -633,7 +651,7 @@ const ReportsPage: React.FC = () => {
             if (actualTabIdx === 0) {
               return (
                 <TabPanel key={0} value={activeTab} index={displayIdx}>
-                  <SalesReportTab key={refreshKey} dateRange={dateRange} userId={user.id} />
+                  <SalesReportTab key={refreshKey} dateRange={dateRange} userId={user.id} currency={currency} />
                 </TabPanel>
               );
             }
@@ -661,21 +679,21 @@ const ReportsPage: React.FC = () => {
             if (actualTabIdx === 3) {
               return (
                 <TabPanel key={3} value={activeTab} index={displayIdx}>
-                  <FinancialReportTab key={refreshKey} dateRange={dateRange} userId={user.id} />
+                  <FinancialReportTab key={refreshKey} dateRange={dateRange} userId={user.id} currency={currency} />
                 </TabPanel>
               );
             }
             if (actualTabIdx === 4) {
               return (
                 <TabPanel key={4} value={activeTab} index={displayIdx}>
-                  <ProductReportTab key={refreshKey} dateRange={dateRange} userId={user.id} />
+                  <ProductReportTab key={refreshKey} dateRange={dateRange} userId={user.id} currency={currency} />
                 </TabPanel>
               );
             }
             if (actualTabIdx === 5) {
               return (
                 <TabPanel key={5} value={activeTab} index={displayIdx}>
-                  <PurchaseSupplierReportTab key={refreshKey} dateRange={dateRange} userId={user.id} />
+                  <PurchaseSupplierReportTab key={refreshKey} dateRange={dateRange} userId={user.id} currency={currency} />
                 </TabPanel>
               );
             }
