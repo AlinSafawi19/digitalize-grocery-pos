@@ -41,6 +41,7 @@ import { registerReceiptTemplateHandlers } from './receipt-template.handlers';
 import { registerAlertRuleHandlers } from './alert-rule.handlers';
 import { registerBarcodeLabelHandlers } from './barcode-label.handlers';
 import { registerBackupLocationHandlers } from './backup-location.handlers';
+import { registerRecoveryHandlers } from './recovery.handlers';
 
 /**
  * Register all IPC handlers
@@ -96,6 +97,7 @@ export function registerIpcHandlers(): void {
   registerAlertRuleHandlers();
   registerBarcodeLabelHandlers();
   registerBackupLocationHandlers();
+  registerRecoveryHandlers();
 
   logger.info('IPC handlers registered');
 }

@@ -72,6 +72,7 @@ export const ROUTES = {
   LICENSE_EXPIRED: '/license-expired',
   ACCESS_DENIED: '/access-denied',
   BACKUP: '/backup',
+  POINT_IN_TIME_RECOVERY: '/recovery/point-in-time',
   LOGS: '/logs',
   LOGS_VIEW: '/logs/view/:id',
   CASHIERS: '/cashiers',

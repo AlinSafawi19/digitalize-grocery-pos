@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { logger } from '../../utils/logger';
 import { DATABASE_PATH, USER_DATA_PATH } from '../../utils/constants';
 import fs from 'fs-extra';
@@ -402,6 +402,23 @@ class DatabaseService {
       // This ensures the app doesn't continue with an invalid database state
       throw error;
     }
+  }
+
+  /**
+   * Setup transaction logging middleware
+   * Transaction logging is handled via TransactionLogHelper utility
+   * Services should use TransactionLogHelper.withLogging() to wrap operations
+   */
+  private setupTransactionLoggingMiddleware(): void {
+    if (!this.prisma) {
+      return;
+    }
+
+    // Transaction logging is implemented via TransactionLogHelper utility
+    // Services should use TransactionLogHelper.withLogging() to wrap database operations
+    // This approach is more explicit and maintainable than automatic middleware
+    
+    logger.info('Transaction logging available via TransactionLogHelper utility');
   }
 
   /**

@@ -65,6 +65,7 @@ const LicenseValidationAuditPage = lazy(() => import('./pages/License/LicenseVal
 const LicenseExpiredPage = lazy(() => import('./pages/License/LicenseExpiredPage'));
 const AccessDeniedPage = lazy(() => import('./pages/AccessDenied/AccessDeniedPage'));
 const BackupPage = lazy(() => import('./pages/Backup/BackupPage'));
+const PointInTimeRecoveryPage = lazy(() => import('./pages/Recovery/PointInTimeRecoveryPage'));
 const LogsPage = lazy(() => import('./pages/Logs/LogsPage'));
 const LogDetails = lazy(() => import('./pages/Logs/LogDetails'));
 const CashierList = lazy(() => import('./pages/Cashiers/CashierList'));
@@ -901,6 +902,21 @@ function AppContent() {
               </ProtectedRoute>
             ) : isAuthenticated ? (
               // Non-main users are redirected to access denied page
+              <Navigate to={ROUTES.ACCESS_DENIED} replace />
+            ) : (
+              <Navigate to={ROUTES.LOGIN} replace />
+            )
+          }
+        />
+        <Route
+          path={ROUTES.POINT_IN_TIME_RECOVERY}
+          element={
+            // Only main user (ID = 1) can access point-in-time recovery
+            isAuthenticated && isMainUser ? (
+              <ProtectedRoute>
+                <PointInTimeRecoveryPage />
+              </ProtectedRoute>
+            ) : isAuthenticated ? (
               <Navigate to={ROUTES.ACCESS_DENIED} replace />
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />

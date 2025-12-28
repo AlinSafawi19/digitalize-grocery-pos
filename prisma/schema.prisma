@@ -153,6 +153,41 @@ model LicenseValidationAudit {
   @@index([timestamp])
 }
 
+model TransactionLog {
+  id          Int      @id @default(autoincrement())
+  tableName   String   // Name of the table that was modified
+  recordId    Int?     // ID of the record that was modified (null for bulk operations)
+  operation   String   // create, update, delete
+  userId      Int?     // User who performed the operation
+  oldData     String?  // JSON string of old data (for update/delete)
+  newData     String?  // JSON string of new data (for create/update)
+  timestamp   DateTime @default(now())
+  recoveryPointId Int? // Link to recovery point if this was part of a recovery operation
+
+  @@index([tableName])
+  @@index([recordId])
+  @@index([operation])
+  @@index([timestamp])
+  @@index([recoveryPointId])
+  @@index([tableName, recordId, timestamp])
+}
+
+model RecoveryPoint {
+  id          Int      @id @default(autoincrement())
+  name        String?  // Optional name/description for the recovery point
+  description String?  // Optional description
+  timestamp   DateTime @default(now()) // Point in time this recovery point represents
+  backupPath  String?  // Path to backup file if this recovery point has a backup
+  checksum    String?  // Checksum of the backup file
+  createdBy   Int?     // User who created this recovery point
+  isAutomatic Boolean  @default(false) // Whether this was automatically created
+  transactionLogId Int? // Last transaction log ID included in this recovery point
+
+  @@index([timestamp])
+  @@index([createdBy])
+  @@index([isAutomatic])
+}
+
 model Notification {
   id        Int      @id @default(autoincrement())
   type      String // low_stock, expiry_warning, system_error, transaction, etc.
