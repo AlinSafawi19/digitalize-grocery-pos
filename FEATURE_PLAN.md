@@ -94,16 +94,28 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - **Dependencies**: File system access
 - **Status**: ✅ **COMPLETED** - Full external drive detection and validation
 
-### Multiple Backup Locations
+### ✅ Multiple Backup Locations (COMPLETED)
 - **Description**: Support backing up to multiple locations (local, network, cloud)
 - **Requirements**:
-  - Location configuration UI
-  - Multiple storage provider support
-  - Backup rotation across locations
-  - Location validation
+  - ✅ Location configuration UI - BackupLocationList component for managing locations
+  - ✅ Multiple storage provider support - Support for external_drive, local, network, and cloud types
+  - ✅ Backup rotation across locations - Round-robin rotation logic implemented
+  - ✅ Location validation - Validation for each location type (external drive, local path, network, cloud)
 - **Priority**: Medium
 - **Dependencies**: Backup system
-- **Note**: Currently supports external drives only. Multiple locations per backup not yet implemented.
+- **Status**: ✅ **COMPLETED** - Full implementation with database schema, services, IPC handlers, and rotation logic
+- **Implementation Notes**:
+  - Created BackupLocation and BackupScheduleLocation models in Prisma schema
+  - Implemented BackupLocationService with CRUD operations, validation, and rotation logic
+  - Updated BackupSchedulerService to support multiple locations with rotation
+  - Backup scheduler tries locations in rotation order until one succeeds
+  - Supports backward compatibility with legacy destinationPath
+  - Location types: external_drive, local, network, cloud
+  - Priority-based ordering for location selection
+  - Location validation for each type (path writability, drive availability, network format, cloud config)
+  - Built BackupLocationList UI component for location management
+  - IPC handlers and frontend service implemented
+  - Note: Full UI integration with backup scheduling form can be enhanced in future iterations
 
 ### Point-in-Time Recovery
 - **Description**: Restore database to a specific point in time

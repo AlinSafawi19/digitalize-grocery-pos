@@ -2,6 +2,7 @@ import * as cron from 'node-cron';
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { BackupService } from './backup.service';
+import { BackupLocationService } from './backup-location.service';
 import { NotificationService } from '../notifications/notification.service';
 import { hasExternalDriveAvailable, validateExternalDrive } from '../../utils/drive.util';
 import moment from 'moment-timezone';
@@ -202,117 +203,154 @@ export class BackupSchedulerService {
 
   /**
    * Execute a scheduled backup
+   * Supports multiple backup locations with rotation
    */
   static async executeScheduledBackup(schedule: BackupScheduleConfig): Promise<void> {
     const prisma = databaseService.getClient();
     const startTime = Date.now();
 
     try {
-      // Check if external drive is available
-      const hasDrive = await hasExternalDriveAvailable();
+      // Get backup locations for this schedule (if any)
+      const locations = await BackupLocationService.getScheduleLocations(schedule.id);
       
-      if (!hasDrive) {
-        logger.warn(`Scheduled backup ${schedule.id} skipped: No external drive available`);
+      // Determine backup destination(s)
+      let backupDestinations: Array<{ path: string; location?: any }> = [];
+      
+      if (locations.length > 0) {
+        // Use multiple locations with rotation
+        // Get next location for rotation
+        const nextLocation = await BackupLocationService.getNextRotationLocation(schedule.id);
         
-        // Update schedule with skip status
-        await prisma.backupSchedule.update({
-          where: { id: schedule.id },
-          data: {
-            lastRunAt: new Date(),
-            lastRunStatus: 'skipped',
-            lastRunError: 'No external drive available. Please connect an external drive and the backup will run on the next scheduled time.',
-            nextRunAt: this.calculateNextRun(schedule),
-          },
-        });
-
-        // Create notification for skipped backup
-        try {
-          await NotificationService.createNotification({
-            type: 'backup_failed',
-            title: 'Scheduled Backup Skipped',
-            message: `Scheduled backup "${schedule.name}" was skipped because no external drive is connected. Please connect an external drive for backups to run automatically.`,
-            userId: schedule.createdById,
-            priority: 'normal',
-          });
-        } catch (notificationError) {
-          logger.error('Failed to create notification for skipped backup', notificationError);
+        if (nextLocation) {
+          backupDestinations = [{ path: nextLocation.path, location: nextLocation }];
+        } else {
+          // Fallback: try all locations in priority order
+          backupDestinations = locations.map(loc => ({ path: loc.path, location: loc }));
         }
-
-        return;
+      } else {
+        // Fallback to legacy destinationPath (backward compatibility)
+        if (schedule.destinationPath) {
+          backupDestinations = [{ path: schedule.destinationPath }];
+        } else {
+          throw new Error('No backup locations configured and no destination path specified');
+        }
       }
 
-      // Validate that destination path is still on an external drive
-      try {
-        await validateExternalDrive(schedule.destinationPath);
-      } catch (validationError) {
-        logger.error(`Scheduled backup ${schedule.id} failed: Destination path is not on external drive`, {
-          destinationPath: schedule.destinationPath,
-          error: validationError,
-        });
+      // Try each destination until one succeeds
+      let backupSucceeded = false;
+      let lastError: Error | null = null;
+      let successfulPath = '';
 
-        // Update schedule with failed status
-        await prisma.backupSchedule.update({
-          where: { id: schedule.id },
-          data: {
-            lastRunAt: new Date(),
-            lastRunStatus: 'failed',
-            lastRunError: validationError instanceof Error ? validationError.message : 'Destination path is not on external drive',
-            nextRunAt: this.calculateNextRun(schedule),
-          },
-        });
-
-        // Create notification for failed backup
+      for (const destination of backupDestinations) {
         try {
-          await NotificationService.createNotification({
-            type: 'backup_failed',
-            title: 'Scheduled Backup Failed',
-            message: `Scheduled backup "${schedule.name}" failed: ${validationError instanceof Error ? validationError.message : 'Destination path is not on external drive'}`,
-            userId: schedule.createdById,
-            priority: 'high',
-          });
-        } catch (notificationError) {
-          logger.error('Failed to create notification for failed backup', notificationError);
-        }
+          // Validate location if it's a configured location
+          if (destination.location) {
+            const validation = await BackupLocationService.validateLocation(
+              destination.location.type,
+              destination.location.path,
+              destination.location.config ? JSON.parse(destination.location.config) : undefined
+            );
+            
+            if (!validation.valid) {
+              logger.warn(`Skipping location ${destination.location.name}: ${validation.message}`);
+              lastError = new Error(validation.message || 'Location validation failed');
+              continue;
+            }
+          } else {
+            // Legacy: validate external drive for destinationPath
+            const hasDrive = await hasExternalDriveAvailable();
+            if (!hasDrive) {
+              logger.warn(`Scheduled backup ${schedule.id} skipped: No external drive available`);
+              
+              // Update schedule with skip status
+              await prisma.backupSchedule.update({
+                where: { id: schedule.id },
+                data: {
+                  lastRunAt: new Date(),
+                  lastRunStatus: 'skipped',
+                  lastRunError: 'No external drive available. Please connect an external drive and the backup will run on the next scheduled time.',
+                  nextRunAt: this.calculateNextRun(schedule),
+                },
+              });
 
-        return;
+              // Create notification for skipped backup
+              try {
+                await NotificationService.createNotification({
+                  type: 'backup_failed',
+                  title: 'Scheduled Backup Skipped',
+                  message: `Scheduled backup "${schedule.name}" was skipped because no external drive is connected. Please connect an external drive for backups to run automatically.`,
+                  userId: schedule.createdById,
+                  priority: 'normal',
+                });
+              } catch (notificationError) {
+                logger.error('Failed to create notification for skipped backup', notificationError);
+              }
+
+              return;
+            }
+
+            // Validate that destination path is still on an external drive
+            try {
+              await validateExternalDrive(destination.path);
+            } catch (validationError) {
+              logger.warn(`Destination path validation failed: ${validationError instanceof Error ? validationError.message : 'Invalid path'}`);
+              lastError = validationError instanceof Error ? validationError : new Error('Invalid destination path');
+              continue;
+            }
+          }
+
+          // Create the backup
+          logger.info(`Creating scheduled backup: ${schedule.name} to ${destination.path}`);
+          const backupInfo = await BackupService.createBackup(
+            {
+              description: `Scheduled backup: ${schedule.name}${destination.location ? ` (Location: ${destination.location.name})` : ''}`,
+              destinationPath: destination.path,
+            },
+            schedule.createdById
+          );
+
+          backupSucceeded = true;
+          successfulPath = destination.path;
+          const duration = Date.now() - startTime;
+
+          // Update schedule with success status
+          await prisma.backupSchedule.update({
+            where: { id: schedule.id },
+            data: {
+              lastRunAt: new Date(),
+              lastRunStatus: 'success',
+              lastRunError: null,
+              nextRunAt: this.calculateNextRun(schedule),
+            },
+          });
+
+          logger.info(`Scheduled backup ${schedule.id} executed successfully. Created: ${backupInfo.filename} (${duration}ms)`);
+
+          // Create notification for successful backup
+          try {
+            await NotificationService.createNotification({
+              type: 'backup_completion',
+              title: 'Scheduled Backup Completed',
+              message: `Scheduled backup "${schedule.name}" completed successfully. Backup saved to: ${destination.path}${destination.location ? ` (${destination.location.name})` : ''}`,
+              userId: schedule.createdById,
+              priority: 'normal',
+            });
+          } catch (notificationError) {
+            logger.error('Failed to create notification for scheduled backup', notificationError);
+          }
+
+          break; // Success, exit loop
+        } catch (error) {
+          logger.warn(`Failed to create backup to ${destination.path}:`, error);
+          lastError = error instanceof Error ? error : new Error('Unknown error');
+          // Continue to next destination
+        }
       }
 
-      // Create the backup
-      logger.info(`Creating scheduled backup: ${schedule.name} to ${schedule.destinationPath}`);
-      const backupInfo = await BackupService.createBackup(
-        {
-          description: `Scheduled backup: ${schedule.name}`,
-          destinationPath: schedule.destinationPath,
-        },
-        schedule.createdById
-      );
-
-      const duration = Date.now() - startTime;
-
-      // Update schedule with success status
-      await prisma.backupSchedule.update({
-        where: { id: schedule.id },
-        data: {
-          lastRunAt: new Date(),
-          lastRunStatus: 'success',
-          lastRunError: null,
-          nextRunAt: this.calculateNextRun(schedule),
-        },
-      });
-
-      logger.info(`Scheduled backup ${schedule.id} executed successfully. Created: ${backupInfo.filename} (${duration}ms)`);
-
-      // Create notification for successful backup
-      try {
-        await NotificationService.createNotification({
-          type: 'backup_completion',
-          title: 'Scheduled Backup Completed',
-          message: `Scheduled backup "${schedule.name}" completed successfully. Backup saved to: ${schedule.destinationPath}`,
-          userId: schedule.createdById,
-          priority: 'normal',
-        });
-      } catch (notificationError) {
-        logger.error('Failed to create notification for scheduled backup', notificationError);
+      // If all destinations failed
+      if (!backupSucceeded) {
+        const errorMessage = lastError?.message || 'All backup locations failed';
+        throw new Error(errorMessage);
       }
     } catch (error) {
       logger.error(`Error executing scheduled backup ${schedule.id}:`, error);

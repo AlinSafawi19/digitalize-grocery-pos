@@ -42,6 +42,7 @@ model User {
   alertRulesCreated        AlertRule[]      @relation("AlertRuleCreator")
   alertsResolved            AlertHistory[]   @relation("AlertResolver")
   barcodeLabelTemplatesCreated BarcodeLabelTemplate[] @relation("BarcodeLabelTemplateCreator")
+  backupLocationsCreated   BackupLocation[] @relation("BackupLocationCreator")
 
   @@index([username])
   @@index([phone])
@@ -651,7 +652,7 @@ model BackupSchedule {
   name            String
   scheduleType    String // daily, weekly, monthly, custom
   scheduleConfig  String // JSON string with schedule details (cron expression, day of week, day of month, time, etc.)
-  destinationPath String // Path on external drive where backups should be saved
+  destinationPath String // Path on external drive where backups should be saved (legacy - kept for backward compatibility)
   isActive        Boolean  @default(true)
   lastRunAt       DateTime?
   nextRunAt       DateTime?
@@ -663,11 +664,54 @@ model BackupSchedule {
 
   // Relations
   createdBy User @relation(fields: [createdById], references: [id])
+  backupLocations BackupScheduleLocation[]
 
   @@index([createdById])
   @@index([isActive])
   @@index([nextRunAt])
   @@index([scheduleType])
+}
+
+// Backup Locations
+model BackupLocation {
+  id          Int      @id @default(autoincrement())
+  name        String
+  type        String // external_drive, local, network, cloud
+  path        String // Path or connection string for the location
+  config      String? // JSON string with location-specific configuration (credentials, etc.)
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0) // Lower number = higher priority (0 is highest)
+  maxBackups  Int?     // Maximum number of backups to keep at this location (null = unlimited)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   Int
+
+  // Relations
+  creator     User     @relation("BackupLocationCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  schedules   BackupScheduleLocation[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([priority])
+  @@index([createdBy])
+}
+
+// Junction table for many-to-many relationship between BackupSchedule and BackupLocation
+model BackupScheduleLocation {
+  id                Int      @id @default(autoincrement())
+  backupScheduleId  Int
+  backupLocationId  Int
+  order             Int      @default(0) // Order for rotation (0 = first, 1 = second, etc.)
+  createdAt         DateTime @default(now())
+
+  // Relations
+  backupSchedule    BackupSchedule @relation(fields: [backupScheduleId], references: [id], onDelete: Cascade)
+  backupLocation    BackupLocation @relation(fields: [backupLocationId], references: [id], onDelete: Cascade)
+
+  @@unique([backupScheduleId, backupLocationId])
+  @@index([backupScheduleId])
+  @@index([backupLocationId])
+  @@index([order])
 }
 
 // Sprint 9: Operation Queue for Offline Sync
