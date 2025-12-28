@@ -37,9 +37,10 @@ import Toast from '../../../components/common/Toast';
 interface ProductReportTabProps {
   dateRange: DateRange;
   userId: number;
+  currency?: 'USD' | 'LBP' | 'ALL';
 }
 
-const ProductReportTab: React.FC<ProductReportTabProps> = ({ dateRange, userId }) => {
+const ProductReportTab: React.FC<ProductReportTabProps> = ({ dateRange, userId, currency = 'ALL' }) => {
   const { toast, showToast, hideToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<ProductPerformanceReport[]>([]);
@@ -69,6 +70,7 @@ const ProductReportTab: React.FC<ProductReportTabProps> = ({ dateRange, userId }
         {
           startDate: startDateUTC!,
           endDate: endDateUTC!,
+          currency,
           page: page + 1, // Convert from 0-based to 1-based
           pageSize,
         },
@@ -86,7 +88,7 @@ const ProductReportTab: React.FC<ProductReportTabProps> = ({ dateRange, userId }
     } finally {
       setLoading(false);
     }
-  }, [dateRange, userId, page, pageSize, showToast]);
+  }, [dateRange, userId, currency, page, pageSize, showToast]);
 
   useEffect(() => {
     loadReport();

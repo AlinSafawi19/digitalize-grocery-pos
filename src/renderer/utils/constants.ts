@@ -81,5 +81,7 @@ export const ROUTES = {
   RECEIPT_TEMPLATES_NEW: '/receipts/templates/new',
   RECEIPT_TEMPLATES_EDIT: '/receipts/templates/:id/edit',
   RECEIPT_TEMPLATES_PREVIEW: '/receipts/templates/:id/preview',
+  ALERT_RULES: '/alerts/rules',
+  ALERT_HISTORY: '/alerts/history',
 } as const;
 

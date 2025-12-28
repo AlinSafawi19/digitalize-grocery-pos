@@ -38,6 +38,7 @@ import { registerSupplierContactHandlers } from './supplier-contact.handlers';
 import { registerSupplierDocumentHandlers } from './supplier-document.handlers';
 import { registerSystemMaintenanceHandlers } from './system-maintenance.handlers';
 import { registerReceiptTemplateHandlers } from './receipt-template.handlers';
+import { registerAlertRuleHandlers } from './alert-rule.handlers';
 
 /**
  * Register all IPC handlers
@@ -90,6 +91,7 @@ export function registerIpcHandlers(): void {
   registerSupplierDocumentHandlers();
   registerSystemMaintenanceHandlers();
   registerReceiptTemplateHandlers();
+  registerAlertRuleHandlers();
 
   logger.info('IPC handlers registered');
 }

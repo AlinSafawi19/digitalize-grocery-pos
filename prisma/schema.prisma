@@ -39,6 +39,8 @@ model User {
   maintenanceOperations  SystemMaintenance[] @relation("MaintenancePerformer")
   receiptTemplatesCreated ReceiptTemplate[] @relation("ReceiptTemplateCreator")
   receiptTemplatesUpdated ReceiptTemplate[] @relation("ReceiptTemplateUpdater")
+  alertRulesCreated        AlertRule[]      @relation("AlertRuleCreator")
+  alertsResolved            AlertHistory[]   @relation("AlertResolver")
 
   @@index([username])
   @@index([phone])
@@ -161,6 +163,8 @@ model Category {
   children     Category[]    @relation("CategoryHierarchy")
   products     Product[]
   pricingRules PricingRule[]
+  alertRules   AlertRule[]
+  alertHistory AlertHistory[]
 
   @@index([name])
   @@index([parentId])
@@ -258,6 +262,7 @@ model Product {
   inventoryLocations       InventoryLocation[]
   stockTransferItems       StockTransferItem[]
   images                   ProductImage[]
+  alertHistory             AlertHistory[]
 
   @@index([code])
   @@index([barcode])
@@ -847,4 +852,56 @@ model ReceiptTemplate {
   @@index([isDefault])
   @@index([isActive])
   @@index([createdBy])
+}
+
+model AlertRule {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  categoryId  Int?     // null means applies to all categories
+  ruleType    String   // e.g., "low_stock", "price_change", "expiry_warning", "out_of_stock"
+  conditions  String   // JSON string containing rule conditions
+  isActive    Boolean  @default(true)
+  priority    String   @default("normal") // low, normal, high, urgent
+  notifyUsers String?  // JSON array of user IDs to notify (null = all users)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   Int      // User who created the rule
+
+  // Relations
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  creator     User      @relation("AlertRuleCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  alertHistory AlertHistory[]
+
+  @@index([categoryId])
+  @@index([ruleType])
+  @@index([isActive])
+  @@index([categoryId, ruleType])
+}
+
+model AlertHistory {
+  id          Int      @id @default(autoincrement())
+  alertRuleId Int
+  productId   Int?
+  categoryId  Int?
+  message     String
+  severity    String   @default("normal") // low, normal, high, urgent
+  isResolved  Boolean  @default(false)
+  resolvedAt  DateTime?
+  resolvedBy  Int?
+  metadata    String?  // JSON string with additional alert data
+  createdAt   DateTime @default(now())
+
+  // Relations
+  alertRule   AlertRule @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  resolver    User?     @relation("AlertResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([alertRuleId])
+  @@index([productId])
+  @@index([categoryId])
+  @@index([isResolved])
+  @@index([createdAt])
+  @@index([alertRuleId, isResolved])
 }

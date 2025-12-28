@@ -70,6 +70,8 @@ const CashierList = lazy(() => import('./pages/Cashiers/CashierList'));
 const SystemMaintenancePage = lazy(() => import('./pages/System/SystemMaintenance'));
 const ReceiptTemplateList = lazy(() => import('./pages/Receipts/ReceiptTemplateList'));
 const ReceiptTemplateEditor = lazy(() => import('./pages/Receipts/ReceiptTemplateEditor'));
+const AlertRuleList = lazy(() => import('./pages/Alerts/AlertRuleList'));
+const AlertHistory = lazy(() => import('./pages/Alerts/AlertHistory'));
 const CashierForm = lazy(() => import('./pages/Cashiers/CashierForm'));
 
 // Loading component for Suspense fallback
@@ -918,6 +920,22 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <ReceiptTemplateEditor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ALERT_RULES}
+          element={
+            <ProtectedRoute>
+              <AlertRuleList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ALERT_HISTORY}
+          element={
+            <ProtectedRoute>
+              <AlertHistory />
             </ProtectedRoute>
           }
         />

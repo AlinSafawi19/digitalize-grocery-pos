@@ -522,6 +522,18 @@ export class ProductService {
 
       logger.info('Product updated successfully', { id: product.id, code: product.code || null });
       return product;
+      // Evaluate alert rules for this product (async, don't wait)
+      (async () => {
+        try {
+          const { AlertRuleService } = await import('../alerts/alert-rule.service');
+          await AlertRuleService.evaluateProductAlerts(id);
+        } catch (error) {
+          logger.error('Error evaluating alerts after product update', { productId: id, error });
+          // Don't throw - alert evaluation failure shouldn't break product update
+        }
+      })();
+
+      return product as ProductWithRelations;
     } catch (error) {
       logger.error('Error updating product', { id, input, error });
       throw error;

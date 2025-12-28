@@ -12,7 +12,7 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz, Build } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz, Build, Notifications } from '@mui/icons-material';
 import NotificationCenter from '../NotificationCenter/NotificationCenter';
 import BackupOperationBanner from '../common/BackupOperationBanner';
 import HelpersPanel from '../helpers/HelpersPanel';
@@ -348,6 +348,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
     handleMoreMenuClose();
   }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
 
+  const handleNavigateToAlertRules = useCallback(() => {
+    if (shouldBlockNavigation()) {
+      navigate(getExpiredLicenseRoute(), { replace: true });
+      return;
+    }
+    navigate(ROUTES.ALERT_RULES);
+    handleMoreMenuClose();
+  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
+
+  const handleNavigateToAlertHistory = useCallback(() => {
+    if (shouldBlockNavigation()) {
+      navigate(getExpiredLicenseRoute(), { replace: true });
+      return;
+    }
+    navigate(ROUTES.ALERT_HISTORY);
+    handleMoreMenuClose();
+  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
+
   const handleNavigateToLicenseFromMenu = useCallback(() => {
     // Only main user can access license page
     const isMainUser = user?.id === 1;
@@ -380,6 +398,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
     isLicenseActive: isActiveRoute(ROUTES.LICENSE),
     isSystemMaintenanceActive: isActiveRoute(ROUTES.SYSTEM_MAINTENANCE),
     isReceiptTemplatesActive: isActiveRoute(ROUTES.RECEIPT_TEMPLATES),
+    isAlertRulesActive: isActiveRoute(ROUTES.ALERT_RULES),
+    isAlertHistoryActive: isActiveRoute(ROUTES.ALERT_HISTORY),
   }), [isActiveRoute, isPricingRoute]);
 
   // Memoize getHeaderButtonStyles function
@@ -935,6 +955,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
             >
               <Receipt sx={{ mr: 1, fontSize: '18px' }} />
               Receipt Templates
+            </MenuItem>
+            <MenuItem
+              onClick={handleNavigateToAlertRules}
+              selected={routeStates.isAlertRulesActive}
+            >
+              <Notifications sx={{ mr: 1, fontSize: '18px' }} />
+              Alert Rules
+            </MenuItem>
+            <MenuItem
+              onClick={handleNavigateToAlertHistory}
+              selected={routeStates.isAlertHistoryActive}
+            >
+              <History sx={{ mr: 1, fontSize: '18px' }} />
+              Alert History
             </MenuItem>
             {user?.id === 1 && (
               <MenuItem

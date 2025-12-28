@@ -45,6 +45,7 @@ import Toast from '../../../components/common/Toast';
 interface PurchaseSupplierReportTabProps {
   dateRange: DateRange;
   userId: number;
+  currency?: 'USD' | 'LBP' | 'ALL';
 }
 
 interface TabPanelProps {
@@ -68,6 +69,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
 const PurchaseSupplierReportTab: React.FC<PurchaseSupplierReportTabProps> = ({
   dateRange,
   userId,
+  currency = 'ALL',
 }) => {
   const { toast, showToast, hideToast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,7 @@ const PurchaseSupplierReportTab: React.FC<PurchaseSupplierReportTabProps> = ({
           {
             startDate: startDateUTC!,
             endDate: endDateUTC!,
+            currency,
             ordersByStatusPage: ordersByStatusPage + 1, // Convert from 0-based to 1-based
             ordersByStatusPageSize,
             ordersPage: ordersPage + 1, // Convert from 0-based to 1-based
@@ -119,6 +122,7 @@ const PurchaseSupplierReportTab: React.FC<PurchaseSupplierReportTabProps> = ({
           {
             startDate: startDateUTC!,
             endDate: endDateUTC!,
+            currency,
             page: supplierPerformancePage + 1, // Convert from 0-based to 1-based
             pageSize: supplierPerformancePageSize,
           },
@@ -146,6 +150,7 @@ const PurchaseSupplierReportTab: React.FC<PurchaseSupplierReportTabProps> = ({
   }, [
     dateRange,
     userId,
+    currency,
     ordersByStatusPage,
     ordersByStatusPageSize,
     ordersPage,

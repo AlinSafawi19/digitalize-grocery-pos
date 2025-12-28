@@ -526,15 +526,31 @@ This document outlines the planned features and enhancements for the DigitalizeP
 
 ## Alerts & Notifications
 
-### Category-Based Alert Rules
+### ✅ Category-Based Alert Rules (COMPLETED)
 - **Description**: Configure alerts based on product categories (low stock, price changes, etc.)
 - **Requirements**:
-  - Alert rule configuration UI
-  - Category-based rule engine
-  - Alert notification system
-  - Alert history and management
+  - ✅ Alert rule configuration - Database schema, service layer, and UI complete
+  - ✅ Category-based rule engine - Rule evaluation logic implemented
+  - ✅ Alert notification system - Integrated with existing NotificationService
+  - ✅ Alert history and management - AlertHistory model, service methods, and UI implemented
+  - ✅ Alert rule configuration UI - AlertRuleList component with add/edit/delete functionality
+  - ✅ Alert history UI - AlertHistory component with filtering and resolution
 - **Priority**: Medium
 - **Dependencies**: Notification system, Product categories
+- **Status**: ✅ **COMPLETED** - Full implementation with database, services, IPC, UI, and integration
+- **Implementation Notes**:
+  - Created AlertRule and AlertHistory models in Prisma schema with database migration
+  - Implemented AlertRuleService with CRUD operations and rule evaluation engine
+  - Rule types supported: low_stock, out_of_stock, price_change, expiry_warning, price_increase, price_decrease
+  - Rules can be configured per category or for all categories
+  - Alert evaluation automatically triggers notifications when conditions are met
+  - Alert history tracks all triggered alerts with resolution status
+  - IPC handlers and frontend service implemented
+  - Created AlertRuleList component with full CRUD operations and rule configuration
+  - Created AlertHistory component with filtering (all/resolved/unresolved) and resolution functionality
+  - Integrated alert evaluation into product update and inventory update workflows
+  - Added navigation menu items for Alert Rules and Alert History
+  - Alert evaluation runs asynchronously after product/inventory updates to avoid blocking operations
 
 ---
 

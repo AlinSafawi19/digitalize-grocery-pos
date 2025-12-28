@@ -366,6 +366,18 @@ export class InventoryService {
       });
 
       logger.info('Inventory updated', { productId, updateData });
+
+      // Evaluate alert rules for this product (async, don't wait)
+      (async () => {
+        try {
+          const { AlertRuleService } = await import('../alerts/alert-rule.service');
+          await AlertRuleService.evaluateProductAlerts(productId);
+        } catch (error) {
+          logger.error('Error evaluating alerts after inventory update', { productId, error });
+          // Don't throw - alert evaluation failure shouldn't break inventory update
+        }
+      })();
+
       return {
         success: true,
         inventory: inventory as InventoryItem,
@@ -526,6 +538,17 @@ export class InventoryService {
           logger.error('Failed to create stock adjustment notification', notificationError);
         }
       }
+
+      // Evaluate alert rules for this product (async, don't wait)
+      (async () => {
+        try {
+          const { AlertRuleService } = await import('../alerts/alert-rule.service');
+          await AlertRuleService.evaluateProductAlerts(productId);
+        } catch (error) {
+          logger.error('Error evaluating alerts after stock adjustment', { productId, error });
+          // Don't throw - alert evaluation failure shouldn't break stock adjustment
+        }
+      })();
 
       // Check for low stock after adjustment
       const finalQuantity = result.inventory.quantity;
