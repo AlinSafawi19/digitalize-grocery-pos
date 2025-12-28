@@ -3,6 +3,7 @@ import { licenseService, ActivateLicenseInput } from '../services/license/licens
 import { credentialsStorage } from '../services/license/credentialsStorage';
 import { secureLicenseValidationService } from '../services/license/secure-license-validation.service';
 import { licenseTransferService, InitiateLicenseTransferInput, CompleteLicenseTransferInput } from '../services/license/license-transfer.service';
+import { licenseUsageStatisticsService } from '../services/license/license-usage-statistics.service';
 import { logger } from '../utils/logger';
 
 /**
@@ -363,6 +364,77 @@ export function registerLicenseHandlers(): void {
     } catch (error) {
       logger.error('IPC: license:getTransferById error', error);
       return null;
+    }
+  });
+
+  /**
+   * Get license usage statistics
+   * IPC: license:getUsageStatistics
+   */
+  ipcMain.handle('license:getUsageStatistics', async () => {
+    try {
+      logger.info('IPC: license:getUsageStatistics');
+      const statistics = await licenseUsageStatisticsService.getUsageStatistics();
+      
+      if (!statistics) {
+        return null;
+      }
+      
+      // Serialize Date objects to ISO strings for IPC
+      return {
+        ...statistics,
+        activatedAt: statistics.activatedAt instanceof Date ? statistics.activatedAt.toISOString() : statistics.activatedAt,
+        expiresAt: statistics.expiresAt instanceof Date ? statistics.expiresAt.toISOString() : statistics.expiresAt,
+        activationHistory: {
+          ...statistics.activationHistory,
+          firstActivation: statistics.activationHistory.firstActivation instanceof Date
+            ? statistics.activationHistory.firstActivation.toISOString()
+            : statistics.activationHistory.firstActivation,
+          lastActivation: statistics.activationHistory.lastActivation instanceof Date
+            ? statistics.activationHistory.lastActivation.toISOString()
+            : statistics.activationHistory.lastActivation,
+        },
+        validationStatistics: {
+          ...statistics.validationStatistics,
+          lastValidation: statistics.validationStatistics.lastValidation instanceof Date
+            ? statistics.validationStatistics.lastValidation.toISOString()
+            : statistics.validationStatistics.lastValidation,
+        },
+        transferStatistics: {
+          ...statistics.transferStatistics,
+          lastTransfer: statistics.transferStatistics.lastTransfer instanceof Date
+            ? statistics.transferStatistics.lastTransfer.toISOString()
+            : statistics.transferStatistics.lastTransfer,
+        },
+        usageTimeline: statistics.usageTimeline.map(item => ({
+          ...item,
+          date: item.date instanceof Date ? item.date.toISOString() : item.date,
+        })),
+      };
+    } catch (error) {
+      logger.error('IPC: license:getUsageStatistics error', error);
+      return null;
+    }
+  });
+
+  /**
+   * Get device activation records
+   * IPC: license:getDeviceActivationRecords
+   */
+  ipcMain.handle('license:getDeviceActivationRecords', async () => {
+    try {
+      logger.info('IPC: license:getDeviceActivationRecords');
+      const records = await licenseUsageStatisticsService.getDeviceActivationRecords();
+      
+      // Serialize Date objects to ISO strings for IPC
+      return records.map(record => ({
+        ...record,
+        activatedAt: record.activatedAt instanceof Date ? record.activatedAt.toISOString() : record.activatedAt,
+        lastValidation: record.lastValidation instanceof Date ? record.lastValidation.toISOString() : record.lastValidation,
+      }));
+    } catch (error) {
+      logger.error('IPC: license:getDeviceActivationRecords error', error);
+      return [];
     }
   });
 

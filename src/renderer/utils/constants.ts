@@ -70,6 +70,7 @@ export const ROUTES = {
   LICENSE: '/license',
   LICENSE_VALIDATION_AUDIT: '/license/validation-audit',
   LICENSE_TRANSFER: '/license/transfer',
+  LICENSE_USAGE_STATISTICS: '/license/usage-statistics',
   LICENSE_EXPIRED: '/license-expired',
   ACCESS_DENIED: '/access-denied',
   BACKUP: '/backup',

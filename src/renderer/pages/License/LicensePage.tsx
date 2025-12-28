@@ -19,7 +19,7 @@ import {
   AppBar,
   Toolbar,
 } from '@mui/material';
-import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle, Security, TransferWithinAStation } from '@mui/icons-material';
+import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle, Security, TransferWithinAStation, Assessment } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -516,7 +516,7 @@ export default function LicensePage() {
                 >
                   License Status
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Button
                     variant="outlined"
                     size="small"
@@ -534,6 +534,15 @@ export default function LicensePage() {
                     sx={{ fontSize: '12px' }}
                   >
                     Transfer License
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Assessment />}
+                    onClick={() => navigate(ROUTES.LICENSE_USAGE_STATISTICS)}
+                    sx={{ fontSize: '12px' }}
+                  >
+                    Usage Statistics
                   </Button>
                 </Box>
               </Box>

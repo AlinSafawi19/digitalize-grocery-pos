@@ -546,15 +546,30 @@ This document outlines the planned features and enhancements for the DigitalizeP
   - Transfer status tracking: pending, approved, completed, cancelled, failed
   - Source and target device information tracking
 
-### License Usage Statistics
+### ✅ License Usage Statistics (COMPLETED)
 - **Description**: Display statistics about license usage, activation history, and device information
 - **Requirements**:
-  - Usage data collection
-  - Statistics dashboard
-  - Usage reports
-  - Historical data visualization
+  - ✅ Usage data collection - Aggregates data from LicenseValidationAudit, LicenseTransfer, and license data
+  - ✅ Statistics dashboard - Comprehensive dashboard with cards, charts, and tables
+  - ✅ Usage reports - Detailed statistics including validation, transfer, and activation history
+  - ✅ Historical data visualization - Timeline charts, pie charts, and line charts using Recharts
 - **Priority**: Low
 - **Dependencies**: License system
+- **Status**: ✅ **COMPLETED** - Full implementation with statistics service, IPC handlers, and comprehensive UI dashboard
+- **Implementation Notes**:
+  - Created LicenseUsageStatisticsService to aggregate data from existing sources (validation audit logs, transfers, license data)
+  - Statistics include: license information, device information, activation history, validation statistics, transfer statistics, and usage timeline
+  - Built LicenseUsageStatisticsPage with comprehensive dashboard including:
+    - License information card with key details and expiration status
+    - Statistics cards showing key metrics (total validations, successful validations, tamper detected, total transfers)
+    - Pie charts for validation types, validation results, and transfer status
+    - Line chart for usage timeline (last 30 days)
+    - Device activation records table
+  - Added IPC handlers for statistics retrieval
+  - Integrated route and navigation (protected for main user only)
+  - Added navigation link from License page
+  - Uses Recharts library for data visualization
+  - Statistics are calculated in real-time from existing database records
 
 ### ✅ Secure License Validation (COMPLETED)
 - **Description**: Enhanced security for license validation with encryption and tamper detection
@@ -670,7 +685,7 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - ✅ Auto-reorder suggestions (ML-enhanced) (COMPLETED - Full implementation with trend analysis, seasonal patterns, and predictive forecasting)
 - Automatic transaction completion
 - ✅ License transfer capability (COMPLETED - Full implementation with transfer token workflow, deactivation/activation, and transfer history)
-- License usage statistics
+- ✅ License usage statistics (COMPLETED - Full implementation with statistics dashboard, charts, and device activation records)
 - System maintenance tools
 
 ---
@@ -690,6 +705,7 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - Date: 2024-12-28
 - Version: 1.0.2
 - **Recent Updates**:
+  - ✅ Completed License Usage Statistics with comprehensive dashboard, charts, and device activation records
   - ✅ Completed License Transfer Capability with transfer token workflow, deactivation/activation, transfer history, and UI
   - ✅ Completed Auto-Reorder Suggestions (ML-Enhanced) with trend analysis, seasonal pattern recognition, predictive forecasting, and enhanced UI
   - ✅ Completed Point-in-Time Recovery with transaction logging, recovery point management, database restoration, and integrity verification

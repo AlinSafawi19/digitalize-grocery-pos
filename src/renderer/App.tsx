@@ -63,6 +63,7 @@ const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'));
 const LicensePage = lazy(() => import('./pages/License/LicensePage'));
 const LicenseValidationAuditPage = lazy(() => import('./pages/License/LicenseValidationAuditPage'));
 const LicenseTransferPage = lazy(() => import('./pages/License/LicenseTransferPage'));
+const LicenseUsageStatisticsPage = lazy(() => import('./pages/License/LicenseUsageStatisticsPage'));
 const LicenseExpiredPage = lazy(() => import('./pages/License/LicenseExpiredPage'));
 const AccessDeniedPage = lazy(() => import('./pages/AccessDenied/AccessDeniedPage'));
 const BackupPage = lazy(() => import('./pages/Backup/BackupPage'));
@@ -889,6 +890,21 @@ function AppContent() {
             isAuthenticated && isMainUser ? (
               <ProtectedRoute>
                 <LicenseTransferPage />
+              </ProtectedRoute>
+            ) : isAuthenticated ? (
+              <Navigate to={ROUTES.ACCESS_DENIED} replace />
+            ) : (
+              <Navigate to={ROUTES.LOGIN} replace />
+            )
+          }
+        />
+        <Route
+          path={ROUTES.LICENSE_USAGE_STATISTICS}
+          element={
+            // Only main user (ID = 1) can access license usage statistics
+            isAuthenticated && isMainUser ? (
+              <ProtectedRoute>
+                <LicenseUsageStatisticsPage />
               </ProtectedRoute>
             ) : isAuthenticated ? (
               <Navigate to={ROUTES.ACCESS_DENIED} replace />
