@@ -7,6 +7,7 @@ import { getHardwareId, getMachineName } from './hardwareFingerprint';
 import { UserService } from '../user/user.service';
 import { databaseService } from '../database/database.service';
 import { NotificationService } from '../notifications/notification.service';
+import { secureLicenseValidationService } from './secure-license-validation.service';
 
 /**
  * License activation input - matches server's ActivateLicenseInput
@@ -638,13 +639,15 @@ export class LicenseService {
 
   /**
    * Validate license (online validation)
+   * Now uses secure validation with tamper detection and audit logging
    */
   async validateLicense(licenseKey?: string): Promise<ValidateLicenseResult> {
     try {
       // Load license data if key not provided
       let key = licenseKey;
+      let licenseData: LicenseData | null = null;
       if (!key) {
-        const licenseData = await this.getLicenseStatus();
+        licenseData = await this.getLicenseStatus();
         if (!licenseData) {
           return {
             valid: false,
@@ -652,62 +655,61 @@ export class LicenseService {
           };
         }
         key = licenseData.licenseKey;
+      } else {
+        licenseData = await this.getLicenseStatus();
       }
 
-      logger.info('Validating license...', { licenseKey: key.substring(0, 8) + '...' });
+      logger.info('Validating license with secure validation...', { licenseKey: key.substring(0, 8) + '...' });
       
-      const response = await this.apiClient.post('/api/license/validate', {
-        licenseKey: key,
-        hardwareId: this.hardwareId, // Optional - sent for tracking but not required
-      });
+      // Use secure validation service
+      const secureResult = await secureLicenseValidationService.validateSecureOnline(key, licenseData);
 
-      if (response.data.valid) {
-        // Check if expiry info is present - if not, treat as invalid (fail-safe)
-        if (!response.data.expiresAt) {
-          logger.error('License validation returned valid but no expiry info - treating as invalid');
-          return {
-            valid: false,
-            message: 'License validation failed: expiry information is missing',
-          };
-        }
+      // If tampering detected, return immediately
+      if (secureResult.tamperDetected) {
+        logger.error('License validation failed due to tampering detection', {
+          reason: secureResult.tamperReason,
+        });
+        return {
+          valid: false,
+          message: secureResult.message || 'License validation failed: tampering detected',
+        };
+      }
 
+      if (secureResult.valid) {
         // Update license data
-        const licenseData = await this.getLicenseStatus();
-        if (licenseData) {
-          licenseData.lastValidation = Date.now();
-          if (response.data.expiresAt) {
-            licenseData.expiresAt = new Date(response.data.expiresAt).getTime();
+        const currentLicenseData = await this.getLicenseStatus();
+        if (currentLicenseData) {
+          currentLicenseData.lastValidation = Date.now();
+          if (secureResult.expiresAt) {
+            currentLicenseData.expiresAt = secureResult.expiresAt.getTime();
           }
-          if (response.data.gracePeriodEnd) {
-            licenseData.gracePeriodEnd = new Date(response.data.gracePeriodEnd).getTime();
+          if (secureResult.gracePeriodEnd) {
+            currentLicenseData.gracePeriodEnd = secureResult.gracePeriodEnd.getTime();
           }
-          if (response.data.token) {
-            licenseData.validationToken = response.data.token;
-          }
-          await licenseStorage.save(licenseData);
+          await licenseStorage.save(currentLicenseData);
           // Update cache
-          this.cachedLicenseData = licenseData;
+          this.cachedLicenseData = currentLicenseData;
         }
         
-        logger.info('License validated successfully');
+        logger.info('License validated successfully with secure validation');
         
         // Check and create expiration warning notifications if needed
-        if (response.data.daysRemaining !== undefined) {
-          await this.checkAndCreateExpirationNotification(response.data.daysRemaining);
+        if (secureResult.daysRemaining !== undefined) {
+          await this.checkAndCreateExpirationNotification(secureResult.daysRemaining);
         }
         
         return {
           valid: true,
-          message: response.data.message || 'License is valid',
-          expiresAt: response.data.expiresAt ? new Date(response.data.expiresAt) : undefined,
-          gracePeriodEnd: response.data.gracePeriodEnd ? new Date(response.data.gracePeriodEnd) : undefined,
-          daysRemaining: response.data.daysRemaining,
+          message: secureResult.message || 'License is valid',
+          expiresAt: secureResult.expiresAt,
+          gracePeriodEnd: secureResult.gracePeriodEnd,
+          daysRemaining: secureResult.daysRemaining,
         };
       } else {
-        logger.warn('License validation failed', { message: response.data.message });
+        logger.warn('License validation failed', { message: secureResult.message });
         return {
           valid: false,
-          message: response.data.message || 'License validation failed',
+          message: secureResult.message || 'License validation failed',
         };
       }
     } catch (error: unknown) {
@@ -728,6 +730,7 @@ export class LicenseService {
   /**
    * Validate cached license (offline validation)
    * Checks if cached validation is still valid (max 14 days)
+   * Now uses secure validation with tamper detection
    */
   async validateCachedLicense(): Promise<ValidateLicenseResult> {
     try {
@@ -740,47 +743,33 @@ export class LicenseService {
         };
       }
 
-      // Hardware ID check removed - users can login from any device
+      // Use secure validation service for cached validation
+      const secureResult = await secureLicenseValidationService.validateSecureCached(licenseData);
 
-      // Check if expiry info exists - if not, treat as expired (fail-safe)
-      if (!licenseData.expiresAt) {
-        logger.warn('No expiry info in cached license data - treating as expired');
+      // If tampering detected, return immediately
+      if (secureResult.tamperDetected) {
+        logger.error('Cached license validation failed due to tampering detection', {
+          reason: secureResult.tamperReason,
+        });
         return {
           valid: false,
-          message: 'License expiry information is missing. Please connect to the internet to validate.',
+          message: secureResult.message || 'License validation failed: tampering detected',
         };
       }
 
-      // Check if cached validation is still valid (max 14 days)
-      const daysSinceValidation = (Date.now() - licenseData.lastValidation) / (1000 * 60 * 60 * 24);
-      if (daysSinceValidation > 14) {
-        return {
-          valid: false,
-          message: 'Cached license validation expired. Please connect to the internet to validate.',
-        };
+      if (secureResult.valid) {
+        // Check and create expiration warning notifications if needed
+        if (secureResult.daysRemaining !== undefined) {
+          await this.checkAndCreateExpirationNotification(secureResult.daysRemaining);
+        }
       }
-
-      // Check if license expired (no grace period - expiration is exact end date)
-      const now = Date.now();
-      if (now > licenseData.expiresAt) {
-        return {
-          valid: false,
-          message: 'License has expired. Please renew your subscription.',
-        };
-      }
-
-      // License is valid
-      const daysRemaining = Math.ceil((licenseData.expiresAt - now) / (1000 * 60 * 60 * 24));
-      
-      // Check and create expiration warning notifications if needed
-      await this.checkAndCreateExpirationNotification(daysRemaining);
       
       return {
-        valid: true,
-        message: 'License is valid (cached validation)',
-        expiresAt: new Date(licenseData.expiresAt),
-        gracePeriodEnd: new Date(licenseData.gracePeriodEnd),
-        daysRemaining,
+        valid: secureResult.valid,
+        message: secureResult.message,
+        expiresAt: secureResult.expiresAt,
+        gracePeriodEnd: secureResult.gracePeriodEnd,
+        daysRemaining: secureResult.daysRemaining,
       };
     } catch (error) {
       logger.error('Cached license validation error', error);

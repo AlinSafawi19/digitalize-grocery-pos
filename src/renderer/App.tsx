@@ -61,6 +61,7 @@ const NotificationsPage = lazy(() => import('./pages/Notifications/Notifications
 const SettingsPage = lazy(() => import('./pages/Settings/SettingsPage'));
 const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'));
 const LicensePage = lazy(() => import('./pages/License/LicensePage'));
+const LicenseValidationAuditPage = lazy(() => import('./pages/License/LicenseValidationAuditPage'));
 const LicenseExpiredPage = lazy(() => import('./pages/License/LicenseExpiredPage'));
 const AccessDeniedPage = lazy(() => import('./pages/AccessDenied/AccessDeniedPage'));
 const BackupPage = lazy(() => import('./pages/Backup/BackupPage'));
@@ -860,6 +861,19 @@ function AppContent() {
               <LicensePage />
             ) : isAuthenticated ? (
               // Non-main users are redirected to access denied page
+              <Navigate to={ROUTES.ACCESS_DENIED} replace />
+            ) : (
+              <Navigate to={ROUTES.LOGIN} replace />
+            )
+          }
+        />
+        <Route
+          path={ROUTES.LICENSE_VALIDATION_AUDIT}
+          element={
+            // Only main user (ID = 1) can access validation audit logs
+            isAuthenticated && isMainUser ? (
+              <LicenseValidationAuditPage />
+            ) : isAuthenticated ? (
               <Navigate to={ROUTES.ACCESS_DENIED} replace />
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />

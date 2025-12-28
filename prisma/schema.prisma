@@ -131,6 +131,28 @@ model AuditLog {
   @@index([timestamp])
 }
 
+model LicenseValidationAudit {
+  id                Int      @id @default(autoincrement())
+  licenseKey        String   // License key (partial for security)
+  validationType    String   // online, offline, cached
+  validationResult  String   // valid, invalid, expired, tampered, error
+  hardwareId        String?  // Hardware ID hash
+  requestSignature  String?  // Request signature for tamper detection
+  responseSignature String?  // Response signature for tamper detection
+  serverResponse    String?  // Server response (sanitized)
+  errorMessage      String?  // Error message if validation failed
+  tamperDetected    Boolean  @default(false) // Whether tampering was detected
+  ipAddress         String?  // IP address of validation request
+  userAgent         String?  // User agent string
+  timestamp         DateTime @default(now())
+
+  @@index([licenseKey])
+  @@index([validationType])
+  @@index([validationResult])
+  @@index([tamperDetected])
+  @@index([timestamp])
+}
+
 model Notification {
   id        Int      @id @default(autoincrement())
   type      String // low_stock, expiry_warning, system_error, transaction, etc.
@@ -972,3 +994,4 @@ model BarcodeLabelTemplate {
   @@index([isActive])
   @@index([createdBy])
 }
+

@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { licenseService, ActivateLicenseInput } from '../services/license/license.service';
 import { credentialsStorage } from '../services/license/credentialsStorage';
+import { secureLicenseValidationService } from '../services/license/secure-license-validation.service';
 import { logger } from '../utils/logger';
 
 /**
@@ -192,6 +193,38 @@ export function registerLicenseHandlers(): void {
         nextPaymentFee: null,
         nextPaymentDate: null,
         currentSubscription: null,
+      };
+    }
+  });
+
+  /**
+   * Get validation audit logs
+   * IPC: license:getValidationAuditLogs
+   */
+  ipcMain.handle('license:getValidationAuditLogs', async (_event, options: {
+    page?: number;
+    pageSize?: number;
+    validationType?: 'online' | 'offline' | 'cached';
+    validationResult?: 'valid' | 'invalid' | 'expired' | 'tampered' | 'error';
+    tamperDetected?: boolean;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    try {
+      logger.info('IPC: license:getValidationAuditLogs');
+      const auditLogs = await secureLicenseValidationService.getValidationAuditLogs({
+        ...options,
+        startDate: options.startDate ? new Date(options.startDate) : undefined,
+        endDate: options.endDate ? new Date(options.endDate) : undefined,
+      });
+      return auditLogs;
+    } catch (error) {
+      logger.error('IPC: license:getValidationAuditLogs error', error);
+      return {
+        logs: [],
+        total: 0,
+        page: options.page || 1,
+        pageSize: options.pageSize || 20,
       };
     }
   });

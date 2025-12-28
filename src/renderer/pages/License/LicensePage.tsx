@@ -19,7 +19,7 @@ import {
   AppBar,
   Toolbar,
 } from '@mui/material';
-import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle } from '@mui/icons-material';
+import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle, Security } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -508,13 +508,24 @@ export default function LicensePage() {
           <Grid container spacing={3}>
             {/* License Status & Expiry */}
             <Grid item xs={12}>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={sectionTitleTypographySx}
-              >
-                License Status
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={sectionTitleTypographySx}
+                >
+                  License Status
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Security />}
+                  onClick={() => navigate(ROUTES.LICENSE_VALIDATION_AUDIT)}
+                  sx={{ fontSize: '12px' }}
+                >
+                  View Validation Audit Logs
+                </Button>
+              </Box>
               <Divider sx={{ mb: 2, borderColor: '#e0e0e0' }} />
             </Grid>
             <Grid item xs={12} md={6}>
