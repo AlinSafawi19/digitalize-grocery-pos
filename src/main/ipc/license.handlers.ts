@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { licenseService, ActivateLicenseInput } from '../services/license/license.service';
 import { credentialsStorage } from '../services/license/credentialsStorage';
 import { secureLicenseValidationService } from '../services/license/secure-license-validation.service';
+import { licenseTransferService, InitiateLicenseTransferInput, CompleteLicenseTransferInput } from '../services/license/license-transfer.service';
 import { logger } from '../utils/logger';
 
 /**
@@ -226,6 +227,142 @@ export function registerLicenseHandlers(): void {
         page: options.page || 1,
         pageSize: options.pageSize || 20,
       };
+    }
+  });
+
+  /**
+   * Initiate license transfer
+   * IPC: license:initiateTransfer
+   */
+  ipcMain.handle('license:initiateTransfer', async (_event, input: InitiateLicenseTransferInput, userId: number) => {
+    try {
+      logger.info('IPC: license:initiateTransfer', {
+        licenseKey: input.licenseKey?.substring(0, 8) + '...',
+        userId,
+      });
+      const result = await licenseTransferService.initiateTransfer(input, userId);
+      return result;
+    } catch (error) {
+      logger.error('IPC: license:initiateTransfer error', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to initiate license transfer',
+      };
+    }
+  });
+
+  /**
+   * Complete license transfer
+   * IPC: license:completeTransfer
+   */
+  ipcMain.handle('license:completeTransfer', async (_event, input: CompleteLicenseTransferInput, userId: number) => {
+    try {
+      logger.info('IPC: license:completeTransfer', {
+        transferToken: input.transferToken?.substring(0, 8) + '...',
+        licenseKey: input.licenseKey?.substring(0, 8) + '...',
+        userId,
+      });
+      const result = await licenseTransferService.completeTransfer(input, userId);
+      
+      // Serialize Date objects to ISO strings for IPC
+      const serializedResult = {
+        ...result,
+        expiresAt: result.expiresAt instanceof Date ? result.expiresAt.toISOString() : result.expiresAt,
+        gracePeriodEnd: result.gracePeriodEnd instanceof Date ? result.gracePeriodEnd.toISOString() : result.gracePeriodEnd,
+      };
+      
+      return serializedResult;
+    } catch (error) {
+      logger.error('IPC: license:completeTransfer error', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to complete license transfer',
+      };
+    }
+  });
+
+  /**
+   * Cancel license transfer
+   * IPC: license:cancelTransfer
+   */
+  ipcMain.handle('license:cancelTransfer', async (_event, transferId: number, userId: number, reason?: string) => {
+    try {
+      logger.info('IPC: license:cancelTransfer', { transferId, userId, reason });
+      const result = await licenseTransferService.cancelTransfer(transferId, userId, reason);
+      return result;
+    } catch (error) {
+      logger.error('IPC: license:cancelTransfer error', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to cancel license transfer',
+      };
+    }
+  });
+
+  /**
+   * Get license transfer history
+   * IPC: license:getTransferHistory
+   */
+  ipcMain.handle('license:getTransferHistory', async (_event, options: {
+    page?: number;
+    pageSize?: number;
+    status?: 'pending' | 'approved' | 'completed' | 'cancelled' | 'failed';
+    licenseKey?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    try {
+      logger.info('IPC: license:getTransferHistory', { options });
+      const result = await licenseTransferService.getTransferHistory({
+        ...options,
+        startDate: options.startDate ? new Date(options.startDate) : undefined,
+        endDate: options.endDate ? new Date(options.endDate) : undefined,
+      });
+      
+      // Serialize Date objects to ISO strings for IPC
+      return {
+        ...result,
+        transfers: result.transfers.map(t => ({
+          ...t,
+          initiatedAt: t.initiatedAt instanceof Date ? t.initiatedAt.toISOString() : t.initiatedAt,
+          completedAt: t.completedAt instanceof Date ? t.completedAt.toISOString() : t.completedAt,
+          cancelledAt: t.cancelledAt instanceof Date ? t.cancelledAt.toISOString() : t.cancelledAt,
+        })),
+      };
+    } catch (error) {
+      logger.error('IPC: license:getTransferHistory error', error);
+      return {
+        transfers: [],
+        total: 0,
+        page: options.page || 1,
+        pageSize: options.pageSize || 20,
+      };
+    }
+  });
+
+  /**
+   * Get license transfer by ID
+   * IPC: license:getTransferById
+   */
+  ipcMain.handle('license:getTransferById', async (_event, transferId: number) => {
+    try {
+      logger.info('IPC: license:getTransferById', { transferId });
+      const transfer = await licenseTransferService.getTransferById(transferId);
+      
+      if (!transfer) {
+        return null;
+      }
+      
+      // Serialize Date objects to ISO strings for IPC
+      return {
+        ...transfer,
+        initiatedAt: transfer.initiatedAt instanceof Date ? transfer.initiatedAt.toISOString() : transfer.initiatedAt,
+        completedAt: transfer.completedAt instanceof Date ? transfer.completedAt.toISOString() : transfer.completedAt,
+        cancelledAt: transfer.cancelledAt instanceof Date ? transfer.cancelledAt.toISOString() : transfer.cancelledAt,
+      };
+    } catch (error) {
+      logger.error('IPC: license:getTransferById error', error);
+      return null;
     }
   });
 

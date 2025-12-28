@@ -69,6 +69,7 @@ export const ROUTES = {
   PROFILE: '/profile',
   LICENSE: '/license',
   LICENSE_VALIDATION_AUDIT: '/license/validation-audit',
+  LICENSE_TRANSFER: '/license/transfer',
   LICENSE_EXPIRED: '/license-expired',
   ACCESS_DENIED: '/access-denied',
   BACKUP: '/backup',

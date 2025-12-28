@@ -153,6 +153,33 @@ model LicenseValidationAudit {
   @@index([timestamp])
 }
 
+model LicenseTransfer {
+  id                Int      @id @default(autoincrement())
+  licenseKey        String   // License key being transferred
+  sourceHardwareId  String   // Hardware ID of source device
+  sourceMachineName String?  // Machine name of source device
+  targetHardwareId  String?  // Hardware ID of target device (null until transfer completed)
+  targetMachineName String?  // Machine name of target device (null until transfer completed)
+  status            String   // pending, approved, completed, cancelled, failed
+  transferToken     String?  // Unique token for transfer approval/activation
+  initiatedBy       Int?     // User who initiated the transfer
+  completedBy       Int?     // User who completed the transfer on target device
+  initiatedAt       DateTime @default(now())
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String? // Reason for cancellation
+  errorMessage      String?  // Error message if transfer failed
+  notes             String?  // Additional notes about the transfer
+
+  @@index([licenseKey])
+  @@index([sourceHardwareId])
+  @@index([targetHardwareId])
+  @@index([status])
+  @@index([transferToken])
+  @@index([initiatedAt])
+  @@index([completedAt])
+}
+
 model TransactionLog {
   id          Int      @id @default(autoincrement())
   tableName   String   // Name of the table that was modified

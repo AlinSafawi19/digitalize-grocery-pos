@@ -19,7 +19,7 @@ import {
   AppBar,
   Toolbar,
 } from '@mui/material';
-import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle, Security } from '@mui/icons-material';
+import { CheckCircle, Error as ErrorIcon, ContentCopy as CopyIcon, Check as CheckIcon, Logout, ChatBubble as MessageCircle, Security, TransferWithinAStation } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -516,15 +516,26 @@ export default function LicensePage() {
                 >
                   License Status
                 </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Security />}
-                  onClick={() => navigate(ROUTES.LICENSE_VALIDATION_AUDIT)}
-                  sx={{ fontSize: '12px' }}
-                >
-                  View Validation Audit Logs
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Security />}
+                    onClick={() => navigate(ROUTES.LICENSE_VALIDATION_AUDIT)}
+                    sx={{ fontSize: '12px' }}
+                  >
+                    View Validation Audit Logs
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<TransferWithinAStation />}
+                    onClick={() => navigate(ROUTES.LICENSE_TRANSFER)}
+                    sx={{ fontSize: '12px' }}
+                  >
+                    Transfer License
+                  </Button>
+                </Box>
               </Box>
               <Divider sx={{ mb: 2, borderColor: '#e0e0e0' }} />
             </Grid>
