@@ -39,6 +39,7 @@ import { registerSupplierDocumentHandlers } from './supplier-document.handlers';
 import { registerSystemMaintenanceHandlers } from './system-maintenance.handlers';
 import { registerReceiptTemplateHandlers } from './receipt-template.handlers';
 import { registerAlertRuleHandlers } from './alert-rule.handlers';
+import { registerBarcodeLabelHandlers } from './barcode-label.handlers';
 
 /**
  * Register all IPC handlers
@@ -92,6 +93,7 @@ export function registerIpcHandlers(): void {
   registerSystemMaintenanceHandlers();
   registerReceiptTemplateHandlers();
   registerAlertRuleHandlers();
+  registerBarcodeLabelHandlers();
 
   logger.info('IPC handlers registered');
 }

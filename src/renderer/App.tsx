@@ -72,6 +72,8 @@ const ReceiptTemplateList = lazy(() => import('./pages/Receipts/ReceiptTemplateL
 const ReceiptTemplateEditor = lazy(() => import('./pages/Receipts/ReceiptTemplateEditor'));
 const AlertRuleList = lazy(() => import('./pages/Alerts/AlertRuleList'));
 const AlertHistory = lazy(() => import('./pages/Alerts/AlertHistory'));
+const BarcodeLabelTemplateList = lazy(() => import('./pages/BarcodeLabels/BarcodeLabelTemplateList'));
+const BarcodeLabelTemplateEditor = lazy(() => import('./pages/BarcodeLabels/BarcodeLabelTemplateEditor'));
 const CashierForm = lazy(() => import('./pages/Cashiers/CashierForm'));
 
 // Loading component for Suspense fallback
@@ -936,6 +938,30 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <AlertHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.BARCODE_LABELS}
+          element={
+            <ProtectedRoute>
+              <BarcodeLabelTemplateList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.BARCODE_LABELS_NEW}
+          element={
+            <ProtectedRoute>
+              <BarcodeLabelTemplateEditor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.BARCODE_LABELS_EDIT}
+          element={
+            <ProtectedRoute>
+              <BarcodeLabelTemplateEditor />
             </ProtectedRoute>
           }
         />

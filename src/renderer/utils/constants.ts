@@ -83,5 +83,8 @@ export const ROUTES = {
   RECEIPT_TEMPLATES_PREVIEW: '/receipts/templates/:id/preview',
   ALERT_RULES: '/alerts/rules',
   ALERT_HISTORY: '/alerts/history',
+  BARCODE_LABELS: '/barcode-labels',
+  BARCODE_LABELS_NEW: '/barcode-labels/new',
+  BARCODE_LABELS_EDIT: '/barcode-labels/edit/:id',
 } as const;
 

@@ -12,7 +12,7 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz, Build, Notifications } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard as DashboardIcon, Inventory, Category, LocalShipping, PointOfSale, Receipt, Warehouse, ShoppingCart, LocalOffer, Assessment, Analytics, History, Settings, MoreVert, Backup as BackupIcon, VpnKey, People, ChatBubble as MessageCircle, SwapHoriz, Build, Notifications, QrCode } from '@mui/icons-material';
 import NotificationCenter from '../NotificationCenter/NotificationCenter';
 import BackupOperationBanner from '../common/BackupOperationBanner';
 import HelpersPanel from '../helpers/HelpersPanel';
@@ -366,6 +366,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
     handleMoreMenuClose();
   }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
 
+  const handleNavigateToBarcodeLabels = useCallback(() => {
+    if (shouldBlockNavigation()) {
+      navigate(getExpiredLicenseRoute(), { replace: true });
+      return;
+    }
+    navigate(ROUTES.BARCODE_LABELS);
+    handleMoreMenuClose();
+  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
+
   const handleNavigateToLicenseFromMenu = useCallback(() => {
     // Only main user can access license page
     const isMainUser = user?.id === 1;
@@ -400,6 +409,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     isReceiptTemplatesActive: isActiveRoute(ROUTES.RECEIPT_TEMPLATES),
     isAlertRulesActive: isActiveRoute(ROUTES.ALERT_RULES),
     isAlertHistoryActive: isActiveRoute(ROUTES.ALERT_HISTORY),
+    isBarcodeLabelsActive: isActiveRoute(ROUTES.BARCODE_LABELS),
   }), [isActiveRoute, isPricingRoute]);
 
   // Memoize getHeaderButtonStyles function
@@ -969,6 +979,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
             >
               <History sx={{ mr: 1, fontSize: '18px' }} />
               Alert History
+            </MenuItem>
+            <MenuItem
+              onClick={handleNavigateToBarcodeLabels}
+              selected={routeStates.isBarcodeLabelsActive}
+            >
+              <QrCode sx={{ mr: 1, fontSize: '18px' }} />
+              Barcode Labels
             </MenuItem>
             {user?.id === 1 && (
               <MenuItem

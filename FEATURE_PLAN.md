@@ -155,15 +155,28 @@ This document outlines the planned features and enhancements for the DigitalizeP
 - **Dependencies**: Product management, Barcode formats
 - **Status**: ✅ **COMPLETED** - Full implementation with generation service and UI integration
 
-### Custom Barcode Printing
+### ✅ Custom Barcode Printing (COMPLETED)
 - **Description**: Print custom barcode labels with product information
 - **Requirements**:
-  - Label template designer
-  - Print preview
-  - Batch printing support
-  - Printer configuration
+  - ✅ Label template designer - Full template editor with element configuration (barcode, text, product name, product code, price, image)
+  - ✅ Print preview - Preview generated labels with product data
+  - ✅ Batch printing support - Generate labels for multiple products
+  - ✅ Printer configuration - Browser print dialog integration
 - **Priority**: Medium
 - **Dependencies**: Barcode generation, Printing system
+- **Status**: ✅ **COMPLETED** - Full implementation with database schema, services, IPC handlers, UI components, and navigation integration
+- **Implementation Notes**:
+  - Created BarcodeLabelTemplate model in Prisma schema for storing label templates
+  - Implemented BarcodeLabelService with template CRUD operations and label HTML generation
+  - Built BarcodeLabelTemplateList component for managing templates
+  - Built BarcodeLabelTemplateEditor component with tabbed interface (General, Layout, Preview)
+  - Label designer supports adding/removing elements (barcode, text, product fields, images)
+  - Element positioning and styling configuration (position, size, font, color, alignment)
+  - Barcode element configuration (format selection, display value toggle)
+  - Preview functionality with product selection and HTML rendering
+  - Print functionality using browser print dialog
+  - Integrated into navigation menu under "More Options"
+  - Uses JsBarcode library for barcode rendering in generated HTML
 
 ### ✅ Barcode Validation (COMPLETED)
 - **Description**: Validate barcode format and check digit accuracy

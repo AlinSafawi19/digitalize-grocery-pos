@@ -41,6 +41,7 @@ model User {
   receiptTemplatesUpdated ReceiptTemplate[] @relation("ReceiptTemplateUpdater")
   alertRulesCreated        AlertRule[]      @relation("AlertRuleCreator")
   alertsResolved            AlertHistory[]   @relation("AlertResolver")
+  barcodeLabelTemplatesCreated BarcodeLabelTemplate[] @relation("BarcodeLabelTemplateCreator")
 
   @@index([username])
   @@index([phone])
@@ -904,4 +905,26 @@ model AlertHistory {
   @@index([isResolved])
   @@index([createdAt])
   @@index([alertRuleId, isResolved])
+}
+
+model BarcodeLabelTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  width       Float    @default(4.0) // Width in inches (standard label sizes)
+  height      Float    @default(2.0) // Height in inches
+  template    String   // JSON string containing label layout configuration
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   Int      // User who created the template
+
+  // Relations
+  creator     User     @relation("BarcodeLabelTemplateCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([name])
+  @@index([isDefault])
+  @@index([isActive])
+  @@index([createdBy])
 }
