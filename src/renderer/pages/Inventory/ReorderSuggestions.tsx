@@ -38,6 +38,8 @@ import {
   ReorderSuggestion,
   ReorderSuggestionOptions,
   ReorderSuggestionSummary,
+  MLReorderSuggestion,
+  MLReorderSuggestionOptions,
 } from '../../services/reorder-suggestion.service';
 import { CategoryService } from '../../services/category.service';
 import { SupplierService } from '../../services/supplier.service';
@@ -57,6 +59,7 @@ export default function ReorderSuggestions() {
   const canCreatePurchaseOrders = usePermission('purchase_orders.create');
 
   const [suggestions, setSuggestions] = useState<ReorderSuggestion[]>([]);
+  const [mlSuggestions, setMlSuggestions] = useState<MLReorderSuggestion[]>([]);
   const [summary, setSummary] = useState<ReorderSuggestionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -73,13 +76,15 @@ export default function ReorderSuggestions() {
   const [includeInactive, setIncludeInactive] = useState(false);
   const [analysisPeriodDays, setAnalysisPeriodDays] = useState(30);
   const [safetyStockDays, setSafetyStockDays] = useState(7);
+  const [enableML, setEnableML] = useState(true);
+  const [forecastPeriodDays, setForecastPeriodDays] = useState(30);
 
   const loadSuggestions = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
     try {
-      const options: ReorderSuggestionOptions = {
+      const baseOptions: ReorderSuggestionOptions = {
         urgencyFilter: urgencyFilter.length > 0 ? urgencyFilter : undefined,
         supplierId: supplierFilter || undefined,
         categoryId: categoryFilter || undefined,
@@ -88,15 +93,46 @@ export default function ReorderSuggestions() {
         safetyStockDays,
       };
 
-      const [suggestionsResult, summaryResult] = await Promise.all([
-        ReorderSuggestionService.getSuggestions(options),
-        ReorderSuggestionService.getSummary(options),
-      ]);
+      if (enableML) {
+        // Load ML-enhanced suggestions
+        const mlOptions: MLReorderSuggestionOptions = {
+          ...baseOptions,
+          enableMLPredictions: true,
+          forecastPeriodDays,
+        };
 
-      if (suggestionsResult.success && suggestionsResult.suggestions) {
-        setSuggestions(suggestionsResult.suggestions);
+        const [mlResult, summaryResult] = await Promise.all([
+          ReorderSuggestionService.getMLSuggestions(mlOptions),
+          ReorderSuggestionService.getSummary(baseOptions),
+        ]);
+
+        if (mlResult.success && mlResult.suggestions) {
+          setMlSuggestions(mlResult.suggestions);
+          setSuggestions([]); // Clear regular suggestions
+        } else {
+          showToast(mlResult.error || 'Failed to load ML suggestions', 'error');
+        }
+
+        if (summaryResult.success && summaryResult.summary) {
+          setSummary(summaryResult.summary);
+        }
       } else {
-        showToast(suggestionsResult.error || 'Failed to load suggestions', 'error');
+        // Load regular suggestions
+        const [suggestionsResult, summaryResult] = await Promise.all([
+          ReorderSuggestionService.getSuggestions(baseOptions),
+          ReorderSuggestionService.getSummary(baseOptions),
+        ]);
+
+        if (suggestionsResult.success && suggestionsResult.suggestions) {
+          setSuggestions(suggestionsResult.suggestions);
+          setMlSuggestions([]); // Clear ML suggestions
+        } else {
+          showToast(suggestionsResult.error || 'Failed to load suggestions', 'error');
+        }
+
+        if (summaryResult.success && summaryResult.summary) {
+          setSummary(summaryResult.summary);
+        }
       }
 
       if (summaryResult.success && summaryResult.summary) {
@@ -167,12 +203,13 @@ export default function ReorderSuggestions() {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    if (selectedSuggestions.size === suggestions.length) {
+    const currentSuggestions = enableML ? mlSuggestions : suggestions;
+    if (selectedSuggestions.size === currentSuggestions.length) {
       setSelectedSuggestions(new Set());
     } else {
-      setSelectedSuggestions(new Set(suggestions.map((s) => s.productId)));
+      setSelectedSuggestions(new Set(currentSuggestions.map((s) => s.productId)));
     }
-  }, [suggestions, selectedSuggestions.size]);
+  }, [enableML, mlSuggestions, suggestions, selectedSuggestions.size]);
 
   const handleCreatePurchaseOrder = useCallback(async () => {
     if (!user?.id || selectedSuggestions.size === 0 || !canCreatePurchaseOrders) {
@@ -181,9 +218,12 @@ export default function ReorderSuggestions() {
 
     setCreatingPO(true);
     try {
+      // Get current suggestions (ML or regular)
+      const currentSuggestions = enableML ? mlSuggestions : suggestions;
+      
       // Group suggestions by supplier
-      const suggestionsBySupplier = new Map<number, ReorderSuggestion[]>();
-      for (const suggestion of suggestions) {
+      const suggestionsBySupplier = new Map<number, (ReorderSuggestion | MLReorderSuggestion)[]>();
+      for (const suggestion of currentSuggestions) {
         if (selectedSuggestions.has(suggestion.productId) && suggestion.supplierId) {
           if (!suggestionsBySupplier.has(suggestion.supplierId)) {
             suggestionsBySupplier.set(suggestion.supplierId, []);
@@ -297,6 +337,8 @@ export default function ReorderSuggestions() {
     showToast,
     loadSuggestions,
     navigate,
+    enableML,
+    mlSuggestions,
   ]);
 
   const getUrgencyColor = (urgency: string) => {
@@ -498,6 +540,27 @@ export default function ReorderSuggestions() {
               }
               label="Include Inactive"
             />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={enableML}
+                  onChange={(e) => setEnableML(e.target.checked)}
+                />
+              }
+              label="Enable ML Predictions"
+            />
+
+            {enableML && (
+              <TextField
+                size="small"
+                label="Forecast Period (days)"
+                type="number"
+                value={forecastPeriodDays}
+                onChange={(e) => setForecastPeriodDays(parseInt(e.target.value) || 30)}
+                sx={{ width: 180 }}
+              />
+            )}
           </Box>
         </Paper>
 
@@ -510,9 +573,14 @@ export default function ReorderSuggestions() {
                   {canCreatePurchaseOrders && (
                     <TableCell padding="checkbox">
                       <Checkbox
-                        checked={selectedSuggestions.size === suggestions.length && suggestions.length > 0}
+                        checked={
+                          (enableML
+                            ? selectedSuggestions.size === mlSuggestions.length && mlSuggestions.length > 0
+                            : selectedSuggestions.size === suggestions.length && suggestions.length > 0)
+                        }
                         indeterminate={
-                          selectedSuggestions.size > 0 && selectedSuggestions.size < suggestions.length
+                          selectedSuggestions.size > 0 &&
+                          selectedSuggestions.size < (enableML ? mlSuggestions.length : suggestions.length)
                         }
                         onChange={handleSelectAll}
                       />
@@ -526,25 +594,174 @@ export default function ReorderSuggestions() {
                   <TableCell align="right" sx={{ fontWeight: 600 }}>Daily Sales</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600 }}>Days Remaining</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600 }}>Recommended Qty</TableCell>
+                  {enableML && (
+                    <>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>ML Predicted</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Trend</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Seasonal Factor</TableCell>
+                    </>
+                  )}
                   <TableCell sx={{ fontWeight: 600 }}>Urgency</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Confidence</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>
+                    {enableML ? 'ML Confidence' : 'Confidence'}
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={canCreatePurchaseOrders ? 11 : 10} align="center">
+                    <TableCell
+                      colSpan={
+                        canCreatePurchaseOrders
+                          ? enableML
+                            ? 14
+                            : 11
+                          : enableML
+                            ? 13
+                            : 10
+                      }
+                      align="center"
+                    >
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
-                ) : suggestions.length === 0 ? (
+                ) : (enableML ? mlSuggestions.length === 0 : suggestions.length === 0) ? (
                   <TableRow>
-                    <TableCell colSpan={canCreatePurchaseOrders ? 11 : 10} align="center">
+                    <TableCell
+                      colSpan={
+                        canCreatePurchaseOrders
+                          ? enableML
+                            ? 14
+                            : 11
+                          : enableML
+                            ? 13
+                            : 10
+                      }
+                      align="center"
+                    >
                       <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
                         No reorder suggestions found. All products are well stocked!
                       </Typography>
                     </TableCell>
                   </TableRow>
+                ) : enableML ? (
+                  mlSuggestions.map((suggestion) => (
+                    <TableRow key={suggestion.productId} hover>
+                      {canCreatePurchaseOrders && (
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedSuggestions.has(suggestion.productId)}
+                            onChange={() => handleSelectSuggestion(suggestion.productId)}
+                          />
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {suggestion.productName}
+                        </Typography>
+                        {suggestion.productCode && (
+                          <Typography variant="caption" color="text.secondary">
+                            Code: {suggestion.productCode}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>{suggestion.category || '-'}</TableCell>
+                      <TableCell>{suggestion.supplier || '-'}</TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color:
+                              suggestion.currentStock <= suggestion.reorderLevel
+                                ? '#d32f2f'
+                                : 'inherit',
+                            fontWeight:
+                              suggestion.currentStock <= suggestion.reorderLevel ? 600 : 400,
+                          }}
+                        >
+                          {suggestion.currentStock.toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">{suggestion.reorderLevel.toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        {suggestion.averageDailySales.toFixed(2)}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color:
+                              suggestion.daysOfStockRemaining <= 3
+                                ? '#d32f2f'
+                                : suggestion.daysOfStockRemaining <= 7
+                                ? '#ed6c02'
+                                : 'inherit',
+                          }}
+                        >
+                          {suggestion.daysOfStockRemaining.toFixed(1)} days
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight="bold" color="primary">
+                          {suggestion.recommendedQuantity.toFixed(0)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" color="info.main">
+                          {suggestion.mlPredictedDemand.toFixed(0)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={suggestion.trendDirection}
+                          size="small"
+                          color={
+                            suggestion.trendDirection === 'increasing'
+                              ? 'success'
+                              : suggestion.trendDirection === 'decreasing'
+                              ? 'warning'
+                              : 'default'
+                          }
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          Strength: {suggestion.trendStrength}%
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color:
+                              suggestion.seasonalFactor > 1.2
+                                ? 'success.main'
+                                : suggestion.seasonalFactor < 0.8
+                                ? 'warning.main'
+                                : 'inherit',
+                          }}
+                        >
+                          {suggestion.seasonalFactor.toFixed(2)}x
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={suggestion.urgency.toUpperCase()}
+                          size="small"
+                          color={getUrgencyColor(suggestion.urgency)}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={`${suggestion.mlConfidence}%`}
+                          size="small"
+                          color={suggestion.mlConfidence >= 70 ? 'success' : suggestion.mlConfidence >= 50 ? 'warning' : 'error'}
+                        />
+                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Pattern: {suggestion.patternConfidence}%
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 ) : (
                   suggestions.map((suggestion) => (
                     <TableRow key={suggestion.productId} hover>
@@ -610,14 +827,16 @@ export default function ReorderSuggestions() {
                       <TableCell>
                         <Chip
                           label={suggestion.urgency.toUpperCase()}
-                          color={getUrgencyColor(suggestion.urgency) as any}
                           size="small"
+                          color={getUrgencyColor(suggestion.urgency)}
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" color="text.secondary">
-                          {suggestion.confidence}%
-                        </Typography>
+                        <Chip
+                          label={`${suggestion.confidence}%`}
+                          size="small"
+                          color={suggestion.confidence >= 70 ? 'success' : suggestion.confidence >= 50 ? 'warning' : 'error'}
+                        />
                       </TableCell>
                     </TableRow>
                   ))
@@ -627,16 +846,18 @@ export default function ReorderSuggestions() {
           </TableContainer>
         </Paper>
 
-        {suggestions.length > 0 && (
+        {(enableML ? mlSuggestions.length > 0 : suggestions.length > 0) && (
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2">
               <strong>Analysis Period:</strong> {analysisPeriodDays} days |{' '}
-              <strong>Safety Stock:</strong> {safetyStockDays} days |{' '}
+              <strong>Safety Stock:</strong> {safetyStockDays} days
+              {enableML && ` | Forecast Period: ${forecastPeriodDays} days`} |{' '}
               <strong>Last Updated:</strong> {new Date().toLocaleString()}
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
-              Suggestions are based on current stock levels, sales velocity, and reorder points.
-              Recommended quantities include safety stock buffer.
+              {enableML
+                ? 'ML-enhanced suggestions include trend analysis, seasonal patterns, and predictive demand forecasting. Recommended quantities are adjusted based on detected patterns.'
+                : 'Suggestions are based on current stock levels, sales velocity, and reorder points. Recommended quantities include safety stock buffer.'}
             </Typography>
           </Alert>
         )}

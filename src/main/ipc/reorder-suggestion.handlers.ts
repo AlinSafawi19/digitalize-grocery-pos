@@ -4,6 +4,10 @@ import {
   ReorderSuggestionService,
   ReorderSuggestionOptions,
 } from '../services/inventory/reorder-suggestion.service';
+import {
+  MLReorderSuggestionService,
+  MLReorderSuggestionOptions,
+} from '../services/inventory/ml-reorder-suggestion.service';
 
 /**
  * Register reorder suggestion IPC handlers
@@ -118,5 +122,31 @@ export function registerReorderSuggestionHandlers(): void {
       }
     }
   );
+
+  /**
+   * Get ML-enhanced reorder suggestions handler
+   * IPC: reorder-suggestion:getMLSuggestions
+   */
+  ipcMain.handle(
+    'reorder-suggestion:getMLSuggestions',
+    async (_event, options: MLReorderSuggestionOptions) => {
+      try {
+        const suggestions = await MLReorderSuggestionService.getMLReorderSuggestions(options);
+        return {
+          success: true,
+          suggestions,
+        };
+      } catch (error) {
+        logger.error('Error in reorder-suggestion:getMLSuggestions handler', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'An error occurred',
+          suggestions: [],
+        };
+      }
+    }
+  );
+
+  logger.info('Reorder suggestion IPC handlers registered');
 }
 
