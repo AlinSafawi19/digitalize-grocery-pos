@@ -59,6 +59,7 @@ export const ROUTES = {
   PRICING_HISTORY: '/pricing/history',
   TRANSACTIONS: '/transactions',
   TRANSACTIONS_VIEW: '/transactions/view/:id',
+  TRANSACTION_COMPLETION_RULES: '/transactions/completion-rules',
   REPORTS: '/reports',
   SCHEDULED_REPORTS: '/reports/scheduled',
   SCHEDULED_REPORTS_NEW: '/reports/scheduled/new',

@@ -401,6 +401,22 @@ model Transaction {
   @@index([cashierId, status, createdAt]) // For cashier-specific reports
 }
 
+model TransactionCompletionRule {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0) // Higher priority rules are evaluated first
+  conditions  String   // JSON string of rule conditions
+  actions     String   // JSON string of actions to perform when conditions match
+  createdBy   Int?     // User who created the rule
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([priority])
+}
+
 model TransactionItem {
   id            Int   @id @default(autoincrement())
   transactionId Int

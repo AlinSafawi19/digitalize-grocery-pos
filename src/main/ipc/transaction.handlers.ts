@@ -6,6 +6,7 @@ import {
   PaymentInput,
   TransactionListOptions,
 } from '../services/transaction/transaction.service';
+import { transactionCompletionRuleService } from '../services/transaction/transaction-completion-rule.service';
 
 /**
  * Register transaction management IPC handlers
@@ -41,6 +42,15 @@ export function registerTransactionHandlers(): void {
         }
 
         const transaction = await TransactionService.create(input);
+        
+        // Evaluate transaction completion rules (async, don't block transaction creation)
+        transactionCompletionRuleService.evaluateTransaction(transaction).catch((error) => {
+          logger.error('Error evaluating transaction completion rules', {
+            transactionId: transaction.id,
+            error,
+          });
+        });
+        
         logger.posAction('Transaction create completed', {
           requestedById,
           transactionId: transaction.id,

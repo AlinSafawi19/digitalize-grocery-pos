@@ -42,6 +42,7 @@ import { registerAlertRuleHandlers } from './alert-rule.handlers';
 import { registerBarcodeLabelHandlers } from './barcode-label.handlers';
 import { registerBackupLocationHandlers } from './backup-location.handlers';
 import { registerRecoveryHandlers } from './recovery.handlers';
+import { registerTransactionCompletionRuleHandlers } from './transaction-completion-rule.handlers';
 
 /**
  * Register all IPC handlers
@@ -98,6 +99,7 @@ export function registerIpcHandlers(): void {
   registerBarcodeLabelHandlers();
   registerBackupLocationHandlers();
   registerRecoveryHandlers();
+  registerTransactionCompletionRuleHandlers();
 
   logger.info('IPC handlers registered');
 }

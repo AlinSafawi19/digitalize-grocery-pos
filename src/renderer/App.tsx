@@ -31,6 +31,7 @@ const SupplierDetails = lazy(() => import('./pages/Suppliers/SupplierDetails'));
 const POSPage = lazy(() => import('./pages/POS/POSPage'));
 const TransactionList = lazy(() => import('./pages/Transactions/TransactionList'));
 const TransactionDetails = lazy(() => import('./pages/Transactions/TransactionDetails'));
+const TransactionCompletionRulesPage = lazy(() => import('./pages/Transactions/TransactionCompletionRulesPage'));
 const InventoryList = lazy(() => import('./pages/Inventory/InventoryList'));
 const StockMovementHistory = lazy(() => import('./pages/Inventory/StockMovementHistory'));
 const LowStockAlerts = lazy(() => import('./pages/Inventory/LowStockAlerts'));
@@ -573,6 +574,21 @@ function AppContent() {
             <PermissionProtectedRoute>
               <TransactionDetails />
             </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.TRANSACTION_COMPLETION_RULES}
+          element={
+            // Only main user (ID = 1) can access transaction completion rules
+            isAuthenticated && isMainUser ? (
+              <ProtectedRoute>
+                <TransactionCompletionRulesPage />
+              </ProtectedRoute>
+            ) : isAuthenticated ? (
+              <Navigate to={ROUTES.ACCESS_DENIED} replace />
+            ) : (
+              <Navigate to={ROUTES.LOGIN} replace />
+            )
           }
         />
         <Route
