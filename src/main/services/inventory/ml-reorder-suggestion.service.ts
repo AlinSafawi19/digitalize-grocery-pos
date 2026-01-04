@@ -2,7 +2,6 @@ import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { ReorderSuggestionService, ReorderSuggestion, ReorderSuggestionOptions } from './reorder-suggestion.service';
 import moment from 'moment-timezone';
-import { Prisma } from '@prisma/client';
 
 const TIMEZONE = 'Asia/Beirut';
 
@@ -321,23 +320,6 @@ export class MLReorderSuggestionService {
     });
 
     overallAverage = totalDays > 0 ? overallAverage / totalDays : 0;
-
-    // Find day with highest and lowest sales
-    let maxDay = 0;
-    let maxAvg = 0;
-    let minDay = 0;
-    let minAvg = Infinity;
-
-    weeklyAverages.forEach((avg, day) => {
-      if (avg > maxAvg) {
-        maxAvg = avg;
-        maxDay = day;
-      }
-      if (avg < minAvg) {
-        minAvg = avg;
-        minDay = day;
-      }
-    });
 
     // Calculate seasonal factor based on current day
     const currentDay = moment.tz(TIMEZONE).day();

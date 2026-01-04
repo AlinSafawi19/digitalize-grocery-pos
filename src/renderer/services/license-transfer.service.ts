@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-
 /**
  * License transfer status
  */
@@ -100,7 +98,7 @@ export class LicenseTransferService {
     input: InitiateLicenseTransferInput,
     userId: number
   ): Promise<InitiateLicenseTransferResult> {
-    return await ipcRenderer.invoke('license:initiateTransfer', input, userId);
+    return await window.electron.ipcRenderer.invoke('license:initiateTransfer', input, userId) as InitiateLicenseTransferResult;
   }
 
   /**
@@ -110,7 +108,7 @@ export class LicenseTransferService {
     input: CompleteLicenseTransferInput,
     userId: number
   ): Promise<CompleteLicenseTransferResult> {
-    return await ipcRenderer.invoke('license:completeTransfer', input, userId);
+    return await window.electron.ipcRenderer.invoke('license:completeTransfer', input, userId) as CompleteLicenseTransferResult;
   }
 
   /**
@@ -121,7 +119,7 @@ export class LicenseTransferService {
     userId: number,
     reason?: string
   ): Promise<{ success: boolean; message: string }> {
-    return await ipcRenderer.invoke('license:cancelTransfer', transferId, userId, reason);
+    return await window.electron.ipcRenderer.invoke('license:cancelTransfer', transferId, userId, reason) as { success: boolean; message: string };
   }
 
   /**
@@ -130,14 +128,14 @@ export class LicenseTransferService {
   static async getTransferHistory(
     options: LicenseTransferListOptions = {}
   ): Promise<LicenseTransferListResponse> {
-    return await ipcRenderer.invoke('license:getTransferHistory', options);
+    return await window.electron.ipcRenderer.invoke('license:getTransferHistory', options) as LicenseTransferListResponse;
   }
 
   /**
    * Get a single license transfer by ID
    */
   static async getTransferById(transferId: number): Promise<LicenseTransferRecord | null> {
-    return await ipcRenderer.invoke('license:getTransferById', transferId);
+    return await window.electron.ipcRenderer.invoke('license:getTransferById', transferId) as LicenseTransferRecord | null;
   }
 }
 

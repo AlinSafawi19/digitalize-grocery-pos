@@ -27,7 +27,6 @@ import {
 import {
   Build,
   Storage,
-  Delete,
   Refresh,
   History,
   CheckCircle,
@@ -50,9 +49,6 @@ const SystemMaintenancePage: React.FC = () => {
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [operations, setOperations] = useState<MaintenanceOperation[]>([]);
   const [history, setHistory] = useState<SystemMaintenance[]>([]);
-  const [historyPage, setHistoryPage] = useState(1);
-  const [historyTotal, setHistoryTotal] = useState(0);
-  const [historyTotalPages, setHistoryTotalPages] = useState(0);
   const [runningOperation, setRunningOperation] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<MaintenanceOperation | null>(null);
@@ -64,7 +60,7 @@ const SystemMaintenancePage: React.FC = () => {
       const [statsResult, operationsResult, historyResult] = await Promise.all([
         SystemMaintenanceService.getDatabaseStats(),
         SystemMaintenanceService.getAvailableOperations(),
-        SystemMaintenanceService.getHistory({ page: historyPage, pageSize: 10 }),
+        SystemMaintenanceService.getHistory({ pageSize: 10 }),
       ]);
 
       if (statsResult.success && statsResult.stats) {
@@ -77,15 +73,13 @@ const SystemMaintenancePage: React.FC = () => {
 
       if (historyResult.success) {
         setHistory(historyResult.operations || []);
-        setHistoryTotal(historyResult.pagination?.totalItems || 0);
-        setHistoryTotalPages(historyResult.pagination?.totalPages || 0);
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'An error occurred', 'error');
     } finally {
       setLoading(false);
     }
-  }, [historyPage, showToast]);
+  }, [showToast]);
 
   useEffect(() => {
     loadData();

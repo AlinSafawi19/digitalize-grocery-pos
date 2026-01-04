@@ -15,31 +15,18 @@ import {
   CircularProgress,
   Chip,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
 import {
   Add,
   Edit,
   Delete,
   Refresh,
-  Print,
-  Visibility,
   Star,
   StarBorder,
 } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store';
 import {
   BarcodeLabelService,
   BarcodeLabelTemplate,
-  CreateBarcodeLabelTemplateInput,
-  UpdateBarcodeLabelTemplateInput,
 } from '../../services/barcode-label.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
@@ -50,7 +37,6 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
 
 const BarcodeLabelTemplateList: React.FC = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
   const navigate = useNavigate();
   const canManage = usePermission('barcode.manage');
@@ -77,7 +63,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to load templates', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while loading templates', 'error');
     } finally {
       setLoading(false);
@@ -110,7 +96,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to set default template', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while setting default template', 'error');
     }
   }, [showToast, loadTemplates]);
@@ -128,7 +114,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to delete template', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while deleting template', 'error');
     }
   }, [deletingTemplate, showToast, loadTemplates]);
@@ -165,7 +151,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
     return (
       <MainLayout>
         <Box sx={containerBoxSx}>
-          <Typography>You don't have permission to manage barcode label templates.</Typography>
+          <Typography>You don&apos;t have permission to manage barcode label templates.</Typography>
         </Box>
       </MainLayout>
     );
@@ -232,7 +218,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            {template.width}" × {template.height}"
+                            {template.width}&quot; × {template.height}&quot;
                           </TableCell>
                           <TableCell>
                             {template.isActive ? (

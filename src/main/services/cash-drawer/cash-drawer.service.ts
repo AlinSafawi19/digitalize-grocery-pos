@@ -1,5 +1,6 @@
 import { logger } from '../../utils/logger';
 import { SettingsService } from '../settings/settings.service';
+import { ReceiptTemplateService } from '../receipt/receipt-template.service';
 import { getPrinters } from 'pdf-to-printer';
 import fs from 'fs-extra';
 import path from 'path';
@@ -41,18 +42,27 @@ export class CashDrawerService {
     try {
       logger.info('Opening cash drawer', { printerName: printerName || 'default' });
 
-      // Get printer settings to determine which printer to use
-      const printerSettings = await SettingsService.getPrinterSettings();
-      const targetPrinter = printerName || printerSettings.printerName;
+      // Get printer name from receipt template if not provided
+      let targetPrinter = printerName;
+      if (!targetPrinter) {
+        try {
+          const defaultTemplate = await ReceiptTemplateService.getDefault();
+          if (defaultTemplate) {
+            const templateData = JSON.parse(defaultTemplate.template);
+            targetPrinter = templateData.printing?.printerName || undefined;
+          }
+        } catch (error) {
+          logger.warn('Failed to get printer name from template', { error });
+        }
+      }
 
       if (!targetPrinter) {
         logger.warn('No printer specified for cash drawer', {
           printerName: targetPrinter,
-          defaultPrinter: printerSettings.printerName,
         });
         return {
           success: false,
-          error: 'No printer specified. Please configure a printer in settings.',
+          error: 'No printer specified. Please configure a printer in receipt template settings.',
         };
       }
 

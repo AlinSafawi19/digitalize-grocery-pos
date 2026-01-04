@@ -1,4 +1,4 @@
-import { Inventory, Product, TransactionItem, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import moment from 'moment-timezone';

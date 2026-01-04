@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -18,8 +18,6 @@ import {
   Button,
 } from '@mui/material';
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   PieChart,
@@ -32,7 +30,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { Refresh, Assessment } from '@mui/icons-material';
+import { Refresh } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
 import MainLayout from '../../components/layout/MainLayout';
@@ -285,7 +283,7 @@ export default function LicenseUsageStatisticsPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {validationTypeData.map((entry, index) => (
+                      {validationTypeData.map((_item, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -319,7 +317,7 @@ export default function LicenseUsageStatisticsPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {validationResultData.map((entry, index) => (
+                      {validationResultData.map((_item, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -353,7 +351,7 @@ export default function LicenseUsageStatisticsPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {transferStatusData.map((entry, index) => (
+                      {transferStatusData.map((_item, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -438,12 +436,7 @@ export default function LicenseUsageStatisticsPage() {
           )}
         </Paper>
 
-        <Toast
-          open={toast.open}
-          message={toast.message}
-          severity={toast.severity}
-          onClose={hideToast}
-        />
+        <Toast toast={toast} onClose={hideToast} />
       </Box>
     </MainLayout>
   );

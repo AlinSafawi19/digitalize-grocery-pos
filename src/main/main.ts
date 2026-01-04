@@ -48,7 +48,7 @@ if (process.env.NODE_ENV !== 'production') {
 // Note: ASAR is disabled in package.json to ensure Prisma client module resolution works correctly
 
 // Now import everything else
-import { app, BrowserWindow, session, nativeImage } from 'electron';
+import { app, BrowserWindow, session, nativeImage, globalShortcut } from 'electron';
 import fs from 'fs-extra';
 
 import { databaseService } from './services/database/database.service';
@@ -202,10 +202,54 @@ async function createWindow() {
     },
   });
 
+  // Add keyboard shortcuts to open dev tools (F12, Ctrl+Shift+I, Ctrl+Shift+J)
+  // This works in both development and production modes
+  
+  // Register F12 to toggle dev tools
+  globalShortcut.register('F12', () => {
+    if (win) {
+      if (win.webContents.isDevToolsOpened()) {
+        win.webContents.closeDevTools();
+      } else {
+        win.webContents.openDevTools();
+      }
+    }
+  });
+
+  // Register Ctrl+Shift+I to toggle dev tools
+  globalShortcut.register('CommandOrControl+Shift+I', () => {
+    if (win) {
+      if (win.webContents.isDevToolsOpened()) {
+        win.webContents.closeDevTools();
+      } else {
+        win.webContents.openDevTools();
+      }
+    }
+  });
+
+  // Register Ctrl+Shift+J to toggle dev tools (alternative shortcut)
+  globalShortcut.register('CommandOrControl+Shift+J', () => {
+    if (win) {
+      if (win.webContents.isDevToolsOpened()) {
+        win.webContents.closeDevTools();
+      } else {
+        win.webContents.openDevTools();
+      }
+    }
+  });
+
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', new Date().toLocaleString());
+    if (!win) return;
+    win.webContents.send('main-process-message', new Date().toLocaleString());
     logger.info('Window loaded successfully');
+    
+    // Always open dev tools in development mode
+    const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+    if (isDev && !win.webContents.isDevToolsOpened()) {
+      win.webContents.openDevTools();
+      logger.info('Dev tools opened automatically (development mode)');
+    }
   });
 
   // Handle load errors
@@ -216,11 +260,22 @@ async function createWindow() {
       validatedURL,
       indexHtml,
     });
+    
+    // Open dev tools on error to help debug
+    if (win && !win.webContents.isDevToolsOpened()) {
+      win.webContents.openDevTools();
+      logger.info('Dev tools opened due to load error');
+    }
   });
 
   // Log when page starts loading
   win.webContents.on('did-start-loading', () => {
     logger.info('Window started loading', { url: url || indexHtml });
+  });
+
+  // Log console messages from renderer
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    logger.info(`[Renderer Console ${level}]: ${message}`, { line, sourceId });
   });
 
   if (url) {
@@ -240,6 +295,10 @@ async function createWindow() {
     }
     win.loadFile(indexHtml).catch((error) => {
       logger.error('Error loading index.html', error);
+      // Open dev tools on error to help debug
+      if (win && !win.webContents.isDevToolsOpened()) {
+        win.webContents.openDevTools();
+      }
     });
   }
 }
@@ -362,6 +421,8 @@ async function initializeApp() {
 
 // Quit when all windows are closed
 app.on('window-all-closed', async () => {
+  // Unregister all global shortcuts
+  globalShortcut.unregisterAll();
   await databaseService.disconnect();
   app.quit();
   win = null;
@@ -378,6 +439,8 @@ app.on('activate', () => {
 // Handle app quit
 app.on('before-quit', async () => {
   logger.info('Application shutting down...');
+  // Unregister all global shortcuts
+  globalShortcut.unregisterAll();
   UpdateService.cleanup();
   await databaseService.disconnect();
 });

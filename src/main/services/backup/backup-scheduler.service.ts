@@ -2,7 +2,7 @@ import * as cron from 'node-cron';
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { BackupService } from './backup.service';
-import { BackupLocationService } from './backup-location.service';
+import { BackupLocationService, BackupLocation } from './backup-location.service';
 import { NotificationService } from '../notifications/notification.service';
 import { hasExternalDriveAvailable, validateExternalDrive } from '../../utils/drive.util';
 import moment from 'moment-timezone';
@@ -214,7 +214,7 @@ export class BackupSchedulerService {
       const locations = await BackupLocationService.getScheduleLocations(schedule.id);
       
       // Determine backup destination(s)
-      let backupDestinations: Array<{ path: string; location?: any }> = [];
+      let backupDestinations: Array<{ path: string; location?: BackupLocation }> = [];
       
       if (locations.length > 0) {
         // Use multiple locations with rotation
@@ -239,7 +239,6 @@ export class BackupSchedulerService {
       // Try each destination until one succeeds
       let backupSucceeded = false;
       let lastError: Error | null = null;
-      let successfulPath = '';
 
       for (const destination of backupDestinations) {
         try {
@@ -310,7 +309,6 @@ export class BackupSchedulerService {
           );
 
           backupSucceeded = true;
-          successfulPath = destination.path;
           const duration = Date.now() - startTime;
 
           // Update schedule with success status
@@ -396,7 +394,7 @@ export class BackupSchedulerService {
       case 'daily': {
         const time = scheduleConfig.time || '02:00';
         const [hours, minutes] = time.split(':').map(Number);
-        let nextRun = moment.tz(TIMEZONE).hour(hours).minute(minutes).second(0).millisecond(0);
+        const nextRun = moment.tz(TIMEZONE).hour(hours).minute(minutes).second(0).millisecond(0);
         
         // If time has passed today, schedule for tomorrow
         if (nextRun.isBefore(now)) {
@@ -411,7 +409,7 @@ export class BackupSchedulerService {
         const weeklyTime = scheduleConfig.time || '02:00';
         const [hours, minutes] = weeklyTime.split(':').map(Number);
         
-        let nextRun = moment.tz(TIMEZONE).day(dayOfWeek).hour(hours).minute(minutes).second(0).millisecond(0);
+        const nextRun = moment.tz(TIMEZONE).day(dayOfWeek).hour(hours).minute(minutes).second(0).millisecond(0);
         
         // If this week's occurrence has passed, schedule for next week
         if (nextRun.isBefore(now)) {
@@ -426,7 +424,7 @@ export class BackupSchedulerService {
         const monthlyTime = scheduleConfig.time || '02:00';
         const [hours, minutes] = monthlyTime.split(':').map(Number);
         
-        let nextRun = moment.tz(TIMEZONE).date(dayOfMonth).hour(hours).minute(minutes).second(0).millisecond(0);
+        const nextRun = moment.tz(TIMEZONE).date(dayOfMonth).hour(hours).minute(minutes).second(0).millisecond(0);
         
         // If this month's occurrence has passed, schedule for next month
         if (nextRun.isBefore(now)) {

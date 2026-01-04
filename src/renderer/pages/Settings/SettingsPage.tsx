@@ -24,7 +24,6 @@ import 'react-phone-number-input/style.css';
 import {
   Store,
   Receipt,
-  Print,
   Business,
   Notifications as NotificationsIcon,
   CurrencyExchange,
@@ -33,9 +32,10 @@ import {
   Image as ImageIcon,
   Delete as DeleteIcon,
   Computer as ComputerIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RootState, AppDispatch } from '../../store';
 import { SettingsService } from '../../services/settings.service';
 import { CurrencyService } from '../../services/currency.service';
@@ -47,6 +47,7 @@ import { ROUTES } from '../../utils/constants';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import SessionManagement from './SessionManagement';
+import ReceiptTemplateList from '../Receipts/ReceiptTemplateList';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -72,10 +73,32 @@ function TabPanel(props: TabPanelProps) {
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState): AuthState => state.auth);
   const { toast, showToast, hideToast } = useToast();
-  const [activeTab, setActiveTab] = useState(0);
+  
+  // Get tab from URL params, default to 0
+  const tabFromUrl = searchParams.get('tab');
+  const initialTab = tabFromUrl ? parseInt(tabFromUrl, 10) : 0;
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Update tab when URL changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      const tabNum = parseInt(tab, 10);
+      if (!isNaN(tabNum) && tabNum >= 0 && tabNum <= 6 && tabNum !== activeTab) {
+        setActiveTab(tabNum);
+      }
+    }
+  }, [searchParams, activeTab]);
+  
+  // Update URL when tab changes (but not on initial load)
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+    setSearchParams({ tab: newValue.toString() }, { replace: true });
+  }, [setSearchParams]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -121,14 +144,6 @@ export default function SettingsPage() {
     usdToLbp: 89000, // Default fallback, will be replaced when settings load
   });
 
-  // Printer Settings (needed for receipt preview)
-  const [printerSettings, setPrinterSettings] = useState({
-    paperWidth: 80,
-    autoPrint: true,
-    printerName: '',
-  });
-
-
   // Notification Settings
   const [notificationSettings, setNotificationSettings] = useState({
     soundEnabled: true,
@@ -153,11 +168,6 @@ export default function SettingsPage() {
     defaultTaxRate: 0,
     taxInclusive: false,
   });
-  const [initialPrinterSettings, setInitialPrinterSettings] = useState({
-    paperWidth: 80,
-    autoPrint: true,
-    printerName: '',
-  });
   const [initialBusinessRules, setInitialBusinessRules] = useState({
     roundingMethod: 'round',
     allowNegativeStock: false,
@@ -180,7 +190,6 @@ export default function SettingsPage() {
       const [
         storeInfoResult,
         taxConfigResult,
-        printerSettingsResult,
         businessRulesResult,
         notificationSettingsResult,
         exchangeRate,
@@ -188,7 +197,6 @@ export default function SettingsPage() {
       ] = await Promise.all([
         SettingsService.getStoreInfo(user.id),
         SettingsService.getTaxConfig(user.id),
-        SettingsService.getPrinterSettings(user.id),
         SettingsService.getBusinessRules(user.id),
         SettingsService.getNotificationSettings(user.id),
         CurrencyService.getExchangeRate(),
@@ -227,16 +235,6 @@ export default function SettingsPage() {
         setTaxConfig(taxConfigResult.taxConfig);
         setInitialTaxConfig(taxConfigResult.taxConfig);
       }
-      if (printerSettingsResult.success && printerSettingsResult.printerSettings) {
-        const minPaperWidth = 58; // Minimum paper width in mm
-        const loadedSettings = {
-          ...printerSettingsResult.printerSettings,
-          paperWidth: Math.max(minPaperWidth, printerSettingsResult.printerSettings.paperWidth || 80),
-          printerName: printerSettingsResult.printerSettings.printerName || '',
-        };
-        setPrinterSettings(loadedSettings);
-        setInitialPrinterSettings(loadedSettings);
-      }
       if (businessRulesResult.success && businessRulesResult.businessRules) {
         setBusinessRules(businessRulesResult.businessRules);
         setInitialBusinessRules(businessRulesResult.businessRules);
@@ -263,9 +261,6 @@ export default function SettingsPage() {
     }
   }, [user?.id, loadAllSettings]);
 
-  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  }, []);
 
   const validateStoreInfo = useCallback((): boolean => {
     const errors: { name?: string } = {};
@@ -358,38 +353,6 @@ export default function SettingsPage() {
       setSaving(false);
     }
   }, [user?.id, validateTaxConfig, taxConfig, initialTaxConfig, showToast]);
-
-
-  const handleSavePrinterSettings = useCallback(async () => {
-    if (!user?.id) return;
-
-    // Check if values have changed
-    if (
-      printerSettings.paperWidth === initialPrinterSettings.paperWidth &&
-      printerSettings.autoPrint === initialPrinterSettings.autoPrint &&
-      printerSettings.printerName === initialPrinterSettings.printerName
-    ) {
-      showToast('No changes made', 'info');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const result = await SettingsService.setPrinterSettings(printerSettings, user.id);
-      if (result.success) {
-        setInitialPrinterSettings(printerSettings);
-        showToast('Successfully updated', 'success');
-      } else {
-        showToast(result.error || 'Failed to save printer settings', 'error');
-      }
-    } catch (error) {
-      console.error('Error saving printer settings:', error);
-      showToast('Failed to save printer settings', 'error');
-    } finally {
-      setSaving(false);
-    }
-  }, [user?.id, printerSettings, initialPrinterSettings, showToast]);
-
 
   const handleSaveBusinessRules = useCallback(async () => {
     if (!user?.id) return;
@@ -576,26 +539,6 @@ export default function SettingsPage() {
   }, []);
 
   // Memoize onChange handlers for other settings
-
-  const handlePaperWidthChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const minPaperWidth = 58; // Minimum paper width in mm
-    const value = parseInt(e.target.value) || minPaperWidth;
-    const clampedValue = Math.max(minPaperWidth, value);
-    setPrinterSettings((prev) => ({
-      ...prev,
-      paperWidth: clampedValue,
-    }));
-  }, []);
-
-  const handleAutoPrintChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPrinterSettings((prev) => ({ ...prev, autoPrint: e.target.checked }));
-  }, []);
-
-  const handlePrinterNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPrinterSettings((prev) => ({ ...prev, printerName: e.target.value }));
-  }, []);
-
-
   const handleRoundingMethodChange = useCallback((e: { target: { value: string } }) => {
     setBusinessRules((prev) => ({ ...prev, roundingMethod: e.target.value }));
   }, []);
@@ -864,37 +807,37 @@ export default function SettingsPage() {
               aria-controls="settings-tabpanel-1"
             />
             <Tab
-              icon={<Print />}
-              iconPosition="start"
-              label="Printer"
-              id="settings-tab-2"
-              aria-controls="settings-tabpanel-2"
-            />
-            <Tab
               icon={<Business />}
               iconPosition="start"
               label="Business Rules"
-              id="settings-tab-3"
-              aria-controls="settings-tabpanel-3"
+              id="settings-tab-2"
+              aria-controls="settings-tabpanel-2"
             />
             <Tab
               icon={<NotificationsIcon />}
               iconPosition="start"
               label="Notifications"
-              id="settings-tab-4"
-              aria-controls="settings-tabpanel-4"
+              id="settings-tab-3"
+              aria-controls="settings-tabpanel-3"
             />
             <Tab
               icon={<CurrencyExchange />}
               iconPosition="start"
               label="Currency"
-              id="settings-tab-5"
-              aria-controls="settings-tabpanel-5"
+              id="settings-tab-4"
+              aria-controls="settings-tabpanel-4"
             />
             <Tab
               icon={<ComputerIcon />}
               iconPosition="start"
               label="Sessions"
+              id="settings-tab-5"
+              aria-controls="settings-tabpanel-5"
+            />
+            <Tab
+              icon={<DescriptionIcon />}
+              iconPosition="start"
+              label="Receipt Templates"
               id="settings-tab-6"
               aria-controls="settings-tabpanel-6"
             />
@@ -1181,77 +1124,8 @@ export default function SettingsPage() {
             </Grid>
           </TabPanel>
 
-          {/* Printer Settings Tab */}
-          <TabPanel value={activeTab} index={2}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  gutterBottom
-                  sx={sectionTitleTypographySx}
-                >
-                  Printer Settings
-                </Typography>
-                <Divider sx={{ mb: 3, borderColor: '#e0e0e0' }} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Tooltip title="Printer Name - Enter the exact name of your printer as it appears in Windows Printers. Leave empty to use the default system printer. The printer name must match exactly for the system to find it.">
-                  <TextField
-                    fullWidth
-                    label="Printer Name"
-                    value={printerSettings.printerName || ''}
-                    onChange={handlePrinterNameChange}
-                    placeholder="Leave empty for default printer"
-                    helperText="Enter the exact name of your printer (as shown in Windows Printers). Leave empty to use the default printer."
-                  />
-                </Tooltip>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Tooltip title="Paper Width - Enter the width of your receipt paper in millimeters. Common sizes are 58mm (narrow) and 80mm (standard). Range: 58-110mm. This affects how text is formatted on receipts.">
-                  <TextField
-                    fullWidth
-                    label="Paper Width (mm)"
-                    type="number"
-                    value={printerSettings.paperWidth}
-                    onChange={handlePaperWidthChange}
-                    inputProps={{ min: 58, max: 110, step: 1 }}
-                    helperText="Minimum: 58mm, Maximum: 110mm"
-                  />
-                </Tooltip>
-              </Grid>
-              <Grid item xs={12}>
-                <Tooltip title="Auto Print Receipts - When enabled, receipts will automatically print after completing a transaction. When disabled, you'll need to manually print receipts.">
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={printerSettings.autoPrint}
-                        onChange={handleAutoPrintChange}
-                      />
-                    }
-                    label="Auto Print Receipts"
-                  />
-                </Tooltip>
-                <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
-                  Automatically print receipts after completing transactions.
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Tooltip title={saving ? "Saving printer settings..." : "Save Printer Settings - Save your printer name, paper width, and auto-print preferences. These settings control how receipts are printed."}>
-                  <Button
-                    variant="contained"
-                    onClick={handleSavePrinterSettings}
-                    disabled={saving}
-                    sx={saveButtonSx}
-                  >
-                    {saving ? 'Saving...' : 'Save Printer Settings'}
-                  </Button>
-                </Tooltip>
-              </Grid>
-            </Grid>
-          </TabPanel>
-
           {/* Business Rules Tab */}
-          <TabPanel value={activeTab} index={3}>
+          <TabPanel value={activeTab} index={2}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Typography
@@ -1313,7 +1187,7 @@ export default function SettingsPage() {
           </TabPanel>
 
           {/* Notification Settings Tab */}
-          <TabPanel value={activeTab} index={4}>
+          <TabPanel value={activeTab} index={3}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Typography
@@ -1403,7 +1277,7 @@ export default function SettingsPage() {
           </TabPanel>
 
           {/* Currency Settings Tab */}
-          <TabPanel value={activeTab} index={5}>
+          <TabPanel value={activeTab} index={4}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Typography
@@ -1459,8 +1333,13 @@ export default function SettingsPage() {
           </TabPanel>
 
           {/* Session Management Tab */}
-          <TabPanel value={activeTab} index={6}>
+          <TabPanel value={activeTab} index={5}>
             <SessionManagement />
+          </TabPanel>
+
+          {/* Receipt Templates Tab */}
+          <TabPanel value={activeTab} index={6}>
+            <ReceiptTemplateList skipLayout={true} />
           </TabPanel>
         </Paper>
       </Box>

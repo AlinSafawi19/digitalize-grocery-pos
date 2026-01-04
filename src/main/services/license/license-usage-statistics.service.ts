@@ -1,8 +1,7 @@
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { licenseService } from './license.service';
-import { licenseTransferService } from './license-transfer.service';
-import { secureLicenseValidationService } from './secure-license-validation.service';
+import { LicenseData } from './licenseStorage';
 import { getHardwareId, getMachineName } from './hardwareFingerprint';
 
 /**
@@ -88,8 +87,6 @@ export class LicenseUsageStatisticsService {
    */
   async getUsageStatistics(): Promise<LicenseUsageStatistics | null> {
     try {
-      const prisma = databaseService.getClient();
-      
       // Get current license data
       const licenseData = await licenseService.getLicenseStatus();
       if (!licenseData) {
@@ -258,7 +255,7 @@ export class LicenseUsageStatisticsService {
    */
   private async getActivationHistory(
     licenseKey: string,
-    licenseData: any
+    licenseData: LicenseData
   ): Promise<LicenseUsageStatistics['activationHistory']> {
     try {
       const prisma = databaseService.getClient();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { SupplierPaymentService, PaymentReminder } from '../../services/supplier-payment.service';
+import { Supplier } from '../../services/product.service';
 import { useToast } from '../../hooks/useToast';
 import { formatDate } from '../../utils/dateUtils';
 import { formatCurrency } from '../../utils/currency';
@@ -167,7 +168,7 @@ export default function PaymentReminders({
 
         <Alert severity="warning" sx={{ mb: 2 }}>
           <Typography variant="body2" fontWeight="medium">
-            Total Overdue Amount: {formatCurrency(totalOverdue)}
+            Total Overdue Amount: {formatCurrency(totalOverdue, 'USD')}
           </Typography>
         </Alert>
 
@@ -199,7 +200,7 @@ export default function PaymentReminders({
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2">
-                      {formatCurrency(reminder.amount)}
+                      {formatCurrency(reminder.amount, 'USD')}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
@@ -207,7 +208,7 @@ export default function PaymentReminders({
                       variant="body2"
                       sx={{ fontWeight: 600, color: '#d32f2f' }}
                     >
-                      {formatCurrency(reminder.outstandingAmount)}
+                      {formatCurrency(reminder.outstandingAmount, 'USD')}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -275,7 +276,7 @@ export default function PaymentReminders({
           setSelectedSupplierId(null);
         }}
         onSuccess={handlePaymentSuccess}
-        supplier={selectedSupplierId ? { id: selectedSupplierId } as any : null}
+        supplier={selectedSupplierId ? { id: selectedSupplierId } as Pick<Supplier, 'id'> : null}
         invoiceId={selectedInvoiceId}
         userId={user?.id || 0}
       />

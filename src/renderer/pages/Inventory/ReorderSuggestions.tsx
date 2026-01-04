@@ -134,10 +134,6 @@ export default function ReorderSuggestions() {
           setSummary(summaryResult.summary);
         }
       }
-
-      if (summaryResult.success && summaryResult.summary) {
-        setSummary(summaryResult.summary);
-      }
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : 'An error occurred',
@@ -154,6 +150,8 @@ export default function ReorderSuggestions() {
     includeInactive,
     analysisPeriodDays,
     safetyStockDays,
+    enableML,
+    forecastPeriodDays,
     showToast,
   ]);
 
@@ -471,7 +469,7 @@ export default function ReorderSuggestions() {
               <Select
                 multiple
                 value={urgencyFilter}
-                onChange={(e) => setUrgencyFilter(e.target.value as any)}
+                onChange={(e) => setUrgencyFilter(e.target.value as ('critical' | 'high' | 'medium' | 'low')[])}
                 label="Urgency"
               >
                 <MenuItem value="critical">Critical</MenuItem>

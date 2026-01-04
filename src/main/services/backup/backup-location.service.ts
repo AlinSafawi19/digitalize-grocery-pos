@@ -94,7 +94,7 @@ export class BackupLocationService {
             const testFile = path.join(locationPath, '.backup-test');
             await fs.writeFile(testFile, 'test');
             await fs.remove(testFile);
-          } catch (error) {
+          } catch {
             return {
               valid: false,
               error: 'PATH_NOT_WRITABLE',
@@ -266,7 +266,7 @@ export class BackupLocationService {
       ]);
 
       return {
-        locations: locations.map((l: any) => this.mapToLocation(l)),
+        locations: locations.map((l) => this.mapToLocation(l)),
         pagination: {
           total,
           page,

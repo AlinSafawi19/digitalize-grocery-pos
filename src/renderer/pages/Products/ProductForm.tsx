@@ -11,8 +11,10 @@ import {
   Typography,
   IconButton,
   Tooltip,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
-import { ArrowBack, Add, Refresh, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
+import { ArrowBack, Add, QrCode, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -635,14 +637,14 @@ const ProductForm: React.FC = () => {
             setFieldErrors((prev) => ({ ...prev, barcode: 'Barcode already exists' }));
             return;
           }
-        } catch (error) {
+        } catch {
           // Ignore errors from duplicate check, continue with format validation
         }
       }
 
       // Validate barcode format using enhanced validation
       const enhancedResult = await BarcodeValidationEnhancedService.validate(barcode, {
-        checkDuplicates: !isEditMode || (product && product.barcode !== barcode),
+        checkDuplicates: !isEditMode || (product !== null && product.barcode !== barcode),
         context: 'product_form',
         validatedBy: user?.id,
         saveHistory: true,
@@ -1573,7 +1575,7 @@ const ProductForm: React.FC = () => {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Box>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Box sx={{ flex: 1 }}>
                             <Tooltip title="Barcode - Enter a unique barcode (EAN, UPC, or custom) for this product. This barcode can be scanned at the POS to quickly add the product to a transaction. This is a required field.">
                               <TextField
@@ -1606,43 +1608,56 @@ const ProductForm: React.FC = () => {
                               />
                             </Tooltip>
                           </Box>
-                          {/* Show warnings and suggestions */}
-                          {barcodeValidation.warnings && barcodeValidation.warnings.length > 0 && (
-                            <Box sx={{ mt: 1, width: '100%' }}>
-                              <Alert severity="warning" sx={{ fontSize: '0.875rem' }}>
-                                {barcodeValidation.warnings.map((warning, idx) => (
-                                  <Typography key={idx} variant="body2">
-                                    {warning}
-                                  </Typography>
-                                ))}
-                              </Alert>
-                            </Box>
-                          )}
-                          {barcodeValidation.suggestions && barcodeValidation.suggestions.length > 0 && (
-                            <Box sx={{ mt: 1, width: '100%' }}>
-                              <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                                <AlertTitle>Suggestions</AlertTitle>
-                                {barcodeValidation.suggestions.map((suggestion, idx) => (
-                                  <Typography key={idx} variant="body2" sx={{ mb: 0.5 }}>
-                                    {suggestion}
-                                  </Typography>
-                                ))}
-                              </Alert>
-                            </Box>
-                          )}
                           <Tooltip title="Generate Barcode - Automatically generate a random EAN-13 barcode for this product. EAN-13 is the most common retail barcode format.">
-                            <span>
-                              <IconButton
-                                onClick={() => handleGenerateBarcode('EAN13')}
-                                disabled={loading || generatingBarcode}
-                                sx={{ mt: 1 }}
-                                color="primary"
-                              >
-                                {generatingBarcode ? <CircularProgress size={20} /> : <Refresh />}
-                              </IconButton>
-                            </span>
+                            <IconButton
+                              onClick={() => handleGenerateBarcode('EAN13')}
+                              disabled={loading || generatingBarcode}
+                              sx={{
+                                height: '44px',
+                                width: '44px',
+                                padding: '8px',
+                                color: '#1a237e',
+                                border: '1px solid #c0c0c0',
+                                borderRadius: 0,
+                                backgroundColor: '#ffffff',
+                                '&:hover': {
+                                  backgroundColor: '#f5f5f5',
+                                  borderColor: '#1a237e',
+                                },
+                                '&:disabled': {
+                                  borderColor: '#e0e0e0',
+                                  color: '#9e9e9e',
+                                },
+                              }}
+                            >
+                              {generatingBarcode ? <CircularProgress size={20} /> : <QrCode sx={{ fontSize: '18px' }} />}
+                            </IconButton>
                           </Tooltip>
                         </Box>
+                        {/* Show warnings and suggestions */}
+                        {barcodeValidation.warnings && barcodeValidation.warnings.length > 0 && (
+                          <Box sx={{ mt: 1, width: '100%' }}>
+                            <Alert severity="warning" sx={{ fontSize: '0.875rem' }}>
+                              {barcodeValidation.warnings.map((warning, idx) => (
+                                <Typography key={idx} variant="body2">
+                                  {warning}
+                                </Typography>
+                              ))}
+                            </Alert>
+                          </Box>
+                        )}
+                        {barcodeValidation.suggestions && barcodeValidation.suggestions.length > 0 && (
+                          <Box sx={{ mt: 1, width: '100%' }}>
+                            <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                              <AlertTitle>Suggestions</AlertTitle>
+                              {barcodeValidation.suggestions.map((suggestion, idx) => (
+                                <Typography key={idx} variant="body2" sx={{ mb: 0.5 }}>
+                                  {suggestion}
+                                </Typography>
+                              ))}
+                            </Alert>
+                          </Box>
+                        )}
                       </Box>
                     </Grid>
                     <Grid item xs={12}>
@@ -1663,7 +1678,7 @@ const ProductForm: React.FC = () => {
                       </Tooltip>
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Box sx={{ flex: 1 }}>
                           <Tooltip title="Category - Select the product category to organize this product. You can search for categories by typing. Categories help organize products and can be used for filtering and reporting.">
                             <Autocomplete
@@ -1717,7 +1732,8 @@ const ProductForm: React.FC = () => {
                               onClick={handleCreateCategory}
                               disabled={loading}
                               sx={{
-                                mt: 1,
+                                height: '44px',
+                                width: '44px',
                                 padding: '8px',
                                 color: '#1a237e',
                                 border: '1px solid #c0c0c0',
@@ -1740,7 +1756,7 @@ const ProductForm: React.FC = () => {
                       </Box>
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Box sx={{ flex: 1 }}>
                           <Tooltip title="Supplier - Select the supplier who provides this product. You can search for suppliers by typing. Supplier information is used for purchase orders and inventory management.">
                             <Autocomplete
@@ -1794,7 +1810,8 @@ const ProductForm: React.FC = () => {
                               onClick={handleCreateSupplier}
                               disabled={loading}
                               sx={{
-                                mt: 1,
+                                height: '44px',
+                                width: '44px',
                                 padding: '8px',
                                 color: '#1a237e',
                                 border: '1px solid #c0c0c0',

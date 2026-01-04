@@ -105,7 +105,7 @@ const AlertRuleList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to load alert rules', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while loading alert rules', 'error');
     } finally {
       setLoading(false);
@@ -113,15 +113,16 @@ const AlertRuleList: React.FC = () => {
   }, [page, pageSize, showToast]);
 
   const loadCategories = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      const result = await CategoryService.getCategories();
-      if (result.success && result.data) {
-        setCategories(result.data);
+      const result = await CategoryService.getAllCategories(user.id);
+      if (result.success && result.categories) {
+        setCategories(result.categories.map(cat => ({ id: cat.id, name: cat.name })));
       }
     } catch (error) {
       console.error('Error loading categories', error);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadRules();
@@ -222,7 +223,7 @@ const AlertRuleList: React.FC = () => {
           showToast(result.error || 'Failed to create alert rule', 'error');
         }
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while saving alert rule', 'error');
     }
   }, [user, formData, editingRule, showToast, loadRules]);
@@ -240,7 +241,7 @@ const AlertRuleList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to delete alert rule', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while deleting alert rule', 'error');
     }
   }, [deletingRule, showToast, loadRules]);
@@ -296,7 +297,7 @@ const AlertRuleList: React.FC = () => {
     return (
       <MainLayout>
         <Box sx={containerBoxSx}>
-          <Typography>You don't have permission to manage alert rules.</Typography>
+          <Typography>You don&apos;t have permission to manage alert rules.</Typography>
         </Box>
       </MainLayout>
     );
@@ -370,7 +371,7 @@ const AlertRuleList: React.FC = () => {
                           <TableCell>
                             <Chip
                               label={AlertRuleService.getPriorityDisplayName(rule.priority as AlertPriority)}
-                              color={getPriorityColor(rule.priority) as any}
+                              color={getPriorityColor(rule.priority) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                               size="small"
                             />
                           </TableCell>

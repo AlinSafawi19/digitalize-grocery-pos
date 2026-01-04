@@ -25,7 +25,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { TransactionService, Transaction, TransactionItem, Payment } from '../../services/transaction.service';
 import { ReceiptService } from '../../services/receipt.service';
-import { SettingsService } from '../../services/settings.service';
+import { ReceiptTemplateService } from '../../services/receipt-template.service';
 import MainLayout from '../../components/layout/MainLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { ROUTES } from '../../utils/constants';
@@ -199,9 +199,17 @@ const TransactionDetails: React.FC = () => {
 
     setReprintingReceipt(true);
     try {
-      // Get printer settings
-      const printerResult = await SettingsService.getPrinterSettings(userId);
-      const printerName = printerResult.printerSettings?.printerName;
+      // Get printer name from receipt template
+      const templateResult = await ReceiptTemplateService.getDefaultTemplate();
+      let printerName: string | undefined = undefined;
+      if (templateResult.success && templateResult.template) {
+        try {
+          const templateData = ReceiptTemplateService.parseTemplate(templateResult.template.template);
+          printerName = templateData.printing?.printerName || undefined;
+        } catch (error) {
+          console.error('Failed to parse template for printer name:', error);
+        }
+      }
 
       const result = await ReceiptService.reprintReceipt(
         transaction.id,

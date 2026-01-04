@@ -3,10 +3,10 @@ import { logger } from '../utils/logger';
 import { databaseService } from '../services/database/database.service';
 import {
   BackupSchedulerService,
-  BackupScheduleConfig,
   ScheduleConfig,
 } from '../services/backup/backup-scheduler.service';
 import { validateExternalDrive } from '../utils/drive.util';
+import { Prisma } from '@prisma/client';
 
 export interface CreateBackupScheduleInput {
   name: string;
@@ -183,7 +183,7 @@ export function registerBackupSchedulerHandlers(): void {
         }
 
         // Build update data
-        const updateData: any = {};
+        const updateData: Prisma.BackupScheduleUpdateInput = {};
         if (input.name !== undefined) updateData.name = input.name;
         if (input.scheduleType !== undefined) updateData.scheduleType = input.scheduleType;
         if (input.scheduleConfig !== undefined) {

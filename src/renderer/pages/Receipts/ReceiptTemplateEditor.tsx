@@ -9,15 +9,11 @@ import {
   Grid,
   FormControlLabel,
   Checkbox,
+  Switch,
   Divider,
   CircularProgress,
-  Alert,
   Tabs,
   Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material';
 import {
   Save,
@@ -28,7 +24,7 @@ import {
 import { IconButton } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
-import { ReceiptTemplateService, ReceiptTemplateData, ReceiptTemplate } from '../../services/receipt-template.service';
+import { ReceiptTemplateService, ReceiptTemplateData } from '../../services/receipt-template.service';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import MainLayout from '../../components/layout/MainLayout';
@@ -54,7 +50,7 @@ const ReceiptTemplateEditor: React.FC = () => {
   const userId = useSelector((state: RootState) => state.auth.user?.id);
   const { toast, showToast, hideToast } = useToast();
 
-  const isEditMode = id !== 'new';
+  const isEditMode = id !== undefined && id !== 'new';
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
@@ -70,14 +66,17 @@ const ReceiptTemplateEditor: React.FC = () => {
   );
 
   const loadTemplate = useCallback(async () => {
-    if (!id || id === 'new' || !userId) return;
+    if (!id || id === 'new' || !userId) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
       const templateId = parseInt(id, 10);
       if (isNaN(templateId)) {
         showToast('Invalid template ID', 'error');
-        navigate('/receipts/templates');
+        navigate('/settings?tab=6');
         return;
       }
 
@@ -91,7 +90,7 @@ const ReceiptTemplateEditor: React.FC = () => {
         setTemplateData(ReceiptTemplateService.parseTemplate(template.template));
       } else {
         showToast(result.error || 'Failed to load template', 'error');
-        navigate('/receipts/templates');
+        navigate('/settings?tab=6');
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'An error occurred', 'error');
@@ -103,8 +102,11 @@ const ReceiptTemplateEditor: React.FC = () => {
   useEffect(() => {
     if (isEditMode) {
       loadTemplate();
+    } else if (id === 'new' || id === undefined) {
+      // Ensure loading is false for new templates
+      setLoading(false);
     }
-  }, [isEditMode, loadTemplate]);
+  }, [id, isEditMode, loadTemplate]);
 
   const handleSave = async () => {
     if (!userId) return;
@@ -134,7 +136,7 @@ const ReceiptTemplateEditor: React.FC = () => {
 
       if (result.success) {
         showToast(isEditMode ? 'Template updated successfully' : 'Template created successfully', 'success');
-        navigate('/receipts/templates');
+        navigate('/settings?tab=6');
       } else {
         showToast(result.error || 'Failed to save template', 'error');
       }
@@ -160,7 +162,7 @@ const ReceiptTemplateEditor: React.FC = () => {
       <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/receipts/templates')}>
+            <IconButton onClick={() => navigate('/settings?tab=6')}>
               <ArrowBack />
             </IconButton>
             <Typography variant="h4" component="h1">
@@ -178,7 +180,7 @@ const ReceiptTemplateEditor: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<Cancel />}
-              onClick={() => navigate('/receipts/templates')}
+              onClick={() => navigate('/settings?tab=6')}
             >
               Cancel
             </Button>
@@ -247,69 +249,13 @@ const ReceiptTemplateEditor: React.FC = () => {
           </Typography>
           <Divider sx={{ mb: 2 }} />
           <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-            <Tab label="Header" />
             <Tab label="Items" />
             <Tab label="Totals" />
             <Tab label="Footer" />
-            <Tab label="Layout" />
+            <Tab label="Printing" />
           </Tabs>
 
           <TabPanel value={activeTab} index={0}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Store Name"
-                  value={templateData.header?.storeName || ''}
-                  onChange={(e) => setTemplateData({
-                    ...templateData,
-                    header: { ...templateData.header, storeName: e.target.value },
-                  })}
-                  fullWidth
-                  placeholder="Leave empty to use store settings"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Address"
-                  value={templateData.header?.address || ''}
-                  onChange={(e) => setTemplateData({
-                    ...templateData,
-                    header: { ...templateData.header, address: e.target.value },
-                  })}
-                  fullWidth
-                  placeholder="Leave empty to use store settings"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Phone"
-                  value={templateData.header?.phone || ''}
-                  onChange={(e) => setTemplateData({
-                    ...templateData,
-                    header: { ...templateData.header, phone: e.target.value },
-                  })}
-                  fullWidth
-                  placeholder="Leave empty to use store settings"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Custom Header Text"
-                  multiline
-                  rows={3}
-                  value={templateData.header?.customText || ''}
-                  onChange={(e) => setTemplateData({
-                    ...templateData,
-                    header: { ...templateData.header, customText: e.target.value },
-                  })}
-                  fullWidth
-                  placeholder="Additional text to display in header"
-                />
-              </Grid>
-            </Grid>
-          </TabPanel>
-
-          <TabPanel value={activeTab} index={1}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <FormControlLabel
@@ -407,7 +353,7 @@ const ReceiptTemplateEditor: React.FC = () => {
             </Grid>
           </TabPanel>
 
-          <TabPanel value={activeTab} index={2}>
+          <TabPanel value={activeTab} index={1}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <FormControlLabel
@@ -482,7 +428,7 @@ const ReceiptTemplateEditor: React.FC = () => {
             </Grid>
           </TabPanel>
 
-          <TabPanel value={activeTab} index={3}>
+          <TabPanel value={activeTab} index={2}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
@@ -512,20 +458,6 @@ const ReceiptTemplateEditor: React.FC = () => {
                 />
               </Grid>
               <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={templateData.footer?.showPoweredBy !== false}
-                      onChange={(e) => setTemplateData({
-                        ...templateData,
-                        footer: { ...templateData.footer, showPoweredBy: e.target.checked },
-                      })}
-                    />
-                  }
-                  label="Show Powered By"
-                />
-              </Grid>
-              <Grid item xs={12}>
                 <TextField
                   label="Custom Footer Text"
                   multiline
@@ -542,46 +474,67 @@ const ReceiptTemplateEditor: React.FC = () => {
             </Grid>
           </TabPanel>
 
-          <TabPanel value={activeTab} index={4}>
+          <TabPanel value={activeTab} index={3}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={4}>
                 <TextField
                   label="Paper Width (mm)"
                   type="number"
-                  value={templateData.layout?.paperWidth || 80}
+                  value={templateData.printing?.paperWidth || 80}
                   onChange={(e) => setTemplateData({
                     ...templateData,
-                    layout: { ...templateData.layout, paperWidth: parseInt(e.target.value) || 80 },
+                    printing: { ...templateData.printing, paperWidth: parseInt(e.target.value) || 80 },
                   })}
                   fullWidth
                   inputProps={{ min: 50, max: 120 }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TextField
-                  label="Font Size"
-                  type="number"
-                  value={templateData.layout?.fontSize || 12}
+                  label="Printer Name"
+                  value={templateData.printing?.printerName || ''}
                   onChange={(e) => setTemplateData({
                     ...templateData,
-                    layout: { ...templateData.layout, fontSize: parseInt(e.target.value) || 12 },
+                    printing: { ...templateData.printing, printerName: e.target.value },
                   })}
                   fullWidth
-                  inputProps={{ min: 8, max: 24 }}
+                  placeholder="Leave empty for default printer"
+                  helperText="Enter the exact name of your printer (as shown in Windows Printers). Leave empty to use the default printer."
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label="Line Spacing"
-                  type="number"
-                  value={templateData.layout?.lineSpacing || 1}
-                  onChange={(e) => setTemplateData({
-                    ...templateData,
-                    layout: { ...templateData.layout, lineSpacing: parseFloat(e.target.value) || 1 },
-                  })}
-                  fullWidth
-                  inputProps={{ min: 0.5, max: 3, step: 0.1 }}
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={templateData.printing?.autoPrint !== false}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTemplateData({
+                        ...templateData,
+                        printing: { ...templateData.printing, autoPrint: e.target.checked },
+                      })}
+                    />
+                  }
+                  label="Auto Print Receipts"
                 />
+                <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                  Automatically print receipts after completing transactions when using this template.
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={templateData.printing?.autoOpenCashDrawer || false}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTemplateData({
+                        ...templateData,
+                        printing: { ...templateData.printing, autoOpenCashDrawer: e.target.checked },
+                      })}
+                    />
+                  }
+                  label="Auto Open Cash Drawer"
+                />
+                <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                  Automatically open the cash drawer when a transaction completes. The cash drawer must be connected to your receipt printer via the RJ-11 port.
+                </Typography>
               </Grid>
             </Grid>
           </TabPanel>

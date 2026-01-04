@@ -148,14 +148,14 @@ export function registerPurchaseOrderTemplateHandlers(): void {
     async (
       _event,
       templateId: number,
-      expectedDate: Date | null | undefined,
-      createdById: number
+      createdById: number,
+      expectedDate: Date | null | undefined
     ) => {
       try {
         const result = await PurchaseOrderTemplateService.createOrderFromTemplate(
           templateId,
-          expectedDate,
-          createdById
+          createdById,
+          expectedDate
         );
         return {
           success: true,

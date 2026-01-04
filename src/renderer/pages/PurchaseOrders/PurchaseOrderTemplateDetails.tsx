@@ -15,8 +15,6 @@ import {
   Grid,
   Card,
   CardContent,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -117,8 +115,8 @@ const PurchaseOrderTemplateDetails: React.FC = () => {
     try {
       const result = await PurchaseOrderTemplateService.createOrderFromTemplate(
         template.id,
-        null,
-        user.id
+        user.id,
+        null
       );
 
       if (result.success && result.orderInput) {

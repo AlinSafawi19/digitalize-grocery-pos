@@ -1,12 +1,10 @@
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
-import { RecoveryPointService, RecoveryPoint } from './recovery-point.service';
+import { RecoveryPointService } from './recovery-point.service';
 import { TransactionLogService } from './transaction-log.service';
 import fs from 'fs-extra';
 import path from 'path';
-import crypto from 'crypto';
 import { BACKUP_DIR } from '../../utils/constants';
-import { PrismaClient } from '@prisma/client';
 
 export interface RestoreToPointInTimeInput {
   recoveryPointId: number;
@@ -248,7 +246,8 @@ export class PointInTimeRecoveryService {
     newData: Record<string, unknown> | null;
     timestamp: Date;
   }>): Promise<number> {
-    const prisma = databaseService.getClient();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _prisma = databaseService.getClient();
     let recordsRestored = 0;
 
     // Group logs by table for batch processing
@@ -305,7 +304,7 @@ export class PointInTimeRecoveryService {
       for (const table of tables) {
         try {
           await prisma.$queryRawUnsafe(`SELECT COUNT(*) FROM ${table}`);
-        } catch (error) {
+        } catch {
           return {
             valid: false,
             message: `Table ${table} is missing or inaccessible`,

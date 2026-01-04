@@ -41,7 +41,9 @@ import { usePermission } from '../../hooks/usePermission';
 const AlertHistory: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
-  const canView = usePermission('alerts.view') || usePermission('alerts.manage');
+  const canViewAlerts = usePermission('alerts.view');
+  const canManageAlerts = usePermission('alerts.manage');
+  const canView = canViewAlerts || canManageAlerts;
 
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<AlertHistoryItem[]>([]);
@@ -76,7 +78,7 @@ const AlertHistory: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to load alert history', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while loading alert history', 'error');
     } finally {
       setLoading(false);
@@ -98,7 +100,7 @@ const AlertHistory: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to resolve alert', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while resolving alert', 'error');
     }
   }, [user, showToast, loadAlerts]);
@@ -155,7 +157,7 @@ const AlertHistory: React.FC = () => {
     return (
       <MainLayout>
         <Box sx={containerBoxSx}>
-          <Typography>You don't have permission to view alert history.</Typography>
+          <Typography>You don&apos;t have permission to view alert history.</Typography>
         </Box>
       </MainLayout>
     );
@@ -237,8 +239,8 @@ const AlertHistory: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={AlertRuleService.getPriorityDisplayName(alert.severity as any)}
-                              color={getSeverityColor(alert.severity) as any}
+                              label={AlertRuleService.getPriorityDisplayName(alert.severity)}
+                              color={getSeverityColor(alert.severity) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                               size="small"
                             />
                           </TableCell>

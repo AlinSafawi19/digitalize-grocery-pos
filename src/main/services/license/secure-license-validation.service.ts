@@ -203,7 +203,6 @@ export class SecureLicenseValidationService {
     tamperDetected: boolean;
     tamperReason?: string;
   }> {
-    const startTime = Date.now();
     let requestSignature: string | undefined;
     let responseSignature: string | undefined;
     let serverResponse: Record<string, unknown> | undefined;
@@ -236,11 +235,12 @@ export class SecureLicenseValidationService {
 
       // Verify response signature if provided by server
       if (response.data.signature) {
-        responseSignature = response.data.signature;
+        const sig = response.data.signature as string;
+        responseSignature = sig;
         const responseData = { ...response.data };
         delete responseData.signature; // Remove signature before verification
         
-        const isValidSignature = this.verifyResponse(responseData, responseSignature);
+        const isValidSignature = this.verifyResponse(responseData, sig);
         if (!isValidSignature) {
           logger.warn('Response signature verification failed - possible tampering');
           tamperDetected = true;
@@ -249,11 +249,13 @@ export class SecureLicenseValidationService {
       }
 
       // Check for tampering in license data
-      const tamperCheck = this.detectTampering(licenseData, serverResponse);
-      if (tamperCheck.tampered) {
-        tamperDetected = true;
-        tamperReason = tamperCheck.reason;
-        logger.warn('Tampering detected in license validation', { reason: tamperReason });
+      if (serverResponse) {
+        const tamperCheck = this.detectTampering(licenseData, serverResponse);
+        if (tamperCheck.tampered) {
+          tamperDetected = true;
+          tamperReason = tamperCheck.reason;
+          logger.warn('Tampering detected in license validation', { reason: tamperReason });
+        }
       }
 
       if (response.data.valid) {
@@ -317,7 +319,7 @@ export class SecureLicenseValidationService {
 
         return {
           valid: false,
-          message: errorMessage,
+          message: errorMessage || 'License validation failed',
           tamperDetected,
           tamperReason,
         };

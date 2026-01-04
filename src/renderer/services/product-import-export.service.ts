@@ -121,15 +121,11 @@ export class ProductImportExportService {
     try {
       // Set up progress listener
       if (onProgress) {
-        const progressListener = (_event: any, progress: { stage: string; message: string }) => {
+        const progressListener = (...args: unknown[]) => {
+          const progress = args[0] as { stage: string; message: string };
           onProgress(progress);
         };
-        window.electron.ipcRenderer.on('product:import:progress', progressListener);
-
-        // Clean up listener after import completes
-        const cleanup = () => {
-          window.electron.ipcRenderer.removeListener('product:import:progress', progressListener);
-        };
+        const cleanup = window.electron.ipcRenderer.on('product:import:progress', progressListener);
 
         try {
           const result = await window.electron.ipcRenderer.invoke(

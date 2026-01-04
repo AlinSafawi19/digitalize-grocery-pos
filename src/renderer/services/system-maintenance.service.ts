@@ -26,7 +26,7 @@ export interface SystemMaintenance {
 export interface MaintenanceResult {
   success: boolean;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   duration?: number;
   error?: string;
 }

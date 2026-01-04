@@ -14,6 +14,7 @@ import {
   Grid,
   FormControlLabel,
   Switch,
+  Checkbox,
   Alert,
   CircularProgress,
   FormControl,
@@ -21,17 +22,19 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  IconButton,
+  Divider,
 } from '@mui/material';
-import { Image as ImageIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Image as ImageIcon, Delete as DeleteIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import {
   SettingsService,
   BusinessRules as BusinessRulesType,
   NotificationSettings as NotificationSettingsType,
-  PrinterSettings as PrinterSettingsType,
 } from '../../services/settings.service';
 import { CurrencyService } from '../../services/currency.service';
+import { ReceiptTemplateService } from '../../services/receipt-template.service';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../common/Toast';
 import { useDispatch, useSelector } from 'react-redux';
@@ -63,7 +66,6 @@ interface CurrencySettings {
 }
 
 // Use types from settings service
-type PrinterSettings = PrinterSettingsType;
 type BusinessRules = BusinessRulesType;
 type NotificationSettings = NotificationSettingsType;
 
@@ -71,9 +73,9 @@ const steps = [
   'Change Password',
   'Change Username',
   'Store Information',
+  'Receipt Template',
   'Tax Configuration',
   'Currency Settings',
-  'Printer Settings',
   'Business Rules',
   'Notifications',
 ];
@@ -103,12 +105,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     usdToLbp: 89000,
   });
 
-  const [printerSettings, setPrinterSettings] = useState<PrinterSettings>({
-    printerName: '',
-    paperWidth: 80,
-    autoPrint: true,
-  } as PrinterSettings);
-
   const [businessRules, setBusinessRules] = useState<BusinessRules>({
     roundingMethod: 'round',
     allowNegativeStock: false,
@@ -121,8 +117,49 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     priorityFilter: 'all',
   });
 
-  const [cashDrawerSettings, setCashDrawerSettings] = useState<{ autoOpen: boolean }>({
-    autoOpen: false,
+  // Receipt template settings
+  const [receiptTemplateSettings, setReceiptTemplateSettings] = useState<{
+    // Items settings
+    showHeaders: boolean;
+    showSeparator: boolean;
+    showDescription: boolean;
+    showQuantity: boolean;
+    showUnitPrice: boolean;
+    showTotal: boolean;
+    // Totals settings
+    showSubtotal: boolean;
+    showDiscount: boolean;
+    showTax: boolean;
+    showTotalUSD: boolean;
+    showTotalLBP: boolean;
+    // Footer settings
+    thankYouMessage: string;
+    showCashier: boolean;
+    customFooterText: string;
+    // Printing settings
+    paperWidth: number;
+    printerName: string;
+    autoPrint: boolean;
+    autoOpenCashDrawer: boolean;
+  }>({
+    showHeaders: true,
+    showSeparator: true,
+    showDescription: true,
+    showQuantity: true,
+    showUnitPrice: true,
+    showTotal: true,
+    showSubtotal: true,
+    showDiscount: true,
+    showTax: true,
+    showTotalUSD: true,
+    showTotalLBP: true,
+    thankYouMessage: 'Thank you for your purchase! We hope to see you again soon!',
+    showCashier: true,
+    customFooterText: '',
+    paperWidth: 80,
+    printerName: '',
+    autoPrint: true,
+    autoOpenCashDrawer: false,
   });
 
   // Password change state
@@ -138,7 +175,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     storeName?: string;
     taxRate?: string;
     exchangeRate?: string;
-    paperWidth?: string;
     currentPassword?: string;
     newPassword?: string;
     confirmPassword?: string;
@@ -152,12 +188,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
   const newUsernameRef = useRef<HTMLInputElement>(null);
   const storeNameRef = useRef<HTMLInputElement>(null);
   const storeAddressRef = useRef<HTMLTextAreaElement>(null);
-  const storePhoneRef = useRef<HTMLInputElement>(null);
   const taxRateRef = useRef<HTMLInputElement>(null);
   const exchangeRateRef = useRef<HTMLInputElement>(null);
-  const printerNameRef = useRef<HTMLInputElement>(null);
-  const paperWidthRef = useRef<HTMLInputElement>(null);
   const soundVolumeRef = useRef<HTMLInputElement>(null);
+  const thankYouMessageRef = useRef<HTMLInputElement>(null);
+  const customFooterTextRef = useRef<HTMLTextAreaElement>(null);
+  const paperWidthRef = useRef<HTMLInputElement>(null);
+  const printerNameRef = useRef<HTMLInputElement>(null);
+  const stepperScrollRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll button visibility state
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(false);
 
   // Focus first input when step changes
   useEffect(() => {
@@ -175,13 +217,13 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
             storeNameRef.current?.focus();
             break;
           case 3:
-            taxRateRef.current?.focus();
+            thankYouMessageRef.current?.focus();
             break;
           case 4:
-            exchangeRateRef.current?.focus();
+            taxRateRef.current?.focus();
             break;
           case 5:
-            printerNameRef.current?.focus();
+            exchangeRateRef.current?.focus();
             break;
           case 6:
             // Business Rules - no text input, focus first select
@@ -204,21 +246,19 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
       const [
         storeInfoResult,
         taxConfigResult,
-        printerSettingsResult,
         businessRulesResult,
         notificationSettingsResult,
-        cashDrawerSettingsResult,
         exchangeRate,
         licenseStatus,
+        defaultTemplateResult,
       ] = await Promise.all([
         SettingsService.getStoreInfo(userId),
         SettingsService.getTaxConfig(userId),
-        SettingsService.getPrinterSettings(userId),
         SettingsService.getBusinessRules(userId),
         SettingsService.getNotificationSettings(userId),
-        SettingsService.getCashDrawerSettings(userId),
         CurrencyService.getExchangeRate(),
         window.electron.ipcRenderer.invoke('license:getStatus') as Promise<{ customerPhone?: string | null } | null>,
+        ReceiptTemplateService.getDefaultTemplate(),
       ]);
 
       if (storeInfoResult.success && storeInfoResult.storeInfo) {
@@ -251,15 +291,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         });
       }
 
-      if (printerSettingsResult.success && printerSettingsResult.printerSettings) {
-        const minPaperWidth = 58;
-        setPrinterSettings({
-          printerName: printerSettingsResult.printerSettings.printerName || '',
-          paperWidth: Math.max(minPaperWidth, printerSettingsResult.printerSettings.paperWidth || 80),
-          autoPrint: printerSettingsResult.printerSettings.autoPrint ?? true,
-        });
-      }
-
       if (businessRulesResult.success && businessRulesResult.businessRules) {
         setBusinessRules({
           ...businessRulesResult.businessRules,
@@ -275,15 +306,38 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         });
       }
 
-      if (cashDrawerSettingsResult.success && cashDrawerSettingsResult.cashDrawerSettings) {
-        setCashDrawerSettings({
-          autoOpen: cashDrawerSettingsResult.cashDrawerSettings.autoOpen || false,
-        });
-      }
-
       setCurrencySettings({
         usdToLbp: exchangeRate || 89000,
       });
+
+      // Load receipt template settings
+      if (defaultTemplateResult.success && defaultTemplateResult.template) {
+        const template = ReceiptTemplateService.parseTemplate(defaultTemplateResult.template.template);
+        setReceiptTemplateSettings({
+          // Items
+          showHeaders: template.items?.showHeaders !== false,
+          showSeparator: template.items?.showSeparator !== false,
+          showDescription: template.items?.columns?.description !== false,
+          showQuantity: template.items?.columns?.quantity !== false,
+          showUnitPrice: template.items?.columns?.unitPrice !== false,
+          showTotal: template.items?.columns?.total !== false,
+          // Totals
+          showSubtotal: template.totals?.showSubtotal !== false,
+          showDiscount: template.totals?.showDiscount !== false,
+          showTax: template.totals?.showTax !== false,
+          showTotalUSD: template.totals?.showTotalUSD !== false,
+          showTotalLBP: template.totals?.showTotalLBP !== false,
+          // Footer
+          thankYouMessage: template.footer?.thankYouMessage || 'Thank you for your purchase! We hope to see you again soon!',
+          showCashier: template.footer?.showCashier !== false,
+          customFooterText: template.footer?.customText || '',
+          // Printing
+          paperWidth: template.printing?.paperWidth || 80,
+          printerName: template.printing?.printerName || '',
+          autoPrint: template.printing?.autoPrint !== false,
+          autoOpenCashDrawer: template.printing?.autoOpenCashDrawer || false,
+        });
+      }
     } catch (error) {
       console.error('Failed to load settings:', error);
       showToast('Failed to load settings', 'error');
@@ -291,6 +345,29 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
       setLoading(false);
     }
   }, [userId, showToast]);
+
+  // Check scroll position and update button visibility
+  const checkScrollButtons = useCallback(() => {
+    const container = stepperScrollRef.current;
+    if (!container) return;
+    
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setShowLeftScroll(scrollLeft > 0);
+    setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 1);
+  }, []);
+
+  // Scroll functions
+  const scrollLeft = useCallback(() => {
+    const container = stepperScrollRef.current;
+    if (!container) return;
+    container.scrollBy({ left: -200, behavior: 'smooth' });
+  }, []);
+
+  const scrollRight = useCallback(() => {
+    const container = stepperScrollRef.current;
+    if (!container) return;
+    container.scrollBy({ left: 200, behavior: 'smooth' });
+  }, []);
 
   // Load existing settings and reset password fields when wizard opens
   useEffect(() => {
@@ -305,6 +382,31 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
       setErrors({});
     }
   }, [open, loadSettings, currentUsername]);
+
+  // Check scroll buttons on mount and when open changes
+  useEffect(() => {
+    if (open && !passwordOnly) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        checkScrollButtons();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open, passwordOnly, checkScrollButtons]);
+
+  // Add scroll event listener
+  useEffect(() => {
+    const container = stepperScrollRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', checkScrollButtons);
+    window.addEventListener('resize', checkScrollButtons);
+    
+    return () => {
+      container.removeEventListener('scroll', checkScrollButtons);
+      window.removeEventListener('resize', checkScrollButtons);
+    };
+  }, [checkScrollButtons]);
 
   // Username validation function (matching ProfilePage pattern)
   const validateUsername = useCallback((value: string): string | undefined => {
@@ -351,26 +453,23 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         newErrors.storeName = 'Store name is required';
       }
     } else if (step === 3) {
+      // Receipt Template validation - no required fields, all optional
+    } else if (step === 4) {
       // Tax Configuration validation
       if (taxConfig.defaultTaxRate < 0 || taxConfig.defaultTaxRate > 100) {
         newErrors.taxRate = 'Tax rate must be between 0 and 100';
       }
-    } else if (step === 4) {
+    } else if (step === 5) {
       // Currency Settings validation
       if (currencySettings.usdToLbp <= 0) {
         newErrors.exchangeRate = 'Exchange rate must be greater than 0';
-      }
-    } else if (step === 5) {
-      // Printer Settings validation
-      if (printerSettings.paperWidth < 58 || printerSettings.paperWidth > 110) {
-        newErrors.paperWidth = 'Paper width must be between 58mm and 110mm';
       }
     }
     // Steps 6, 7 don't require validation (all optional settings)
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [currentPassword, newPassword, confirmPassword, newUsername, validateUsername, storeInfo, taxConfig, currencySettings, printerSettings]);
+  }, [currentPassword, newPassword, confirmPassword, newUsername, validateUsername, storeInfo, taxConfig, currencySettings]);
 
   const handleNext = useCallback(async () => {
     if (!validateStep(activeStep)) {
@@ -530,15 +629,57 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     try {
       setSaving(true);
 
+      // Get or create default template
+      const defaultTemplateResult = await ReceiptTemplateService.getDefaultTemplate();
+      let templateToUpdate = defaultTemplateResult.success && defaultTemplateResult.template 
+        ? defaultTemplateResult.template 
+        : null;
+
+      // Prepare template data
+      const templateData = templateToUpdate 
+        ? ReceiptTemplateService.parseTemplate(templateToUpdate.template)
+        : ReceiptTemplateService.getDefaultTemplateData();
+
+      // Update template data with settings from wizard
+      // Items
+      templateData.items = templateData.items || {};
+      templateData.items.showHeaders = receiptTemplateSettings.showHeaders;
+      templateData.items.showSeparator = receiptTemplateSettings.showSeparator;
+      templateData.items.columns = templateData.items.columns || {};
+      templateData.items.columns.description = receiptTemplateSettings.showDescription;
+      templateData.items.columns.quantity = receiptTemplateSettings.showQuantity;
+      templateData.items.columns.unitPrice = receiptTemplateSettings.showUnitPrice;
+      templateData.items.columns.total = receiptTemplateSettings.showTotal;
+      
+      // Totals
+      templateData.totals = templateData.totals || {};
+      templateData.totals.showSubtotal = receiptTemplateSettings.showSubtotal;
+      templateData.totals.showDiscount = receiptTemplateSettings.showDiscount;
+      templateData.totals.showTax = receiptTemplateSettings.showTax;
+      templateData.totals.showTotalUSD = receiptTemplateSettings.showTotalUSD;
+      templateData.totals.showTotalLBP = receiptTemplateSettings.showTotalLBP;
+      
+      // Footer
+      templateData.footer = templateData.footer || {};
+      templateData.footer.thankYouMessage = receiptTemplateSettings.thankYouMessage;
+      templateData.footer.showCashier = receiptTemplateSettings.showCashier;
+      templateData.footer.customText = receiptTemplateSettings.customFooterText;
+      
+      // Printing
+      templateData.printing = templateData.printing || {};
+      templateData.printing.paperWidth = receiptTemplateSettings.paperWidth;
+      templateData.printing.printerName = receiptTemplateSettings.printerName;
+      templateData.printing.autoPrint = receiptTemplateSettings.autoPrint;
+      templateData.printing.autoOpenCashDrawer = receiptTemplateSettings.autoOpenCashDrawer;
+
       // Save all settings
       const [
         storeResult,
         taxResult,
-        printerResult,
         businessRulesResult,
         notificationResult,
-        cashDrawerResult,
         setupResult,
+        templateResult,
       ] = await Promise.all([
         SettingsService.setStoreInfo(
           {
@@ -556,10 +697,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           },
           userId
         ),
-        SettingsService.setPrinterSettings(printerSettings, userId),
         SettingsService.setBusinessRules(businessRules, userId),
         SettingsService.setNotificationSettings(notificationSettings, userId),
-        SettingsService.setCashDrawerSettings(cashDrawerSettings, userId),
         // Mark setup as completed
         SettingsService.setSetting(
           {
@@ -570,17 +709,35 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           },
           userId
         ),
+        // Update or create default template
+        templateToUpdate
+          ? ReceiptTemplateService.updateTemplate(
+              templateToUpdate.id,
+              {
+                template: templateData,
+              },
+              userId
+            )
+          : ReceiptTemplateService.createTemplate(
+              {
+                name: 'Default Receipt Template',
+                description: 'Default template created during setup',
+                template: templateData,
+                isDefault: true,
+                isActive: true,
+              },
+              userId
+            ),
       ]);
 
       // Check if any operation failed
       if (
         !storeResult.success ||
         !taxResult.success ||
-        !printerResult.success ||
         !businessRulesResult.success ||
         !notificationResult.success ||
-        !cashDrawerResult.success ||
-        !setupResult.success
+        !setupResult.success ||
+        !templateResult.success
       ) {
         throw new Error('Some settings failed to save');
       }
@@ -600,10 +757,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
     storeInfo,
     taxConfig,
     currencySettings,
-    printerSettings,
     businessRules,
     notificationSettings,
-    cashDrawerSettings,
+    receiptTemplateSettings,
     activeStep,
     userId,
     onComplete,
@@ -887,10 +1043,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
                       setStoreInfo({ ...storeInfo, address: e.target.value })
                     }
                     onKeyDown={(e) => {
-                      // For multiline, only move to next on Ctrl+Enter or Shift+Enter
-                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      // For multiline, Enter moves to next field, Shift+Enter creates new line
+                      if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        storePhoneRef.current?.focus();
+                        // Focus the PhoneInput component's input element
+                        setTimeout(() => {
+                          const phoneInput = document.querySelector('.mui-phone-input .PhoneInputInput') as HTMLInputElement;
+                          phoneInput?.focus();
+                        }, 0);
                       }
                     }}
                     inputRef={storeAddressRef}
@@ -1089,6 +1249,465 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
+              Configure your default receipt template. These settings will be used for all printed receipts. You can change these later in Settings.
+            </Alert>
+            <Grid container spacing={3}>
+              {/* Items Section */}
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, fontSize: '18px', fontWeight: 600 }}>
+                  Items Display
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Tooltip title="Show column headers for item columns on receipts">
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={receiptTemplateSettings.showHeaders}
+                            onChange={(e) =>
+                              setReceiptTemplateSettings({
+                                ...receiptTemplateSettings,
+                                showHeaders: e.target.checked,
+                              })
+                            }
+                            disabled={saving}
+                          />
+                        }
+                        label="Show column headers"
+                      />
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Tooltip title="Show separator line between items">
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={receiptTemplateSettings.showSeparator}
+                            onChange={(e) =>
+                              setReceiptTemplateSettings({
+                                ...receiptTemplateSettings,
+                                showSeparator: e.target.checked,
+                              })
+                            }
+                            disabled={saving}
+                          />
+                        }
+                        label="Show separator line"
+                      />
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '14px', fontWeight: 600 }}>
+                      Visible Columns
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={receiptTemplateSettings.showDescription}
+                              onChange={(e) =>
+                                setReceiptTemplateSettings({
+                                  ...receiptTemplateSettings,
+                                  showDescription: e.target.checked,
+                                })
+                              }
+                              disabled={saving}
+                            />
+                          }
+                          label="Description"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={receiptTemplateSettings.showQuantity}
+                              onChange={(e) =>
+                                setReceiptTemplateSettings({
+                                  ...receiptTemplateSettings,
+                                  showQuantity: e.target.checked,
+                                })
+                              }
+                              disabled={saving}
+                            />
+                          }
+                          label="Quantity"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={receiptTemplateSettings.showUnitPrice}
+                              onChange={(e) =>
+                                setReceiptTemplateSettings({
+                                  ...receiptTemplateSettings,
+                                  showUnitPrice: e.target.checked,
+                                })
+                              }
+                              disabled={saving}
+                            />
+                          }
+                          label="Unit Price"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={receiptTemplateSettings.showTotal}
+                              onChange={(e) =>
+                                setReceiptTemplateSettings({
+                                  ...receiptTemplateSettings,
+                                  showTotal: e.target.checked,
+                                })
+                              }
+                              disabled={saving}
+                            />
+                          }
+                          label="Total"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              {/* Totals Section */}
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, fontSize: '18px', fontWeight: 600 }}>
+                  Totals Display
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={receiptTemplateSettings.showSubtotal}
+                          onChange={(e) =>
+                            setReceiptTemplateSettings({
+                              ...receiptTemplateSettings,
+                              showSubtotal: e.target.checked,
+                            })
+                          }
+                          disabled={saving}
+                        />
+                      }
+                      label="Show Subtotal"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={receiptTemplateSettings.showDiscount}
+                          onChange={(e) =>
+                            setReceiptTemplateSettings({
+                              ...receiptTemplateSettings,
+                              showDiscount: e.target.checked,
+                            })
+                          }
+                          disabled={saving}
+                        />
+                      }
+                      label="Show Discount"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={receiptTemplateSettings.showTax}
+                          onChange={(e) =>
+                            setReceiptTemplateSettings({
+                              ...receiptTemplateSettings,
+                              showTax: e.target.checked,
+                            })
+                          }
+                          disabled={saving}
+                        />
+                      }
+                      label="Show Tax"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={receiptTemplateSettings.showTotalUSD}
+                          onChange={(e) =>
+                            setReceiptTemplateSettings({
+                              ...receiptTemplateSettings,
+                              showTotalUSD: e.target.checked,
+                            })
+                          }
+                          disabled={saving}
+                        />
+                      }
+                      label="Show Total (USD)"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={receiptTemplateSettings.showTotalLBP}
+                          onChange={(e) =>
+                            setReceiptTemplateSettings({
+                              ...receiptTemplateSettings,
+                              showTotalLBP: e.target.checked,
+                            })
+                          }
+                          disabled={saving}
+                        />
+                      }
+                      label="Show Total (LBP)"
+                    />
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              {/* Footer Section */}
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, fontSize: '18px', fontWeight: 600 }}>
+                  Footer
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <Tooltip title="Thank You Message - Enter a message that will appear at the bottom of each receipt. This is optional.">
+                      <TextField
+                        fullWidth
+                        label="Thank You Message"
+                        value={receiptTemplateSettings.thankYouMessage}
+                        onChange={(e) =>
+                          setReceiptTemplateSettings({
+                            ...receiptTemplateSettings,
+                            thankYouMessage: e.target.value,
+                          })
+                        }
+                        onKeyDown={(e) => handleKeyDown(e, customFooterTextRef)}
+                        inputRef={thankYouMessageRef}
+                        disabled={saving}
+                        size="medium"
+                        multiline
+                        rows={2}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            fontSize: '18px',
+                            '& textarea': {
+                              padding: '16px 14px',
+                            },
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '16px',
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Tooltip title="Show the cashier name on receipts">
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={receiptTemplateSettings.showCashier}
+                            onChange={(e) =>
+                              setReceiptTemplateSettings({
+                                ...receiptTemplateSettings,
+                                showCashier: e.target.checked,
+                              })
+                            }
+                            disabled={saving}
+                          />
+                        }
+                        label="Show Cashier Name"
+                      />
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Tooltip title="Custom Footer Text - Enter any additional text you want to appear at the bottom of receipts. This is optional.">
+                      <TextField
+                        fullWidth
+                        label="Custom Footer Text"
+                        value={receiptTemplateSettings.customFooterText}
+                        onChange={(e) =>
+                          setReceiptTemplateSettings({
+                            ...receiptTemplateSettings,
+                            customFooterText: e.target.value,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          // For multiline, Enter moves to next field, Shift+Enter creates new line
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            setTimeout(() => {
+                              paperWidthRef.current?.focus();
+                            }, 0);
+                          }
+                        }}
+                        inputRef={customFooterTextRef}
+                        disabled={saving}
+                        size="medium"
+                        multiline
+                        rows={2}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            fontSize: '18px',
+                            '& textarea': {
+                              padding: '16px 14px',
+                            },
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '16px',
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              {/* Printing Section */}
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, fontSize: '18px', fontWeight: 600 }}>
+                  Printing Settings
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Tooltip title="Paper Width - Enter the width of your receipt paper in millimeters (typically 58mm or 80mm). This affects how content is formatted on the receipt.">
+                      <TextField
+                        fullWidth
+                        label="Paper Width (mm)"
+                        type="number"
+                        value={receiptTemplateSettings.paperWidth}
+                        onChange={(e) =>
+                          setReceiptTemplateSettings({
+                            ...receiptTemplateSettings,
+                            paperWidth: parseFloat(e.target.value) || 80,
+                          })
+                        }
+                        onKeyDown={(e) => handleKeyDown(e, printerNameRef)}
+                        inputRef={paperWidthRef}
+                        inputProps={{ min: 50, max: 200, step: 1 }}
+                        disabled={saving}
+                        size="medium"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            fontSize: '18px',
+                            minHeight: 56,
+                            '& input': {
+                              padding: '16px 14px',
+                            },
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '16px',
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Tooltip title="Printer Name - Enter the exact name of your printer (as shown in Windows Printers). Leave empty to use the default printer.">
+                      <TextField
+                        fullWidth
+                        label="Printer Name"
+                        value={receiptTemplateSettings.printerName}
+                        onChange={(e) =>
+                          setReceiptTemplateSettings({
+                            ...receiptTemplateSettings,
+                            printerName: e.target.value,
+                          })
+                        }
+                        onKeyDown={(e) => handleKeyDown(e, undefined, true)}
+                        inputRef={printerNameRef}
+                        disabled={saving}
+                        size="medium"
+                        placeholder="Leave empty for default printer"
+                        helperText="Enter the exact name of your printer (as shown in Windows Printers). Leave empty to use the default printer."
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            fontSize: '18px',
+                            minHeight: 56,
+                            '& input': {
+                              padding: '16px 14px',
+                            },
+                          },
+                          '& .MuiInputLabel-root': {
+                            fontSize: '16px',
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Tooltip title="Auto Print - When enabled, receipts will automatically print after a transaction completes. When disabled, you'll need to manually print receipts.">
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={receiptTemplateSettings.autoPrint}
+                            onChange={(e) =>
+                              setReceiptTemplateSettings({
+                                ...receiptTemplateSettings,
+                                autoPrint: e.target.checked,
+                              })
+                            }
+                            disabled={saving}
+                          />
+                        }
+                        label="Automatically print receipts after transaction"
+                      />
+                    </Tooltip>
+                    <Typography
+                      variant="caption"
+                      display="block"
+                      color="text.secondary"
+                      sx={{ mt: 1, fontSize: '12px' }}
+                    >
+                      When enabled, receipts will be automatically sent to the printer after each transaction completes.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Tooltip title="Auto Open Cash Drawer - When enabled, the cash drawer will automatically open when a transaction completes. The cash drawer must be connected to your receipt printer via the RJ-11 port.">
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={receiptTemplateSettings.autoOpenCashDrawer}
+                            onChange={(e) =>
+                              setReceiptTemplateSettings({
+                                ...receiptTemplateSettings,
+                                autoOpenCashDrawer: e.target.checked,
+                              })
+                            }
+                            disabled={saving}
+                          />
+                        }
+                        label="Auto Open Cash Drawer"
+                      />
+                    </Tooltip>
+                    <Typography
+                      variant="caption"
+                      display="block"
+                      color="text.secondary"
+                      sx={{ mt: 1, fontSize: '12px' }}
+                    >
+                      Automatically open the cash drawer when a transaction completes. The cash drawer must be connected to your receipt printer via the RJ-11 port.
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Box>
+        );
+
+      case 4:
+        return (
+          <Box sx={{ mt: 3 }}>
+            <Alert severity="info" sx={{ mb: 3 }}>
               Configure your tax settings. You can change these later in Settings.
             </Alert>
             <Grid container spacing={3}>
@@ -1155,7 +1774,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           </Box>
         );
 
-      case 4:
+      case 5:
         return (
           <Box sx={{ mt: 3 }}>
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -1198,132 +1817,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
                     }}
                   />
                 </Tooltip>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 5:
-        return (
-          <Box sx={{ mt: 3 }}>
-            <Alert severity="info" sx={{ mb: 3 }}>
-              Configure your printer settings. These settings affect how receipts are printed.
-            </Alert>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Tooltip title="Printer Name - Enter the exact name of your printer as it appears in Windows Printers. Leave empty to use the default system printer. The printer name must match exactly for the system to find it.">
-                  <TextField
-                    fullWidth
-                    label="Printer Name"
-                    value={printerSettings.printerName}
-                    onChange={(e) =>
-                      setPrinterSettings({
-                        ...printerSettings,
-                        printerName: e.target.value,
-                      })
-                    }
-                    onKeyDown={(e) => handleKeyDown(e, paperWidthRef)}
-                    inputRef={printerNameRef}
-                    placeholder="Leave empty for default printer"
-                    helperText="Enter the exact name of your printer (as shown in Windows Printers). Leave empty to use the default printer."
-                    disabled={saving}
-                    size="medium"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        fontSize: '18px',
-                        minHeight: 56,
-                        '& input': {
-                          padding: '16px 14px',
-                        },
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '16px',
-                      },
-                    }}
-                  />
-                </Tooltip>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Paper Width (mm) *"
-                  type="number"
-                  value={printerSettings.paperWidth}
-                  onChange={(e) =>
-                    setPrinterSettings({
-                      ...printerSettings,
-                      paperWidth: parseFloat(e.target.value) || 80,
-                    })
-                  }
-                  onKeyDown={(e) => handleKeyDown(e, undefined, true)}
-                  inputRef={paperWidthRef}
-                  error={!!errors.paperWidth}
-                  helperText={errors.paperWidth || 'Minimum: 58mm, Maximum: 110mm'}
-                  inputProps={{ min: 58, max: 110, step: 1 }}
-                  disabled={saving}
-                  size="medium"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: '18px',
-                      minHeight: 56,
-                      '& input': {
-                        padding: '16px 14px',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      fontSize: '16px',
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={printerSettings.autoPrint}
-                      onChange={(e) =>
-                        setPrinterSettings({
-                          ...printerSettings,
-                          autoPrint: e.target.checked,
-                        })
-                      }
-                      disabled={saving}
-                    />
-                  }
-                  label="Auto Print Receipts"
-                />
-                <Typography
-                  variant="caption"
-                  display="block"
-                  color="text.secondary"
-                  sx={{ mt: 1, fontSize: '12px' }}
-                >
-                  Automatically print receipts after completing transactions.
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={cashDrawerSettings.autoOpen}
-                      onChange={(e) =>
-                        setCashDrawerSettings({
-                          autoOpen: e.target.checked,
-                        })
-                      }
-                      disabled={saving}
-                    />
-                  }
-                  label="Auto Open Cash Drawer"
-                />
-                <Typography
-                  variant="caption"
-                  display="block"
-                  color="text.secondary"
-                  sx={{ mt: 1, fontSize: '12px' }}
-                >
-                  Automatically open the cash drawer when a transaction completes. The cash drawer must be connected to your receipt printer via the RJ-11 port.
-                </Typography>
               </Grid>
             </Grid>
           </Box>
@@ -1540,13 +2033,82 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ open, onComplete, userId, pas
           ) : (
             <>
               {!passwordOnly && (
-                <Stepper activeStep={activeStep} sx={{ mt: 2, mb: 4 }}>
-                  {steps.map((label) => (
-                    <Step key={label}>
-                      <StepLabel>{label}</StepLabel>
-                    </Step>
-                  ))}
-                </Stepper>
+                <Box
+                  sx={{
+                    mt: 2,
+                    mb: 4,
+                    width: '100%',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showLeftScroll && (
+                    <IconButton
+                      onClick={scrollLeft}
+                      sx={{
+                        position: 'absolute',
+                        left: 0,
+                        zIndex: 1,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        boxShadow: '2px 0 4px rgba(0, 0, 0, 0.1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 1)',
+                        },
+                      }}
+                      aria-label="Scroll left"
+                    >
+                      <ChevronLeft />
+                    </IconButton>
+                  )}
+                  <Box
+                    ref={stepperScrollRef}
+                    sx={{
+                      width: '100%',
+                      overflowX: 'auto',
+                      overflowY: 'hidden',
+                      scrollbarWidth: 'none', // Hide scrollbar for Firefox
+                      msOverflowStyle: 'none', // Hide scrollbar for IE and Edge
+                      '&::-webkit-scrollbar': {
+                        display: 'none', // Hide scrollbar for Chrome, Safari, Opera
+                      },
+                      ...(showLeftScroll && { pl: 5 }),
+                      ...(showRightScroll && { pr: 5 }),
+                    }}
+                  >
+                    <Stepper 
+                      activeStep={activeStep} 
+                      sx={{ 
+                        minWidth: 'max-content',
+                        px: 1,
+                      }}
+                    >
+                      {steps.map((label) => (
+                        <Step key={label}>
+                          <StepLabel>{label}</StepLabel>
+                        </Step>
+                      ))}
+                    </Stepper>
+                  </Box>
+                  {showRightScroll && (
+                    <IconButton
+                      onClick={scrollRight}
+                      sx={{
+                        position: 'absolute',
+                        right: 0,
+                        zIndex: 1,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        boxShadow: '-2px 0 4px rgba(0, 0, 0, 0.1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 1)',
+                        },
+                      }}
+                      aria-label="Scroll right"
+                    >
+                      <ChevronRight />
+                    </IconButton>
+                  )}
+                </Box>
               )}
               {passwordOnly && (
                 <Box sx={{ mt: 2, mb: 4 }}>

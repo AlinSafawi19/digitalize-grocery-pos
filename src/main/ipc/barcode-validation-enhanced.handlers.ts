@@ -3,7 +3,9 @@ import { logger } from '../utils/logger';
 import {
   BarcodeValidationEnhancedService,
   ValidationOptions,
+  EnhancedBarcodeValidationResult,
 } from '../services/barcode/barcode-validation-enhanced.service';
+import { BarcodeFormat } from '../services/barcode/barcode.service';
 
 /**
  * Register enhanced barcode validation IPC handlers
@@ -99,7 +101,7 @@ export function registerBarcodeValidationEnhancedHandlers(): void {
       _event,
       options: {
         barcode?: string;
-        format?: string;
+        format?: BarcodeFormat;
         valid?: boolean;
         startDate?: Date;
         endDate?: Date;
@@ -128,7 +130,7 @@ export function registerBarcodeValidationEnhancedHandlers(): void {
    */
   ipcMain.handle(
     'barcode-validation-enhanced:suggestCorrections',
-    async (_event, barcode: string, validationResult: any) => {
+    async (_event, barcode: string, validationResult: EnhancedBarcodeValidationResult) => {
       try {
         const suggestions = BarcodeValidationEnhancedService.suggestCorrections(
           barcode,

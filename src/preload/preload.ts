@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, shell } from 'electron';
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.once(channel, (_event, ...args: unknown[]) => func(...args));
     },
   },
+  shell: {
+    openPath: (path: string) => shell.openPath(path),
+    showItemInFolder: (path: string) => shell.showItemInFolder(path),
+  },
 });
 
 // Type definitions for the exposed API
@@ -24,6 +28,10 @@ declare global {
         invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
         on: (channel: string, func: (...args: unknown[]) => void) => () => void;
         once: (channel: string, func: (...args: unknown[]) => void) => void;
+      };
+      shell: {
+        openPath: (path: string) => Promise<string>;
+        showItemInFolder: (path: string) => void;
       };
     };
   }

@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-
 /**
  * License usage statistics summary
  */
@@ -85,14 +83,14 @@ export class LicenseUsageStatisticsService {
    * Get comprehensive license usage statistics
    */
   static async getUsageStatistics(): Promise<LicenseUsageStatistics | null> {
-    return await ipcRenderer.invoke('license:getUsageStatistics');
+    return await window.electron.ipcRenderer.invoke('license:getUsageStatistics') as LicenseUsageStatistics | null;
   }
 
   /**
    * Get device activation records
    */
   static async getDeviceActivationRecords(): Promise<DeviceActivationRecord[]> {
-    return await ipcRenderer.invoke('license:getDeviceActivationRecords');
+    return await window.electron.ipcRenderer.invoke('license:getDeviceActivationRecords') as DeviceActivationRecord[];
   }
 }
 

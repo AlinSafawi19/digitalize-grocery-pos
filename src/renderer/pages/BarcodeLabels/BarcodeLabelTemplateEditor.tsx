@@ -20,13 +20,11 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Tooltip,
 } from '@mui/material';
 import {
   Save,
   Cancel,
   Preview,
-  Add,
   Delete,
   Print,
 } from '@mui/icons-material';
@@ -36,7 +34,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { RootState } from '../../store';
 import {
   BarcodeLabelService,
-  BarcodeLabelTemplate,
   CreateBarcodeLabelTemplateInput,
   UpdateBarcodeLabelTemplateInput,
   LabelLayout,
@@ -46,7 +43,6 @@ import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import { usePermission } from '../../hooks/usePermission';
 import { ROUTES } from '../../utils/constants';
-import { ProductService } from '../../services/product.service';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -124,7 +120,7 @@ const BarcodeLabelTemplateEditor: React.FC = () => {
         showToast(result.error || 'Failed to load template', 'error');
         navigate(ROUTES.BARCODE_LABELS);
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while loading template', 'error');
       navigate(ROUTES.BARCODE_LABELS);
     } finally {
@@ -181,7 +177,7 @@ const BarcodeLabelTemplateEditor: React.FC = () => {
           showToast(result.error || 'Failed to create template', 'error');
         }
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while saving template', 'error');
     } finally {
       setSaving(false);
@@ -209,7 +205,7 @@ const BarcodeLabelTemplateEditor: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to generate preview', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while generating preview', 'error');
     }
   }, [previewProductId, id, showToast]);
@@ -269,12 +265,13 @@ const BarcodeLabelTemplateEditor: React.FC = () => {
     const newElements = [...layout.elements];
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      (newElements[index] as any)[parent] = {
-        ...(newElements[index] as any)[parent],
+      const element = newElements[index] as Record<string, unknown>;
+      element[parent] = {
+        ...(element[parent] as Record<string, unknown> || {}),
         [child]: value,
       };
     } else {
-      (newElements[index] as any)[field] = value;
+      (newElements[index] as Record<string, unknown>)[field] = value;
     }
     setLayout({
       ...layout,
@@ -305,7 +302,7 @@ const BarcodeLabelTemplateEditor: React.FC = () => {
     return (
       <MainLayout>
         <Box sx={containerBoxSx}>
-          <Typography>You don't have permission to manage barcode label templates.</Typography>
+          <Typography>You don&apos;t have permission to manage barcode label templates.</Typography>
         </Box>
       </MainLayout>
     );

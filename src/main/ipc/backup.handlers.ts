@@ -8,7 +8,6 @@ import {
 import {
   getAvailableExternalDrives,
   hasExternalDriveAvailable,
-  ExternalDriveInfo,
 } from '../utils/drive.util';
 
 /**

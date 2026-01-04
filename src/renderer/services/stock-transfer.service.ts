@@ -1,4 +1,3 @@
-import { ipcRenderer } from 'electron';
 import { Product } from './product.service';
 
 // Stock Transfer Types
@@ -113,7 +112,7 @@ export class StockTransferService {
    */
   static async getById(id: number): Promise<StockTransfer | null> {
     try {
-      const result = await ipcRenderer.invoke('stockTransfer:getById', id);
+      const result = await window.electron.ipcRenderer.invoke('stockTransfer:getById', id) as { success: boolean; transfer?: StockTransfer };
       if (result.success && result.transfer) {
         return result.transfer;
       }
@@ -129,7 +128,7 @@ export class StockTransferService {
    */
   static async getList(options: StockTransferListOptions): Promise<StockTransferListResult> {
     try {
-      const result = await ipcRenderer.invoke('stockTransfer:getList', options);
+      const result = await window.electron.ipcRenderer.invoke('stockTransfer:getList', options) as StockTransferListResult;
       return result;
     } catch (error) {
       console.error('Error getting stock transfer list', error);
@@ -148,7 +147,7 @@ export class StockTransferService {
     requestedById: number
   ): Promise<{ success: boolean; transfer?: StockTransfer; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('stockTransfer:create', input, requestedById);
+      const result = await window.electron.ipcRenderer.invoke('stockTransfer:create', input, requestedById) as { success: boolean; transfer?: StockTransfer; error?: string };
       return result;
     } catch (error) {
       console.error('Error creating stock transfer', error);
@@ -168,7 +167,7 @@ export class StockTransferService {
     updatedById: number
   ): Promise<{ success: boolean; transfer?: StockTransfer; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('stockTransfer:update', id, input, updatedById);
+      const result = await window.electron.ipcRenderer.invoke('stockTransfer:update', id, input, updatedById) as { success: boolean; transfer?: StockTransfer; error?: string };
       return result;
     } catch (error) {
       console.error('Error updating stock transfer', error);
@@ -188,12 +187,12 @@ export class StockTransferService {
     completedById: number
   ): Promise<{ success: boolean; transfer?: StockTransfer; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await window.electron.ipcRenderer.invoke(
         'stockTransfer:complete',
         id,
         receivedItems,
         completedById
-      );
+      ) as { success: boolean; transfer?: StockTransfer; error?: string };
       return result;
     } catch (error) {
       console.error('Error completing stock transfer', error);
@@ -212,7 +211,7 @@ export class StockTransferService {
     cancelledById: number
   ): Promise<{ success: boolean; transfer?: StockTransfer; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('stockTransfer:cancel', id, cancelledById);
+      const result = await window.electron.ipcRenderer.invoke('stockTransfer:cancel', id, cancelledById) as { success: boolean; transfer?: StockTransfer; error?: string };
       return result;
     } catch (error) {
       console.error('Error cancelling stock transfer', error);

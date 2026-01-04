@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { SupplierPaymentService, CreateSupplierPaymentInput } from '../../services/supplier-payment.service';
 import { Supplier } from '../../services/product.service';
-import { PurchaseOrderService } from '../../services/purchase-order.service';
+import { PurchaseOrderService, PurchaseInvoice } from '../../services/purchase-order.service';
 import { useToast } from '../../hooks/useToast';
 import { fromBeirutToUTC, toBeirutTime } from '../../utils/dateUtils';
 import moment from 'moment-timezone';
@@ -39,7 +39,7 @@ export default function SupplierPaymentForm({
   userId,
 }: SupplierPaymentFormProps) {
   const [loading, setLoading] = useState(false);
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [formData, setFormData] = useState<CreateSupplierPaymentInput>({
     supplierId: supplier?.id || 0,
@@ -53,6 +53,33 @@ export default function SupplierPaymentForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { showToast } = useToast();
+
+  const loadInvoices = useCallback(async () => {
+    if (!supplier) return;
+    setLoadingInvoices(true);
+    try {
+      // Get purchase orders for this supplier and their invoices
+      const result = await PurchaseOrderService.getPurchaseOrders({
+        supplierId: supplier.id,
+        page: 1,
+        pageSize: 100,
+      }, userId);
+      if (result.success && result.purchaseOrders) {
+        // Extract invoices from purchase orders
+        const allInvoices: PurchaseInvoice[] = [];
+        for (const po of result.purchaseOrders) {
+          if (po.invoices) {
+            allInvoices.push(...po.invoices);
+          }
+        }
+        setInvoices(allInvoices);
+      }
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [supplier, userId]);
 
   useEffect(() => {
     if (open && supplier) {
@@ -69,36 +96,9 @@ export default function SupplierPaymentForm({
       setErrors({});
       loadInvoices();
     }
-  }, [open, supplier, invoiceId]);
+  }, [open, supplier, invoiceId, loadInvoices]);
 
-  const loadInvoices = async () => {
-    if (!supplier) return;
-    setLoadingInvoices(true);
-    try {
-      // Get purchase orders for this supplier and their invoices
-      const result = await PurchaseOrderService.getPurchaseOrders({
-        supplierId: supplier.id,
-        page: 1,
-        pageSize: 100,
-      }, userId);
-      if (result.success && result.purchaseOrders) {
-        // Extract invoices from purchase orders
-        const allInvoices: any[] = [];
-        for (const po of result.purchaseOrders) {
-          if (po.invoices) {
-            allInvoices.push(...po.invoices);
-          }
-        }
-        setInvoices(allInvoices);
-      }
-    } catch (error) {
-      console.error('Error loading invoices:', error);
-    } finally {
-      setLoadingInvoices(false);
-    }
-  };
-
-  const handleChange = (field: keyof CreateSupplierPaymentInput, value: any) => {
+  const handleChange = (field: keyof CreateSupplierPaymentInput, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
@@ -198,7 +198,7 @@ export default function SupplierPaymentForm({
               <MenuItem value="">None (General Payment)</MenuItem>
               {invoices.map((invoice) => (
                 <MenuItem key={invoice.id} value={invoice.id}>
-                  {invoice.invoiceNumber} - {invoice.amount.toFixed(2)} {invoice.purchaseOrder?.currency || 'USD'} 
+                  {invoice.invoiceNumber} - {invoice.amount.toFixed(2)} USD
                   {invoice.status !== 'paid' && ` (${invoice.status})`}
                 </MenuItem>
               ))}

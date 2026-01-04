@@ -34,7 +34,7 @@ import { useNavigate } from 'react-router-dom';
 import { RootState } from '../store';
 import { AuthState } from '../store/slices/auth.slice';
 import MainLayout from '../components/layout/MainLayout';
-import { ReportService, DailySalesStats, TopSellingProduct } from '../services/report.service';
+import { ReportService, DailySalesStats, TopSellingProduct, DailySalesStatsResult, TopSellingProductsResult } from '../services/report.service';
 import { TransactionService, Transaction } from '../services/transaction.service';
 import { InventoryService } from '../services/inventory.service';
 import { PricingService } from '../services/pricing.service';
@@ -195,7 +195,7 @@ const Dashboard: React.FC = () => {
 
       // Process results based on indices
       if (promiseIndices.todayStats !== undefined) {
-        const todayStatsResult = results[promiseIndices.todayStats] as any;
+        const todayStatsResult = results[promiseIndices.todayStats] as DailySalesStatsResult;
         if (todayStatsResult.success && todayStatsResult.data && todayStatsResult.data.length > 0) {
           setTodayStats(todayStatsResult.data[0]);
         } else {
@@ -210,7 +210,7 @@ const Dashboard: React.FC = () => {
       }
 
       if (promiseIndices.yesterdayStats !== undefined) {
-        const yesterdayStatsResult = results[promiseIndices.yesterdayStats] as any;
+        const yesterdayStatsResult = results[promiseIndices.yesterdayStats] as DailySalesStatsResult;
         if (yesterdayStatsResult.success && yesterdayStatsResult.data && yesterdayStatsResult.data.length > 0) {
           setYesterdayStats(yesterdayStatsResult.data[0]);
         } else {
@@ -225,42 +225,42 @@ const Dashboard: React.FC = () => {
       }
 
       if (promiseIndices.recentTransactions !== undefined) {
-        const recentTransactionsResult = results[promiseIndices.recentTransactions] as any;
+        const recentTransactionsResult = results[promiseIndices.recentTransactions] as { success: boolean; transactions?: Transaction[]; error?: string };
         if (recentTransactionsResult.success && recentTransactionsResult.transactions) {
           setRecentTransactions(recentTransactionsResult.transactions);
         }
       }
 
       if (promiseIndices.lowStockCount !== undefined) {
-        const lowStockCountResult = results[promiseIndices.lowStockCount] as any;
+        const lowStockCountResult = results[promiseIndices.lowStockCount] as { success: boolean; count?: number; error?: string };
         if (lowStockCountResult.success && lowStockCountResult.count !== undefined) {
           setLowStockCount(lowStockCountResult.count);
         }
       }
 
       if (promiseIndices.inventoryReport !== undefined) {
-        const inventoryReportResult = results[promiseIndices.inventoryReport] as any;
+        const inventoryReportResult = results[promiseIndices.inventoryReport] as { success: boolean; data?: { outOfStockItems?: number }; error?: string };
         if (inventoryReportResult.success && inventoryReportResult.data) {
           setOutOfStockCount(inventoryReportResult.data.outOfStockItems || 0);
         }
       }
 
       if (promiseIndices.topProducts !== undefined) {
-        const topProductsResult = results[promiseIndices.topProducts] as any;
+        const topProductsResult = results[promiseIndices.topProducts] as TopSellingProductsResult;
         if (topProductsResult.success && topProductsResult.data) {
           setTopProducts(topProductsResult.data);
         }
       }
 
       if (promiseIndices.purchaseOrders !== undefined) {
-        const purchaseOrdersResult = results[promiseIndices.purchaseOrders] as any;
+        const purchaseOrdersResult = results[promiseIndices.purchaseOrders] as { success: boolean; total?: number; error?: string };
         if (purchaseOrdersResult.success && purchaseOrdersResult.total !== undefined) {
           setPendingPurchaseOrders(purchaseOrdersResult.total);
         }
       }
 
       if (promiseIndices.promotions !== undefined) {
-        const promotionsResult = results[promiseIndices.promotions] as any;
+        const promotionsResult = results[promiseIndices.promotions] as { success: boolean; promotions?: unknown[]; error?: string };
         if (promotionsResult.success && promotionsResult.promotions) {
           setActivePromotions(promotionsResult.promotions.length);
         }

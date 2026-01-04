@@ -1,6 +1,7 @@
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { TransactionService, TransactionWithRelations } from './transaction.service';
+import { Prisma } from '@prisma/client';
 
 /**
  * Rule condition types
@@ -13,7 +14,7 @@ export type ConditionOperator = 'equals' | 'not_equals' | 'greater_than' | 'less
 export interface RuleCondition {
   field: string; // e.g., 'total', 'itemCount', 'cashierId', 'type'
   operator: ConditionOperator;
-  value: any; // Value to compare against
+  value: unknown; // Value to compare against
 }
 
 /**
@@ -26,7 +27,7 @@ export type RuleActionType = 'complete_transaction' | 'add_note' | 'apply_discou
  */
 export interface RuleAction {
   type: RuleActionType;
-  params?: Record<string, any>; // Action-specific parameters
+  params?: Record<string, unknown>; // Action-specific parameters
 }
 
 /**
@@ -117,7 +118,7 @@ export class TransactionCompletionRuleService {
     try {
       const prisma = databaseService.getClient();
       
-      const updateData: any = {};
+      const updateData: Prisma.TransactionCompletionRuleUpdateInput = {};
       if (input.name !== undefined) updateData.name = input.name;
       if (input.description !== undefined) updateData.description = input.description || null;
       if (input.isActive !== undefined) updateData.isActive = input.isActive;
@@ -159,7 +160,7 @@ export class TransactionCompletionRuleService {
     try {
       const prisma = databaseService.getClient();
       
-      const where: any = {};
+      const where: Prisma.TransactionCompletionRuleWhereInput = {};
       if (activeOnly) {
         where.isActive = true;
       }
@@ -265,10 +266,10 @@ export class TransactionCompletionRuleService {
   /**
    * Get field value from transaction
    */
-  private getFieldValue(transaction: TransactionWithRelations, field: string): any {
+  private getFieldValue(transaction: TransactionWithRelations, field: string): unknown {
     // Direct transaction fields
     if (field in transaction) {
-      return (transaction as any)[field];
+      return (transaction as unknown as Record<string, unknown>)[field];
     }
 
     // Computed fields
@@ -281,28 +282,30 @@ export class TransactionCompletionRuleService {
         return transaction.payments.length > 0;
       case 'paymentTotal':
         return transaction.payments.reduce((sum, p) => sum + p.amount, 0);
-      case 'isFullyPaid':
+      case 'isFullyPaid': {
         const paymentTotal = transaction.payments.reduce((sum, p) => sum + p.amount, 0);
         return paymentTotal >= transaction.total;
-      default:
+      }
+      default: {
         // Try nested fields (e.g., 'cashier.id', 'cashier.username')
         const parts = field.split('.');
-        let value: any = transaction;
+        let value: unknown = transaction;
         for (const part of parts) {
           if (value && typeof value === 'object' && part in value) {
-            value = (value as any)[part];
+            value = (value as Record<string, unknown>)[part];
           } else {
             return undefined;
           }
         }
         return value;
+      }
     }
   }
 
   /**
    * Evaluate a single condition
    */
-  private evaluateCondition(fieldValue: any, operator: ConditionOperator, expectedValue: any): boolean {
+  private evaluateCondition(fieldValue: unknown, operator: ConditionOperator, expectedValue: unknown): boolean {
     switch (operator) {
       case 'equals':
         return fieldValue === expectedValue;
@@ -408,7 +411,18 @@ export class TransactionCompletionRuleService {
   /**
    * Map database record to rule interface
    */
-  private mapToRule(record: any): TransactionCompletionRule {
+  private mapToRule(record: {
+    id: number;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+    priority: number;
+    conditions: string;
+    actions: string;
+    createdBy: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): TransactionCompletionRule {
     return {
       id: record.id,
       name: record.name,

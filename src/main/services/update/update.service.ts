@@ -45,7 +45,6 @@ export class UpdateService {
     });
 
     autoUpdater.on('download-progress', (progressObj) => {
-      const message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
       logger.info('Update download progress', { percent: progressObj.percent });
       this.notifyDownloadProgress(progressObj);
     });

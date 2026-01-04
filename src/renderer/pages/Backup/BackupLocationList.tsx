@@ -22,8 +22,6 @@ import {
   Delete,
   Refresh,
 } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store';
 import {
   BackupLocationService,
   BackupLocation,
@@ -35,7 +33,6 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { usePermission } from '../../hooks/usePermission';
 
 const BackupLocationList: React.FC = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
   const canManage = usePermission('backup.manage');
 
@@ -61,7 +58,7 @@ const BackupLocationList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to load locations', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while loading locations', 'error');
     } finally {
       setLoading(false);
@@ -90,7 +87,7 @@ const BackupLocationList: React.FC = () => {
       } else {
         showToast(result.error || 'Failed to delete location', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('An error occurred while deleting location', 'error');
     }
   }, [deletingLocation, showToast, loadLocations]);
@@ -127,7 +124,7 @@ const BackupLocationList: React.FC = () => {
     return (
       <MainLayout>
         <Box sx={containerBoxSx}>
-          <Typography>You don't have permission to manage backup locations.</Typography>
+          <Typography>You don&apos;t have permission to manage backup locations.</Typography>
         </Box>
       </MainLayout>
     );

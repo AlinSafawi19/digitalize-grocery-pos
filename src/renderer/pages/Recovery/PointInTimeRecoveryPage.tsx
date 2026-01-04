@@ -30,7 +30,6 @@ import {
   Delete,
   Restore,
   Verified,
-  Warning,
   History,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
@@ -203,17 +202,23 @@ const PointInTimeRecoveryPage: React.FC = () => {
     setPage(0);
   };
 
+  const handleClearFilters = useCallback(() => {
+    setStartDate(null);
+    setEndDate(null);
+    setIsAutomaticFilter('');
+  }, []);
+
   const filterFields: FilterField[] = [
     {
       label: 'Start Date',
       value: startDate,
-      onChange: setStartDate,
+      onChange: (value) => setStartDate(value as Date | null),
       type: 'date',
     },
     {
       label: 'End Date',
       value: endDate,
-      onChange: setEndDate,
+      onChange: (value) => setEndDate(value as Date | null),
       type: 'date',
     },
     {
@@ -268,7 +273,7 @@ const PointInTimeRecoveryPage: React.FC = () => {
             Create recovery points before making major changes or on a regular schedule.
           </Alert>
 
-          <FilterHeader fields={filterFields} />
+          <FilterHeader fields={filterFields} onClear={handleClearFilters} />
 
           <TableContainer>
             <Table>
@@ -493,7 +498,7 @@ const PointInTimeRecoveryPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {toast && <Toast {...toast} onClose={hideToast} />}
+      <Toast toast={toast} onClose={hideToast} />
     </MainLayout>
   );
 };

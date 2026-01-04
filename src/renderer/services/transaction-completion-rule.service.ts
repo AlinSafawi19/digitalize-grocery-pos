@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-
 /**
  * Rule condition types
  */
@@ -11,7 +9,7 @@ export type ConditionOperator = 'equals' | 'not_equals' | 'greater_than' | 'less
 export interface RuleCondition {
   field: string;
   operator: ConditionOperator;
-  value: any;
+  value: unknown;
 }
 
 /**
@@ -24,7 +22,7 @@ export type RuleActionType = 'complete_transaction' | 'add_note' | 'apply_discou
  */
 export interface RuleAction {
   type: RuleActionType;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 /**
@@ -86,42 +84,42 @@ export class TransactionCompletionRuleService {
    * Create a new rule
    */
   static async createRule(input: CreateRuleInput, userId: number): Promise<{ success: boolean; rule?: TransactionCompletionRule; error?: string }> {
-    return await ipcRenderer.invoke('transactionCompletionRule:create', input, userId);
+    return await window.electron.ipcRenderer.invoke('transactionCompletionRule:create', input, userId) as { success: boolean; rule?: TransactionCompletionRule; error?: string };
   }
 
   /**
    * Update an existing rule
    */
   static async updateRule(ruleId: number, input: UpdateRuleInput): Promise<{ success: boolean; rule?: TransactionCompletionRule; error?: string }> {
-    return await ipcRenderer.invoke('transactionCompletionRule:update', ruleId, input);
+    return await window.electron.ipcRenderer.invoke('transactionCompletionRule:update', ruleId, input) as { success: boolean; rule?: TransactionCompletionRule; error?: string };
   }
 
   /**
    * Delete a rule
    */
   static async deleteRule(ruleId: number): Promise<{ success: boolean; error?: string }> {
-    return await ipcRenderer.invoke('transactionCompletionRule:delete', ruleId);
+    return await window.electron.ipcRenderer.invoke('transactionCompletionRule:delete', ruleId) as { success: boolean; error?: string };
   }
 
   /**
    * Get all rules
    */
   static async getAllRules(activeOnly?: boolean): Promise<{ success: boolean; rules: TransactionCompletionRule[]; error?: string }> {
-    return await ipcRenderer.invoke('transactionCompletionRule:getAll', activeOnly);
+    return await window.electron.ipcRenderer.invoke('transactionCompletionRule:getAll', activeOnly) as { success: boolean; rules: TransactionCompletionRule[]; error?: string };
   }
 
   /**
    * Get a rule by ID
    */
   static async getRuleById(ruleId: number): Promise<{ success: boolean; rule: TransactionCompletionRule | null; error?: string }> {
-    return await ipcRenderer.invoke('transactionCompletionRule:getById', ruleId);
+    return await window.electron.ipcRenderer.invoke('transactionCompletionRule:getById', ruleId) as { success: boolean; rule: TransactionCompletionRule | null; error?: string };
   }
 
   /**
    * Test a rule against a transaction
    */
   static async testRule(ruleId: number, transactionId: number): Promise<{ success: boolean; result?: RuleEvaluationResult; error?: string }> {
-    return await ipcRenderer.invoke('transactionCompletionRule:test', ruleId, transactionId);
+    return await window.electron.ipcRenderer.invoke('transactionCompletionRule:test', ruleId, transactionId) as { success: boolean; result?: RuleEvaluationResult; error?: string };
   }
 }
 

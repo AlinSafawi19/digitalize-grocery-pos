@@ -28,6 +28,7 @@ import {
   PurchaseOrderService,
   UpdatePurchaseOrderInput,
   PurchaseOrder,
+  PurchaseOrderItem,
 } from '../../services/purchase-order.service';
 import { SupplierService } from '../../services/supplier.service';
 import { ProductService, Supplier, Product } from '../../services/product.service';
@@ -217,7 +218,7 @@ const PurchaseOrderForm: React.FC = () => {
         }
       }
       setItems(
-        templateData.items.map((item: any) => ({
+        templateData.items.map((item: PurchaseOrderItem) => ({
           productId: item.productId,
           productName: '', // Will be loaded when products are fetched
           quantity: item.quantity,

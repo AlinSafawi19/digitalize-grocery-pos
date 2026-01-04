@@ -64,7 +64,6 @@ export class BarcodeValidationEnhancedService {
   ): Promise<EnhancedBarcodeValidationResult> {
     const {
       strictMode = false,
-      allowPartial = false,
       checkDuplicates = false,
       context,
       validatedBy,
@@ -241,7 +240,18 @@ export class BarcodeValidationEnhancedService {
       totalValidations: 0,
       successfulValidations: 0,
       failedValidations: 0,
-      formatDistribution: {},
+      formatDistribution: {
+        EAN13: 0,
+        EAN8: 0,
+        UPC: 0,
+        CODE128: 0,
+        CODE39: 0,
+        ITF14: 0,
+        MSI: 0,
+        pharmacode: 0,
+        codabar: 0,
+        unknown: 0,
+      },
       commonErrors: [],
       validationRate: 0,
       period: {
@@ -255,7 +265,8 @@ export class BarcodeValidationEnhancedService {
    * Get validation history
    */
   static async getValidationHistory(
-    options: {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options: {
       barcode?: string;
       format?: BarcodeFormat;
       valid?: boolean;
@@ -332,7 +343,7 @@ export class BarcodeValidationEnhancedService {
                 padded.slice(0, -1)
               );
               suggestions.push(corrected);
-            } catch (error) {
+            } catch {
               // Ignore errors
             }
           } else {
@@ -348,7 +359,7 @@ export class BarcodeValidationEnhancedService {
                 truncated.slice(0, -1)
               );
               suggestions.push(corrected);
-            } catch (error) {
+            } catch {
               // Ignore errors
             }
           } else {

@@ -3,7 +3,6 @@ import {
   PurchaseOrderTemplateItem,
   Supplier,
   Product,
-  User,
   Prisma,
 } from '@prisma/client';
 import { logger } from '../../utils/logger';
@@ -129,13 +128,13 @@ export class PurchaseOrderTemplateService {
       await AuditLogService.log({
         userId: createdById,
         action: 'create',
-        entityType: 'purchase_order_template',
+        entity: 'purchase_order_template',
         entityId: template.id,
-        details: {
+        details: JSON.stringify({
           name: template.name,
           supplierId: template.supplierId,
           itemCount: template.items.length,
-        },
+        }),
       });
 
       logger.info('Purchase order template created', {
@@ -251,12 +250,12 @@ export class PurchaseOrderTemplateService {
       await AuditLogService.log({
         userId: updatedById,
         action: 'update',
-        entityType: 'purchase_order_template',
+        entity: 'purchase_order_template',
         entityId: template.id,
-        details: {
+        details: JSON.stringify({
           name: template.name,
           supplierId: template.supplierId,
-        },
+        }),
       });
 
       logger.info('Purchase order template updated', {
@@ -299,12 +298,12 @@ export class PurchaseOrderTemplateService {
       await AuditLogService.log({
         userId: deletedById,
         action: 'delete',
-        entityType: 'purchase_order_template',
+        entity: 'purchase_order_template',
         entityId: templateId,
-        details: {
+        details: JSON.stringify({
           name: template.name,
           supplierId: template.supplierId,
-        },
+        }),
       });
 
       logger.info('Purchase order template deleted', { templateId });
@@ -379,8 +378,8 @@ export class PurchaseOrderTemplateService {
 
       if (search) {
         where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
+          { name: { contains: search } },
+          { description: { contains: search } },
         ];
       }
 
@@ -439,8 +438,8 @@ export class PurchaseOrderTemplateService {
    */
   static async createOrderFromTemplate(
     templateId: number,
-    expectedDate?: Date | null,
-    createdById: number
+    createdById: number,
+    expectedDate?: Date | null
   ): Promise<{
     template: PurchaseOrderTemplateWithRelations;
     orderInput: {

@@ -1,7 +1,5 @@
 import { logger } from '../../utils/logger';
-import { databaseService } from '../database/database.service';
 import { ProductService } from '../product/product.service';
-import { InventoryService } from '../inventory/inventory.service';
 import { BarcodeService } from './barcode.service';
 
 export interface BatchScanItem {
@@ -70,8 +68,7 @@ export class BatchBarcodeScanService {
   static async scanBarcode(
     batchId: string,
     barcode: string,
-    options: BatchScanOptions,
-    userId: number
+    options: BatchScanOptions
   ): Promise<BatchScanItem> {
     const batch = this.activeBatches.get(batchId);
     if (!batch) {
@@ -122,14 +119,11 @@ export class BatchBarcodeScanService {
       }
 
       // Lookup product by barcode
-      const productResult = await ProductService.getProductByBarcode(
-        barcode.trim(),
-        userId
-      );
+      const product = await ProductService.getByBarcode(barcode.trim());
 
-      if (productResult.success && productResult.product) {
-        item.productId = productResult.product.id;
-        item.productName = productResult.product.name;
+      if (product) {
+        item.productId = product.id;
+        item.productName = product.name;
         item.quantity = 1; // Default quantity
         item.status = 'success';
         batch.items.push(item);
@@ -137,7 +131,7 @@ export class BatchBarcodeScanService {
         batch.successful++;
       } else {
         item.status = 'error';
-        item.error = productResult.error || 'Product not found';
+        item.error = 'Product not found';
         batch.items.push(item);
         batch.totalScanned++;
         batch.failed++;

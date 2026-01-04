@@ -13,7 +13,6 @@ import {
   Chip,
   Typography,
   CircularProgress,
-  IconButton,
 } from '@mui/material';
 import { Refresh, Security, Warning, CheckCircle, Error as ErrorIcon, Block } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
@@ -167,14 +166,14 @@ const LicenseValidationAuditPage: React.FC = () => {
     {
       label: 'Validation Type',
       value: validationTypeFilter,
-      onChange: setValidationTypeFilter,
+      onChange: (value) => setValidationTypeFilter(value as string),
       type: 'select',
       options: VALIDATION_TYPES,
     },
     {
       label: 'Result',
       value: validationResultFilter,
-      onChange: setValidationResultFilter,
+      onChange: (value) => setValidationResultFilter(value as string),
       type: 'select',
       options: VALIDATION_RESULTS,
     },
@@ -198,16 +197,24 @@ const LicenseValidationAuditPage: React.FC = () => {
     {
       label: 'Start Date',
       value: startDate,
-      onChange: setStartDate,
+      onChange: (value) => setStartDate(value as Date | null),
       type: 'date',
     },
     {
       label: 'End Date',
       value: endDate,
-      onChange: setEndDate,
+      onChange: (value) => setEndDate(value as Date | null),
       type: 'date',
     },
   ];
+
+  const handleClearFilters = useCallback(() => {
+    setValidationTypeFilter('');
+    setValidationResultFilter('');
+    setTamperDetectedFilter('');
+    setStartDate(null);
+    setEndDate(null);
+  }, []);
 
   return (
     <MainLayout>
@@ -228,7 +235,7 @@ const LicenseValidationAuditPage: React.FC = () => {
             </Button>
           </Box>
 
-          <FilterHeader fields={filterFields} />
+          <FilterHeader fields={filterFields} onClear={handleClearFilters} />
 
           <TableContainer>
             <Table>
@@ -321,7 +328,7 @@ const LicenseValidationAuditPage: React.FC = () => {
         </Paper>
       </Box>
 
-      {toast && <Toast {...toast} onClose={hideToast} />}
+      <Toast toast={toast} onClose={hideToast} />
     </MainLayout>
   );
 };

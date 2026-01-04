@@ -1,6 +1,3 @@
-import { ipcRenderer } from 'electron';
-import { Product } from './product.service';
-
 // Product Image Types
 export interface ProductImage {
   id: number;
@@ -53,7 +50,7 @@ export class ProductImageService {
    */
   static async getByProductId(productId: number): Promise<ProductImage[]> {
     try {
-      const result = await ipcRenderer.invoke('productImage:getByProductId', productId);
+      const result = await window.electron.ipcRenderer.invoke('productImage:getByProductId', productId) as { success: boolean; images?: ProductImage[] };
       if (result.success && result.images) {
         return result.images;
       }
@@ -69,7 +66,7 @@ export class ProductImageService {
    */
   static async getById(id: number): Promise<ProductImage | null> {
     try {
-      const result = await ipcRenderer.invoke('productImage:getById', id);
+      const result = await window.electron.ipcRenderer.invoke('productImage:getById', id) as { success: boolean; image?: ProductImage };
       if (result.success && result.image) {
         return result.image;
       }
@@ -88,7 +85,7 @@ export class ProductImageService {
     uploadedById: number
   ): Promise<{ success: boolean; image?: ProductImage; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('productImage:upload', input, uploadedById);
+      const result = await window.electron.ipcRenderer.invoke('productImage:upload', input, uploadedById) as { success: boolean; image?: ProductImage; error?: string };
       return result;
     } catch (error) {
       console.error('Error uploading product image', error);
@@ -108,7 +105,7 @@ export class ProductImageService {
     updatedById: number
   ): Promise<{ success: boolean; image?: ProductImage; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('productImage:update', id, input, updatedById);
+      const result = await window.electron.ipcRenderer.invoke('productImage:update', id, input, updatedById) as { success: boolean; image?: ProductImage; error?: string };
       return result;
     } catch (error) {
       console.error('Error updating product image', error);
@@ -127,7 +124,7 @@ export class ProductImageService {
     deletedById: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('productImage:delete', id, deletedById);
+      const result = await window.electron.ipcRenderer.invoke('productImage:delete', id, deletedById) as { success: boolean; error?: string };
       return result;
     } catch (error) {
       console.error('Error deleting product image', error);
@@ -146,7 +143,7 @@ export class ProductImageService {
     updatedById: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('productImage:reorder', imageIds, updatedById);
+      const result = await window.electron.ipcRenderer.invoke('productImage:reorder', imageIds, updatedById) as { success: boolean; error?: string };
       return result;
     } catch (error) {
       console.error('Error reordering product images', error);
@@ -162,7 +159,7 @@ export class ProductImageService {
    */
   static async getImagePath(relativePath: string): Promise<string | null> {
     try {
-      const result = await ipcRenderer.invoke('productImage:getImagePath', relativePath);
+      const result = await window.electron.ipcRenderer.invoke('productImage:getImagePath', relativePath) as { success: boolean; path?: string };
       if (result.success && result.path) {
         return result.path;
       }
@@ -178,7 +175,7 @@ export class ProductImageService {
    */
   static async getThumbnailPath(relativePath: string): Promise<string | null> {
     try {
-      const result = await ipcRenderer.invoke('productImage:getThumbnailPath', relativePath);
+      const result = await window.electron.ipcRenderer.invoke('productImage:getThumbnailPath', relativePath) as { success: boolean; path?: string };
       if (result.success && result.path) {
         return result.path;
       }
@@ -194,7 +191,7 @@ export class ProductImageService {
    */
   static async getImageDataUrl(relativePath: string): Promise<string | null> {
     try {
-      const result = await ipcRenderer.invoke('productImage:getImageDataUrl', relativePath);
+      const result = await window.electron.ipcRenderer.invoke('productImage:getImageDataUrl', relativePath) as { success: boolean; dataUrl?: string };
       if (result.success && result.dataUrl) {
         return result.dataUrl;
       }

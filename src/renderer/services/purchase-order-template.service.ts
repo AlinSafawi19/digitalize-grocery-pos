@@ -191,8 +191,8 @@ export class PurchaseOrderTemplateService {
    */
   static async createOrderFromTemplate(
     templateId: number,
-    expectedDate?: Date | null,
-    createdById: number
+    createdById: number,
+    expectedDate?: Date | null
   ): Promise<{
     success: boolean;
     template?: PurchaseOrderTemplate;
@@ -211,8 +211,8 @@ export class PurchaseOrderTemplateService {
       const result = await window.electron.ipcRenderer.invoke(
         'purchase-order-template:createOrderFromTemplate',
         templateId,
-        expectedDate,
-        createdById
+        createdById,
+        expectedDate
       ) as {
         success: boolean;
         template?: PurchaseOrderTemplate;

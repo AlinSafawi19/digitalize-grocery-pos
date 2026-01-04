@@ -130,7 +130,7 @@ const FinancialReportTab: React.FC<FinancialReportTabProps> = ({ dateRange, user
     } finally {
       setLoading(false);
     }
-  }, [dateRange, userId, showToast]);
+  }, [dateRange, userId, currency, showToast]);
 
   const loadCashFlowReport = useCallback(async () => {
     setCashFlowLoading(true);

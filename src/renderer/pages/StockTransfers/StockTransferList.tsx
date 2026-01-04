@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -15,10 +15,6 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
 } from '@mui/material';
 import {
   Add,
@@ -39,7 +35,7 @@ import {
 } from '../../services/stock-transfer.service';
 import { LocationService, Location } from '../../services/location.service';
 import MainLayout from '../../components/layout/MainLayout';
-import FilterHeader from '../../components/common/FilterHeader';
+import FilterHeader, { FilterField } from '../../components/common/FilterHeader';
 import { formatDate } from '../../utils/dateUtils';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
@@ -120,7 +116,7 @@ StockTransferRow.displayName = 'StockTransferRow';
 
 const StockTransferList: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { toast, showToast, hideToast } = useToast();
   const { user } = useSelector((state: RootState) => state.auth);
   const canCreate = usePermission('inventory.create');
   const canView = usePermission('inventory.view');
@@ -209,12 +205,58 @@ const StockTransferList: React.FC = () => {
     loadTransfers();
   };
 
+  const handleClearFilters = useCallback(() => {
+    setSearch('');
+    setStatusFilter('all');
+    setFromLocationFilter(undefined);
+    setToLocationFilter(undefined);
+  }, []);
+
+  const filterFields = useMemo<FilterField[]>(() => [
+    {
+      type: 'select',
+      label: 'Status',
+      value: statusFilter,
+      onChange: (value) => setStatusFilter(value as string),
+      options: [
+        { value: 'all', label: 'All' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'in_transit', label: 'In Transit' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ],
+      gridSize: { xs: 12, sm: 6, md: 2 },
+    },
+    {
+      type: 'select',
+      label: 'From Location',
+      value: fromLocationFilter || '',
+      onChange: (value) => setFromLocationFilter(value ? Number(value) : undefined),
+      options: [
+        { value: '', label: 'All' },
+        ...locations.map((loc) => ({ value: String(loc.id), label: loc.name })),
+      ],
+      gridSize: { xs: 12, sm: 6, md: 3 },
+    },
+    {
+      type: 'select',
+      label: 'To Location',
+      value: toLocationFilter || '',
+      onChange: (value) => setToLocationFilter(value ? Number(value) : undefined),
+      options: [
+        { value: '', label: 'All' },
+        ...locations.map((loc) => ({ value: String(loc.id), label: loc.name })),
+      ],
+      gridSize: { xs: 12, sm: 6, md: 3 },
+    },
+  ], [statusFilter, fromLocationFilter, toLocationFilter, locations]);
+
   if (!canView) {
     return (
       <MainLayout>
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" color="error">
-            You don't have permission to view stock transfers
+            You don&apos;t have permission to view stock transfers
           </Typography>
         </Box>
       </MainLayout>
@@ -241,66 +283,20 @@ const StockTransferList: React.FC = () => {
         </Box>
 
         <Paper sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', p: 2, pb: 0 }}>
+            <Tooltip title="Refresh">
+              <IconButton onClick={handleRefresh} size="small">
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+          </Box>
           <FilterHeader
             searchValue={search}
             onSearchChange={setSearch}
             searchPlaceholder="Search by transfer number or notes..."
-          >
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  label="Status"
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <MenuItem value="all">All</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="in_transit">In Transit</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>From Location</InputLabel>
-                <Select
-                  value={fromLocationFilter || ''}
-                  label="From Location"
-                  onChange={(e) => setFromLocationFilter(e.target.value ? Number(e.target.value) : undefined)}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {locations.map((loc) => (
-                    <MenuItem key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>To Location</InputLabel>
-                <Select
-                  value={toLocationFilter || ''}
-                  label="To Location"
-                  onChange={(e) => setToLocationFilter(e.target.value ? Number(e.target.value) : undefined)}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {locations.map((loc) => (
-                    <MenuItem key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <Tooltip title="Refresh">
-                <IconButton onClick={handleRefresh} size="small">
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </FilterHeader>
+            onClear={handleClearFilters}
+            fields={filterFields}
+          />
 
           <TableContainer>
             <Table>
@@ -354,7 +350,7 @@ const StockTransferList: React.FC = () => {
           />
         </Paper>
 
-        <Toast />
+        <Toast toast={toast} onClose={hideToast} />
       </Box>
     </MainLayout>
   );

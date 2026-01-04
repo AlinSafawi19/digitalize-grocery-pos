@@ -20,7 +20,6 @@ import {
   DialogActions,
   Alert,
   CircularProgress,
-  Tooltip,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -53,7 +52,7 @@ const StockTransferDetails: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { showToast } = useToast();
+  const { toast, showToast, hideToast } = useToast();
   const canUpdate = usePermission('inventory.update');
 
   const [transfer, setTransfer] = useState<StockTransfer | null>(null);
@@ -407,7 +406,7 @@ const StockTransferDetails: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        <Toast />
+        <Toast toast={toast} onClose={hideToast} />
       </Box>
     </MainLayout>
   );

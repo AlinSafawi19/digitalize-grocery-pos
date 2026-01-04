@@ -76,12 +76,12 @@ export default function BatchBarcodeScan() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to get error message
-  const getErrorMessage = (error: unknown): string => {
+  const getErrorMessage = useCallback((error: unknown): string => {
     if (error instanceof Error) {
       return (error as Error).message;
     }
     return 'An error occurred';
-  };
+  }, []);
 
   // Auto-focus input when component mounts or scanning starts
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function BatchBarcodeScan() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, operation, allowDuplicates, autoValidate, showToast]);
+  }, [user?.id, operation, allowDuplicates, autoValidate, showToast, getErrorMessage]);
 
   const stopScanning = useCallback(async () => {
     if (!batchId) return;
@@ -159,7 +159,7 @@ export default function BatchBarcodeScan() {
     } finally {
       setLoading(false);
     }
-  }, [batchId, showToast]);
+  }, [batchId, showToast, getErrorMessage]);
 
   const cancelScanning = useCallback(async () => {
     if (!batchId) return;
@@ -181,7 +181,7 @@ export default function BatchBarcodeScan() {
     } finally {
       setLoading(false);
     }
-  }, [batchId, showToast]);
+  }, [batchId, showToast, getErrorMessage]);
 
   const handleBarcodeSubmit = useCallback(
     async (barcode: string) => {
@@ -280,7 +280,7 @@ export default function BatchBarcodeScan() {
     } catch (error: unknown) {
       showToast(getErrorMessage(error), 'error');
     }
-  }, [batchId, showToast]);
+  }, [batchId, showToast, getErrorMessage]);
 
   const handleCopyCSV = useCallback(() => {
     navigator.clipboard.writeText(csvData);
@@ -587,7 +587,7 @@ export default function BatchBarcodeScan() {
                         <Chip
                           icon={getStatusIcon(item.status)}
                           label={item.status.toUpperCase()}
-                          color={getStatusColor(item.status) as any}
+                          color={getStatusColor(item.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                           size="small"
                         />
                       </TableCell>

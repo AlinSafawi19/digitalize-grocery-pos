@@ -35,8 +35,11 @@ export class AuthService {
    */
   static async login(credentials: LoginCredentials, sessionOptions?: Omit<CreateSessionOptions, 'userId'>): Promise<LoginResult> {
     try {
+      // Normalize username (trim whitespace)
+      const normalizedUsername = credentials.username?.trim() || '';
+      
       // Validate required fields
-      if (!credentials.username || credentials.username.trim() === '') {
+      if (!normalizedUsername) {
         return {
           success: false,
           error: 'Username is required',
@@ -52,13 +55,21 @@ export class AuthService {
 
       const prisma = databaseService.getClient();
 
-      // Find user by username
+      // Find user by username (exact match - case-sensitive)
+      // Note: Username must match exactly as stored in database (including case)
       const user = await prisma.user.findUnique({
-        where: { username: credentials.username },
+        where: { username: normalizedUsername },
       });
 
       if (!user) {
-        logger.warn('Login attempt with invalid username', { username: credentials.username });
+        // Log additional info for debugging
+        const userCount = await prisma.user.count().catch(() => 0);
+        logger.warn('Login attempt with invalid username', { 
+          username: normalizedUsername,
+          originalUsername: credentials.username,
+          usernameLength: normalizedUsername.length,
+          totalUsersInDatabase: userCount,
+        });
         return {
           success: false,
           error: 'Invalid username or password',
@@ -75,10 +86,23 @@ export class AuthService {
       }
 
       // Verify password
+      // Log password comparison attempt for debugging (without logging actual password)
+      logger.debug('Verifying password', { 
+        userId: user.id, 
+        username: user.username,
+        passwordProvided: !!credentials.password,
+        passwordLength: credentials.password?.length || 0,
+        storedPasswordHashLength: user.password?.length || 0,
+      });
+      
       const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
       if (!isPasswordValid) {
-        logger.warn('Login attempt with invalid password', { userId: user.id, username: user.username });
+        logger.warn('Login attempt with invalid password', { 
+          userId: user.id, 
+          username: user.username,
+          passwordLength: credentials.password?.length || 0,
+        });
         return {
           success: false,
           error: 'Invalid username or password',

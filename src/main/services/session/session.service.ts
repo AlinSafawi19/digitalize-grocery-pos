@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { Prisma } from '@prisma/client';
 
 export interface CreateSessionOptions {
   userId: number;
@@ -451,7 +452,11 @@ export class SessionService {
   /**
    * Map database session to SessionInfo
    */
-  private static mapSessionToInfo(session: any): SessionInfo {
+  private static mapSessionToInfo(
+    session: Prisma.SessionGetPayload<{
+      include: { user: { select: { username: true } } };
+    }>
+  ): SessionInfo {
     return {
       id: session.id,
       userId: session.userId,

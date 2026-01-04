@@ -2,6 +2,7 @@ import { ipcMain, dialog } from 'electron';
 import { logger } from '../utils/logger';
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import { IMAGES_DIR } from '../utils/constants';
 import {
   ProductImageService,
@@ -67,7 +68,7 @@ export function registerProductImageHandlers(): void {
    */
   ipcMain.handle(
     'productImage:showSelectDialog',
-    async (_event) => {
+    async () => {
       try {
         const result = await dialog.showOpenDialog({
           title: 'Select Product Image',
@@ -101,7 +102,7 @@ export function registerProductImageHandlers(): void {
     'productImage:copyToTemp',
     async (_event, sourcePath: string) => {
       try {
-        const tempDir = path.join(require('os').tmpdir(), 'digitalize-pos-images');
+        const tempDir = path.join(os.tmpdir(), 'digitalize-pos-images');
         await fs.ensureDir(tempDir);
 
         const fileName = path.basename(sourcePath);

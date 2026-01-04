@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Grid, TextField, InputAdornment, Paper, Button, ButtonGroup, IconButton, Menu, MenuItem, Typography, Tooltip, useMediaQuery, useTheme } from '@mui/material';
-import { Search, QrCodeScanner, Home, Menu as MenuIcon, Dashboard, Inventory, Category, LocalShipping, Receipt, Warehouse, ShoppingCart as ShoppingCartIcon, LocalOffer, Assessment, Analytics, History, Settings, Backup, VpnKey, People, AccountBalanceWallet, ChatBubble as MessageCircle } from '@mui/icons-material';
+import { Search, QrCodeScanner, Home, Menu as MenuIcon, Dashboard, Inventory, Category, LocalShipping, Receipt, Warehouse, ShoppingCart as ShoppingCartIcon, LocalOffer, Assessment, Analytics, History, Settings, Backup, VpnKey, People, AccountBalanceWallet, ChatBubble as MessageCircle, SwapHoriz, QrCode, Notifications as NotificationsIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -14,6 +14,7 @@ import { SettingsService } from '../../services/settings.service';
 import { TransactionService } from '../../services/transaction.service';
 import { ReceiptService } from '../../services/receipt.service';
 import { CashDrawerService } from '../../services/cash-drawer.service';
+import { ReceiptTemplateService } from '../../services/receipt-template.service';
 import { ROUTES } from '../../utils/constants';
 import { usePricingRules } from '../../hooks/usePricingRules';
 import { useRoutePermission } from '../../hooks/usePermission';
@@ -56,6 +57,7 @@ const POSPage: React.FC = () => {
   const canAccessTransactions = useRoutePermission(ROUTES.TRANSACTIONS);
   const canAccessInventory = useRoutePermission(ROUTES.INVENTORY);
   const canAccessPurchaseOrders = useRoutePermission(ROUTES.PURCHASE_ORDERS);
+  const canAccessStockTransfers = useRoutePermission(ROUTES.STOCK_TRANSFERS);
   const canAccessPricing = useRoutePermission(ROUTES.PRICING_RULES);
   const canAccessReports = useRoutePermission(ROUTES.REPORTS);
   const canAccessAnalytics = useRoutePermission(ROUTES.ANALYTICS);
@@ -279,11 +281,17 @@ const POSPage: React.FC = () => {
     try {
       setOpeningDrawer(true);
 
-      // Get printer settings to get printer name
-      const printerSettingsResult = await SettingsService.getPrinterSettings(user.id);
-      const printerName = printerSettingsResult.success && printerSettingsResult.printerSettings?.printerName
-        ? printerSettingsResult.printerSettings.printerName
-        : undefined;
+      // Get printer name from receipt template
+      const templateResult = await ReceiptTemplateService.getDefaultTemplate();
+      let printerName: string | undefined = undefined;
+      if (templateResult.success && templateResult.template) {
+        try {
+          const templateData = ReceiptTemplateService.parseTemplate(templateResult.template.template);
+          printerName = templateData.printing?.printerName || undefined;
+        } catch (error) {
+          console.error('Failed to parse template for printer name:', error);
+        }
+      }
 
       const result = await CashDrawerService.openCashDrawer(printerName);
 
@@ -394,13 +402,33 @@ const POSPage: React.FC = () => {
         throw new Error(paymentResult.error || 'Failed to process payment');
       }
 
-      // Generate receipt and print immediately if auto-print is enabled
+      // Generate receipt and print if auto-print is enabled
       try {
-        // Get printer settings first to check if auto-print is enabled
-        const printerSettingsResult = await SettingsService.getPrinterSettings(user.id);
-        
-        const shouldAutoPrint = printerSettingsResult.success && 
-                                printerSettingsResult.printerSettings?.autoPrint;
+        // Get printer name and auto-print setting from receipt template
+        const templateResult = await ReceiptTemplateService.getDefaultTemplate();
+        let printerName: string | undefined = undefined;
+        let shouldAutoPrint = true; // Default to true if template doesn't specify
+        if (templateResult.success && templateResult.template) {
+          try {
+            const templateData = ReceiptTemplateService.parseTemplate(templateResult.template.template);
+            printerName = templateData.printing?.printerName || undefined;
+            shouldAutoPrint = templateData.printing?.autoPrint !== false; // Default to true if not specified
+            console.log('[POS Checkout] Receipt template settings:', {
+              hasTemplate: true,
+              printerName: printerName || '(default)',
+              autoPrint: templateData.printing?.autoPrint,
+              shouldAutoPrint,
+            });
+          } catch (error) {
+            console.error('Failed to parse template for printer settings:', error);
+          }
+        } else {
+          console.warn('[POS Checkout] No default template found, using defaults:', {
+            success: templateResult.success,
+            error: templateResult.error,
+            shouldAutoPrint,
+          });
+        }
         
         const receiptResult = await ReceiptService.generateReceipt(
           createResult.transaction.id,
@@ -408,23 +436,29 @@ const POSPage: React.FC = () => {
         );
         
         if (receiptResult.success && receiptResult.filepath) {
-          // Receipt generated successfully
-
-          // Print immediately if auto-print is enabled
+          // Receipt generated successfully - print if auto-print is enabled
+          console.log('[POS Checkout] Receipt generated, checking auto-print:', {
+            shouldAutoPrint,
+            filepath: receiptResult.filepath,
+          });
           if (shouldAutoPrint) {
-            const printerName = printerSettingsResult.printerSettings?.printerName;
-
-            // Print the receipt immediately - await to ensure it starts right away
-            // but don't fail the transaction if printing fails
             try {
+              console.log('[POS Checkout] Attempting to print receipt...', {
+                printerName: printerName || '(default printer)',
+              });
               const printResult = await ReceiptService.printReceipt(
                 receiptResult.filepath,
                 printerName
               );
 
               if (printResult.success) {
+                console.log('[POS Checkout] Receipt printed successfully');
                 showToast('Receipt printed successfully', 'success');
               } else {
+                console.error('[POS Checkout] Receipt printing failed:', {
+                  error: printResult.error,
+                  printerName: printerName || '(default printer)',
+                });
                 showToast(
                   `Receipt generated but printing failed: ${printResult.error || 'Unknown error'}`,
                   'warning'
@@ -441,8 +475,15 @@ const POSPage: React.FC = () => {
                 `Receipt generated but printing failed: ${printError instanceof Error ? printError.message : 'Unknown error'}`,
                 'warning'
               );
-              }
             }
+          } else {
+            console.log('[POS Checkout] Auto-print is disabled, skipping print');
+          }
+        } else {
+          console.error('[POS Checkout] Receipt generation failed:', {
+            success: receiptResult.success,
+            error: receiptResult.error,
+          });
         }
       } catch (receiptError) {
         // Log error but don't fail the transaction
@@ -459,10 +500,17 @@ const POSPage: React.FC = () => {
       try {
         const cashDrawerSettingsResult = await SettingsService.getCashDrawerSettings(user.id);
         if (cashDrawerSettingsResult.success && cashDrawerSettingsResult.cashDrawerSettings?.autoOpen) {
-          const printerSettingsResult = await SettingsService.getPrinterSettings(user.id);
-          const printerName = printerSettingsResult.success && printerSettingsResult.printerSettings?.printerName
-            ? printerSettingsResult.printerSettings.printerName
-            : undefined;
+          // Get printer name from receipt template
+          const templateResult = await ReceiptTemplateService.getDefaultTemplate();
+          let printerName: string | undefined = undefined;
+          if (templateResult.success && templateResult.template) {
+            try {
+              const templateData = ReceiptTemplateService.parseTemplate(templateResult.template.template);
+              printerName = templateData.printing?.printerName || undefined;
+            } catch (error) {
+              console.error('Failed to parse template for printer name:', error);
+            }
+          }
 
           await CashDrawerService.openCashDrawer(printerName);
           // Don't show error toast for auto-open failures to avoid disrupting checkout flow
@@ -774,6 +822,12 @@ const POSPage: React.FC = () => {
                   Purchase Orders
                 </MenuItem>
               )}
+              {canAccessStockTransfers && (
+                <MenuItem onClick={() => handleNavigate(ROUTES.STOCK_TRANSFERS)} sx={menuItemSx}>
+                  <SwapHoriz sx={{ mr: 1 }} />
+                  Stock Transfers
+                </MenuItem>
+              )}
               {canAccessPricing && (
                 <MenuItem onClick={() => handleNavigate(ROUTES.PRICING_RULES)} sx={menuItemSx}>
                   <LocalOffer sx={{ mr: 1 }} />
@@ -804,6 +858,18 @@ const POSPage: React.FC = () => {
                   Settings
                 </MenuItem>
               )}
+              <MenuItem onClick={() => handleNavigate(ROUTES.ALERT_RULES)} sx={menuItemSx}>
+                <NotificationsIcon sx={{ mr: 1 }} />
+                Alert Rules
+              </MenuItem>
+              <MenuItem onClick={() => handleNavigate(ROUTES.ALERT_HISTORY)} sx={menuItemSx}>
+                <History sx={{ mr: 1 }} />
+                Alert History
+              </MenuItem>
+              <MenuItem onClick={() => handleNavigate(ROUTES.BARCODE_LABELS)} sx={menuItemSx}>
+                <QrCode sx={{ mr: 1 }} />
+                Barcode Labels
+              </MenuItem>
               {user?.id === 1 && (
                 <MenuItem onClick={() => handleNavigate(ROUTES.BACKUP)} sx={menuItemSx}>
                   <Backup sx={{ mr: 1 }} />

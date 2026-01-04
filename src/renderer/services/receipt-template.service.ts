@@ -1,11 +1,4 @@
 export interface ReceiptTemplateData {
-  header?: {
-    storeName?: string;
-    address?: string;
-    phone?: string;
-    logo?: string;
-    customText?: string;
-  };
   items?: {
     showHeaders?: boolean;
     showSeparator?: boolean;
@@ -29,10 +22,11 @@ export interface ReceiptTemplateData {
     showPoweredBy?: boolean;
     customText?: string;
   };
-  layout?: {
+  printing?: {
     paperWidth?: number;
-    fontSize?: number;
-    lineSpacing?: number;
+    printerName?: string;
+    autoPrint?: boolean;
+    autoOpenCashDrawer?: boolean;
   };
 }
 
@@ -235,12 +229,6 @@ export class ReceiptTemplateService {
    */
   static getDefaultTemplateData(): ReceiptTemplateData {
     return {
-      header: {
-        storeName: '',
-        address: '',
-        phone: '',
-        customText: '',
-      },
       items: {
         showHeaders: true,
         showSeparator: true,
@@ -264,10 +252,11 @@ export class ReceiptTemplateService {
         showPoweredBy: true,
         customText: '',
       },
-      layout: {
+      printing: {
         paperWidth: 80,
-        fontSize: 12,
-        lineSpacing: 1,
+        printerName: '',
+        autoPrint: true,
+        autoOpenCashDrawer: false,
       },
     };
   }

@@ -121,7 +121,7 @@ const SalesReportTab: React.FC<SalesReportTabProps> = ({ dateRange, userId, curr
     } finally {
       setLoading(false);
     }
-  }, [dateRange, userId, salesByCashierPage, salesByCashierPageSize, showToast]);
+  }, [dateRange, userId, currency, salesByCashierPage, salesByCashierPageSize, showToast]);
 
   const loadVoidReturnReport = useCallback(async () => {
     setVoidReturnLoading(true);

@@ -54,7 +54,7 @@ export class BarcodeService {
     }
 
     // CODE39: Alphanumeric with specific characters
-    if (/^[0-9A-Z\-\. \$\/\+\%]+$/.test(barcode) && length >= 1) {
+    if (/^[0-9A-Z\-. $/+%]+$/.test(barcode) && length >= 1) {
       return 'CODE39';
     }
 
@@ -148,7 +148,7 @@ export class BarcodeService {
 
     // Validate format-specific requirements
     switch (format) {
-      case 'EAN13':
+      case 'EAN13': {
         if (cleaned.length !== 13) {
           return {
             valid: false,
@@ -167,8 +167,9 @@ export class BarcodeService {
           };
         }
         break;
+      }
 
-      case 'EAN8':
+      case 'EAN8': {
         if (cleaned.length !== 8) {
           return {
             valid: false,
@@ -187,8 +188,9 @@ export class BarcodeService {
           };
         }
         break;
+      }
 
-      case 'UPC':
+      case 'UPC': {
         if (cleaned.length !== 12) {
           return {
             valid: false,
@@ -207,6 +209,7 @@ export class BarcodeService {
           };
         }
         break;
+      }
 
       case 'CODE128':
         if (barcode.length < 1) {
@@ -263,39 +266,43 @@ export class BarcodeService {
     const cleaned = baseValue.replace(/\D/g, '');
 
     switch (format) {
-      case 'EAN13':
+      case 'EAN13': {
         if (cleaned.length !== 12) {
           throw new Error('EAN-13 requires 12 digits (without check digit)');
         }
         const ean13CheckDigit = this.calculateEAN13CheckDigit(cleaned);
         return cleaned + ean13CheckDigit;
+      }
 
-      case 'EAN8':
+      case 'EAN8': {
         if (cleaned.length !== 7) {
           throw new Error('EAN-8 requires 7 digits (without check digit)');
         }
         const ean8CheckDigit = this.calculateEAN8CheckDigit(cleaned);
         return cleaned + ean8CheckDigit;
+      }
 
-      case 'UPC':
+      case 'UPC': {
         if (cleaned.length !== 11) {
           throw new Error('UPC-A requires 11 digits (without check digit)');
         }
         const upcCheckDigit = this.calculateUPCCheckDigit(cleaned);
         return cleaned + upcCheckDigit;
+      }
 
       case 'CODE128':
       case 'CODE39':
         // For these formats, use the value as-is
         return baseValue;
 
-      case 'ITF14':
+      case 'ITF14': {
         if (cleaned.length !== 13) {
           throw new Error('ITF-14 requires 13 digits (without check digit)');
         }
         // ITF-14 uses same check digit calculation as EAN-13
         const itf14CheckDigit = this.calculateEAN13CheckDigit(cleaned);
         return cleaned + itf14CheckDigit;
+      }
 
       default:
         // For other formats, return as-is
@@ -308,42 +315,49 @@ export class BarcodeService {
    */
   static generateRandomBarcode(format: BarcodeFormat): string {
     switch (format) {
-      case 'EAN13':
+      case 'EAN13': {
         // Generate 12 random digits (check digit will be calculated)
         const ean13Base = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join('');
         return this.generateBarcode('EAN13', ean13Base);
+      }
 
-      case 'EAN8':
+      case 'EAN8': {
         // Generate 7 random digits (check digit will be calculated)
         const ean8Base = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join('');
         return this.generateBarcode('EAN8', ean8Base);
+      }
 
-      case 'UPC':
+      case 'UPC': {
         // Generate 11 random digits (check digit will be calculated)
         const upcBase = Array.from({ length: 11 }, () => Math.floor(Math.random() * 10)).join('');
         return this.generateBarcode('UPC', upcBase);
+      }
 
-      case 'CODE128':
+      case 'CODE128': {
         // Generate random alphanumeric string
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         const length = Math.floor(Math.random() * 10) + 5; // 5-14 characters
         return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      }
 
-      case 'CODE39':
+      case 'CODE39': {
         // Generate random CODE39 string
         const code39Chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%';
         const code39Length = Math.floor(Math.random() * 10) + 5; // 5-14 characters
         return Array.from({ length: code39Length }, () => code39Chars[Math.floor(Math.random() * code39Chars.length)]).join('');
+      }
 
-      case 'ITF14':
+      case 'ITF14': {
         // Generate 13 random digits (check digit will be calculated)
         const itf14Base = Array.from({ length: 13 }, () => Math.floor(Math.random() * 10)).join('');
         return this.generateBarcode('ITF14', itf14Base);
+      }
 
-      default:
+      default: {
         // For other formats, generate numeric string
         const defaultLength = Math.floor(Math.random() * 10) + 5;
         return Array.from({ length: defaultLength }, () => Math.floor(Math.random() * 10)).join('');
+      }
     }
   }
 

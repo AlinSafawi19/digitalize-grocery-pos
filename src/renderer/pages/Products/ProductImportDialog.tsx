@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -48,20 +48,7 @@ export default function ProductImportDialog({
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
 
-  useEffect(() => {
-    if (open) {
-      // Reset state when dialog opens
-      setFilePath(null);
-      setPreview(null);
-      setLoading(false);
-      setImporting(false);
-      setImportProgress('');
-      setError(null);
-      handleSelectFile();
-    }
-  }, [open]);
-
-  const handleSelectFile = async () => {
+  const handleSelectFile = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -95,7 +82,20 @@ export default function ProductImportDialog({
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
-  };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (open) {
+      // Reset state when dialog opens
+      setFilePath(null);
+      setPreview(null);
+      setLoading(false);
+      setImporting(false);
+      setImportProgress('');
+      setError(null);
+      handleSelectFile();
+    }
+  }, [open, handleSelectFile]);
 
   const handleImport = async () => {
     if (!filePath || !preview || preview.summary.valid === 0) {

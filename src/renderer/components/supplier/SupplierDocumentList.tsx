@@ -126,8 +126,8 @@ const SupplierDocumentList: React.FC<SupplierDocumentListProps> = ({
       setFormOpen(true);
       
       // Store temp path for upload
-      (window as any).__tempDocumentPath = copyResult.tempPath;
-      (window as any).__tempDocumentFileName = fileName;
+      (window as typeof window & { __tempDocumentPath?: string; __tempDocumentFileName?: string }).__tempDocumentPath = copyResult.tempPath;
+      (window as typeof window & { __tempDocumentPath?: string; __tempDocumentFileName?: string }).__tempDocumentFileName = fileName;
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'An error occurred', 'error');
     }
@@ -151,8 +151,8 @@ const SupplierDocumentList: React.FC<SupplierDocumentListProps> = ({
       description: '',
       expiryDate: null,
     });
-    delete (window as any).__tempDocumentPath;
-    delete (window as any).__tempDocumentFileName;
+    delete (window as typeof window & { __tempDocumentPath?: string; __tempDocumentFileName?: string }).__tempDocumentPath;
+    delete (window as typeof window & { __tempDocumentPath?: string; __tempDocumentFileName?: string }).__tempDocumentFileName;
   };
 
   const handleSubmit = async () => {
@@ -174,8 +174,8 @@ const SupplierDocumentList: React.FC<SupplierDocumentListProps> = ({
         }
       } else {
         // Upload new document
-        const tempPath = (window as any).__tempDocumentPath;
-        const fileName = (window as any).__tempDocumentFileName;
+        const tempPath = (window as typeof window & { __tempDocumentPath?: string; __tempDocumentFileName?: string }).__tempDocumentPath;
+        const fileName = (window as typeof window & { __tempDocumentPath?: string; __tempDocumentFileName?: string }).__tempDocumentFileName;
         
         if (!tempPath || !fileName) {
           showToast('File not selected', 'error');
@@ -188,8 +188,8 @@ const SupplierDocumentList: React.FC<SupplierDocumentListProps> = ({
           filePath: tempPath,
           fileName,
           category: formData.category || 'other',
-          description: formData.description || null,
-          expiryDate: formData.expiryDate || null,
+          description: formData.description ?? undefined,
+          expiryDate: formData.expiryDate ?? undefined,
         };
 
         const result = await SupplierDocumentService.uploadDocument(uploadInput, userId);

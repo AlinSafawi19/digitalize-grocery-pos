@@ -55,7 +55,6 @@ const PurchaseOrderTemplateList: React.FC = () => {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
-  const [supplierFilter, setSupplierFilter] = useState<number | ''>('');
   const [activeFilter, setActiveFilter] = useState<boolean | ''>('');
 
   const loadTemplates = useCallback(async () => {
@@ -67,7 +66,6 @@ const PurchaseOrderTemplateList: React.FC = () => {
         page: page + 1,
         pageSize,
         search: search || undefined,
-        supplierId: supplierFilter || undefined,
         isActive: activeFilter === '' ? undefined : activeFilter,
       };
 
@@ -86,7 +84,7 @@ const PurchaseOrderTemplateList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, page, pageSize, search, supplierFilter, activeFilter, showToast]);
+  }, [user?.id, page, pageSize, search, activeFilter, showToast]);
 
   useEffect(() => {
     loadTemplates();
@@ -125,8 +123,8 @@ const PurchaseOrderTemplateList: React.FC = () => {
       try {
         const result = await PurchaseOrderTemplateService.createOrderFromTemplate(
           template.id,
-          null,
-          user.id
+          user.id,
+          null
         );
 
         if (result.success && result.orderInput) {
@@ -150,13 +148,18 @@ const PurchaseOrderTemplateList: React.FC = () => {
     [user?.id, canCreate, navigate, showToast]
   );
 
+  const handleClearFilters = useCallback(() => {
+    setSearch('');
+    setActiveFilter('');
+  }, []);
+
   const filterOptions = useMemo(
     () => [
       {
         type: 'text' as const,
         label: 'Search',
         value: search,
-        onChange: (value: string) => setSearch(value),
+        onChange: (value: unknown) => setSearch(value as string),
         placeholder: 'Search templates...',
         gridSize: { xs: 12, sm: 6, md: 4 },
       },
@@ -164,8 +167,8 @@ const PurchaseOrderTemplateList: React.FC = () => {
         type: 'select' as const,
         label: 'Status',
         value: activeFilter === '' ? '' : activeFilter ? 'active' : 'inactive',
-        onChange: (value: string) =>
-          setActiveFilter(value === '' ? '' : value === 'active'),
+        onChange: (value: unknown) =>
+          setActiveFilter((value as string) === '' ? '' : (value as string) === 'active'),
         options: [
           { value: '', label: 'All' },
           { value: 'active', label: 'Active' },
@@ -221,7 +224,7 @@ const PurchaseOrderTemplateList: React.FC = () => {
           </Box>
         </Box>
 
-        <FilterHeader filters={filterOptions} />
+        <FilterHeader fields={filterOptions} onClear={handleClearFilters} />
 
         <Paper>
           <TableContainer>

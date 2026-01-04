@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../../utils/logger';
 import { DATABASE_PATH, USER_DATA_PATH } from '../../utils/constants';
 import fs from 'fs-extra';

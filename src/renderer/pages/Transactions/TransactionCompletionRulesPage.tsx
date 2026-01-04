@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -32,9 +32,6 @@ import {
   Add,
   Edit,
   Delete,
-  PlayArrow,
-  CheckCircle,
-  Cancel,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -531,9 +528,7 @@ export default function TransactionCompletionRulesPage() {
         </Dialog>
 
         <Toast
-          open={toast.open}
-          message={toast.message}
-          severity={toast.severity}
+          toast={toast}
           onClose={hideToast}
         />
       </Box>

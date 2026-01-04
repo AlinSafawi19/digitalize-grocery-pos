@@ -201,7 +201,7 @@ export default function UpdateNotification({ onDismiss }: UpdateNotificationProp
           {updateAvailable?.releaseNotes && (
             <Box sx={{ mt: 1, maxHeight: '150px', overflow: 'auto' }}>
               <Typography variant="caption" sx={{ fontSize: '11px', fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 600, display: 'block', mb: 0.5 }}>
-                What's New:
+                What&apos;s New:
               </Typography>
               <Typography
                 variant="caption"
@@ -281,7 +281,7 @@ export default function UpdateNotification({ onDismiss }: UpdateNotificationProp
           {updateDownloaded?.releaseNotes && (
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" sx={{ fontSize: '13px', fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 600, mb: 1 }}>
-                What's New:
+                What&apos;s New:
               </Typography>
               <Typography
                 variant="body2"

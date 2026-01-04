@@ -4,6 +4,7 @@ import {
   BackupLocationService,
   CreateBackupLocationInput,
   UpdateBackupLocationInput,
+  BackupLocationType,
 } from '../services/backup/backup-location.service';
 
 /**
@@ -21,9 +22,9 @@ export function registerBackupLocationHandlers(): void {
     async (_event, type: string, path: string, config?: unknown) => {
       try {
         const result = await BackupLocationService.validateLocation(
-          type as any,
+          type as BackupLocationType,
           path,
-          config as any
+          config as BackupLocationConfig | undefined
         );
         return {
           success: result.valid,
@@ -95,7 +96,7 @@ export function registerBackupLocationHandlers(): void {
       _event,
       options?: {
         isActive?: boolean;
-        type?: string;
+        type?: BackupLocationType;
         page?: number;
         pageSize?: number;
       }

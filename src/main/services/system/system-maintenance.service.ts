@@ -3,13 +3,12 @@ import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import fs from 'fs-extra';
-import path from 'path';
 import { DATABASE_PATH } from '../../utils/constants';
 
 export interface MaintenanceResult {
   success: boolean;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   duration?: number;
   error?: string;
 }
@@ -474,7 +473,7 @@ export class SystemMaintenanceService {
 
       const result = await prisma.auditLog.deleteMany({
         where: {
-          createdAt: {
+          timestamp: {
             lt: cutoffDate,
           },
         },

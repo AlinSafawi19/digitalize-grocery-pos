@@ -43,6 +43,9 @@ import {
   VpnKey,
   Visibility,
   People,
+  SwapHoriz,
+  QrCode,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -95,6 +98,7 @@ export default function NotificationsPage() {
   const canAccessTransactions = useRoutePermission(ROUTES.TRANSACTIONS);
   const canAccessInventory = useRoutePermission(ROUTES.INVENTORY);
   const canAccessPurchaseOrders = useRoutePermission(ROUTES.PURCHASE_ORDERS);
+  const canAccessStockTransfers = useRoutePermission(ROUTES.STOCK_TRANSFERS);
   const canAccessPricing = useRoutePermission(ROUTES.PRICING_RULES);
   const canAccessReports = useRoutePermission(ROUTES.REPORTS);
   const canAccessAnalytics = useRoutePermission(ROUTES.ANALYTICS);
@@ -401,6 +405,11 @@ export default function NotificationsPage() {
     handleNavMenuClose();
   }, [navigate, handleNavMenuClose]);
 
+  const handleNavigateToStockTransfers = useCallback(() => {
+    navigate(ROUTES.STOCK_TRANSFERS);
+    handleNavMenuClose();
+  }, [navigate, handleNavMenuClose]);
+
   const handleNavigateToPricingRules = useCallback(() => {
     navigate(ROUTES.PRICING_RULES);
     handleNavMenuClose();
@@ -459,6 +468,22 @@ export default function NotificationsPage() {
     navigate(ROUTES.LICENSE);
     handleNavMenuClose();
   }, [navigate, handleNavMenuClose, user?.id]);
+
+
+  const handleNavigateToAlertRules = useCallback(() => {
+    navigate(ROUTES.ALERT_RULES);
+    handleNavMenuClose();
+  }, [navigate, handleNavMenuClose]);
+
+  const handleNavigateToAlertHistory = useCallback(() => {
+    navigate(ROUTES.ALERT_HISTORY);
+    handleNavMenuClose();
+  }, [navigate, handleNavMenuClose]);
+
+  const handleNavigateToBarcodeLabels = useCallback(() => {
+    navigate(ROUTES.BARCODE_LABELS);
+    handleNavMenuClose();
+  }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToDashboardDirect = useCallback(() => {
     navigate(ROUTES.DASHBOARD);
@@ -964,6 +989,12 @@ export default function NotificationsPage() {
                   Purchase Orders
                 </MenuItem>
               )}
+              {canAccessStockTransfers && (
+                <MenuItem onClick={handleNavigateToStockTransfers} sx={menuItemSx}>
+                  <SwapHoriz sx={{ mr: 1, fontSize: '18px' }} />
+                  Stock Transfers
+                </MenuItem>
+              )}
               {canAccessPricing && (
                 <MenuItem onClick={handleNavigateToPricingRules} sx={menuItemSx}>
                   <LocalOffer sx={{ mr: 1, fontSize: '18px' }} />
@@ -994,6 +1025,18 @@ export default function NotificationsPage() {
                   Settings
                 </MenuItem>
               )}
+              <MenuItem onClick={handleNavigateToAlertRules} sx={menuItemSx}>
+                <NotificationsIcon sx={{ mr: 1, fontSize: '18px' }} />
+                Alert Rules
+              </MenuItem>
+              <MenuItem onClick={handleNavigateToAlertHistory} sx={menuItemSx}>
+                <History sx={{ mr: 1, fontSize: '18px' }} />
+                Alert History
+              </MenuItem>
+              <MenuItem onClick={handleNavigateToBarcodeLabels} sx={menuItemSx}>
+                <QrCode sx={{ mr: 1, fontSize: '18px' }} />
+                Barcode Labels
+              </MenuItem>
               {user?.id === 1 && (
                 <MenuItem onClick={handleNavigateToBackup} sx={menuItemSx}>
                   <Backup sx={{ mr: 1, fontSize: '18px' }} />

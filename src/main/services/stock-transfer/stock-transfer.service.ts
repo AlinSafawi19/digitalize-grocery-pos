@@ -2,7 +2,6 @@ import { StockTransfer, StockTransferItem, Location, Product, Prisma } from '@pr
 import { logger } from '../../utils/logger';
 import { databaseService } from '../database/database.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import { InventoryService } from '../inventory/inventory.service';
 
 export interface StockTransferWithRelations extends StockTransfer {
   fromLocation: Location;
@@ -64,7 +63,7 @@ export interface StockTransferListOptions {
  * Generate stock transfer number
  * Format: ST-YYYYMMDD-XXXXX (where XXXXX is a 5-digit sequential number)
  */
-async function generateTransferNumber(prisma: any): Promise<string> {
+async function generateTransferNumber(prisma: Prisma.TransactionClient): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -443,6 +442,15 @@ export class StockTransferService {
                 code: true,
               },
             },
+            items: {
+              include: {
+                product: {
+                  include: {
+                    category: true,
+                  },
+                },
+              },
+            },
           };
 
       // Get transfers
@@ -458,7 +466,7 @@ export class StockTransferService {
 
       return {
         success: true,
-        transfers: transfers as StockTransferWithRelations[],
+        transfers: transfers as unknown as StockTransferWithRelations[],
         total,
         page,
         pageSize,
@@ -483,7 +491,7 @@ export class StockTransferService {
   ): Promise<{ success: boolean; transfer?: StockTransferWithRelations; error?: string }> {
     try {
       const prisma = databaseService.getClient();
-      const { status, notes, items } = input;
+      const { status, notes } = input;
 
       // Get existing transfer
       const existingTransfer = await prisma.stockTransfer.findUnique({
@@ -501,7 +509,7 @@ export class StockTransferService {
       }
 
       // Update transfer
-      const updateData: Prisma.StockTransferUpdateInput = {};
+      const updateData: Prisma.StockTransferUncheckedUpdateInput = {};
       if (status !== undefined) {
         updateData.status = status;
         if (status === 'completed' && existingTransfer.status !== 'completed') {
@@ -907,12 +915,14 @@ export class StockTransferService {
    * Helper method to adjust inventory at a specific location
    */
   private static async adjustLocationInventory(
-    prisma: any,
+    prisma: Prisma.TransactionClient,
     productId: number,
     locationId: number,
     quantity: number,
-    type: string,
-    reason: string
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _type: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _reason: string
   ): Promise<void> {
     // Get or create inventory location
     const inventoryLocation = await prisma.inventoryLocation.findUnique({

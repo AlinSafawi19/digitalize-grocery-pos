@@ -258,9 +258,6 @@ export async function getAvailableExternalDrives(): Promise<ExternalDriveInfo[]>
  * Checks common drive letters (D-Z) for removable drives
  */
 async function getExternalDrivesFallback(drives: ExternalDriveInfo[]): Promise<void> {
-  const systemDrive = process.env.SystemDrive || 'C:';
-  const systemDriveLetter = systemDrive.replace(':', '').toUpperCase();
-  
   // Check drive letters from D to Z
   for (let i = 68; i <= 90; i++) { // D=68, Z=90
     const driveLetter = String.fromCharCode(i) + ':';

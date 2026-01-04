@@ -146,7 +146,7 @@ export function registerLocationHandlers(): void {
    */
   ipcMain.handle(
     'location:getDefault',
-    async (_event) => {
+    async () => {
       try {
         const location = await LocationService.getDefaultLocation();
         return { success: true, location };

@@ -339,14 +339,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
     handleMoreMenuClose();
   }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute, user?.id]);
 
-  const handleNavigateToReceiptTemplates = useCallback(() => {
-    if (shouldBlockNavigation()) {
-      navigate(getExpiredLicenseRoute(), { replace: true });
-      return;
-    }
-    navigate(ROUTES.RECEIPT_TEMPLATES);
-    handleMoreMenuClose();
-  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
 
   const handleNavigateToAlertRules = useCallback(() => {
     if (shouldBlockNavigation()) {
@@ -406,7 +398,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
     isBackupActive: isActiveRoute(ROUTES.BACKUP),
     isLicenseActive: isActiveRoute(ROUTES.LICENSE),
     isSystemMaintenanceActive: isActiveRoute(ROUTES.SYSTEM_MAINTENANCE),
-    isReceiptTemplatesActive: isActiveRoute(ROUTES.RECEIPT_TEMPLATES),
     isAlertRulesActive: isActiveRoute(ROUTES.ALERT_RULES),
     isAlertHistoryActive: isActiveRoute(ROUTES.ALERT_HISTORY),
     isBarcodeLabelsActive: isActiveRoute(ROUTES.BARCODE_LABELS),
@@ -959,13 +950,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 Settings
               </MenuItem>
             )}
-            <MenuItem
-              onClick={handleNavigateToReceiptTemplates}
-              selected={routeStates.isReceiptTemplatesActive}
-            >
-              <Receipt sx={{ mr: 1, fontSize: '18px' }} />
-              Receipt Templates
-            </MenuItem>
             <MenuItem
               onClick={handleNavigateToAlertRules}
               selected={routeStates.isAlertRulesActive}

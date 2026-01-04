@@ -2,8 +2,6 @@ import { ipcMain } from 'electron';
 import { logger } from '../utils/logger';
 import {
   SystemMaintenanceService,
-  MaintenanceResult,
-  DatabaseStats,
 } from '../services/system/system-maintenance.service';
 
 /**

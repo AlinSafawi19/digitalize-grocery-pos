@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-
 // Location Types
 export interface Location {
   id: number;
@@ -65,7 +63,7 @@ export class LocationService {
    */
   static async getById(id: number): Promise<Location | null> {
     try {
-      const result = await ipcRenderer.invoke('location:getById', id);
+      const result = await window.electron.ipcRenderer.invoke('location:getById', id) as { success: boolean; location?: Location };
       if (result.success && result.location) {
         return result.location;
       }
@@ -81,7 +79,7 @@ export class LocationService {
    */
   static async getAll(activeOnly: boolean = false): Promise<Location[]> {
     try {
-      const result = await ipcRenderer.invoke('location:getAll', activeOnly);
+      const result = await window.electron.ipcRenderer.invoke('location:getAll', activeOnly) as { success: boolean; locations?: Location[] };
       if (result.success && result.locations) {
         return result.locations;
       }
@@ -97,7 +95,7 @@ export class LocationService {
    */
   static async getList(options: LocationListOptions): Promise<LocationListResult> {
     try {
-      const result = await ipcRenderer.invoke('location:getList', options);
+      const result = await window.electron.ipcRenderer.invoke('location:getList', options) as LocationListResult;
       return result;
     } catch (error) {
       console.error('Error getting location list', error);
@@ -116,7 +114,7 @@ export class LocationService {
     createdById: number
   ): Promise<{ success: boolean; location?: Location; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('location:create', input, createdById);
+      const result = await window.electron.ipcRenderer.invoke('location:create', input, createdById) as { success: boolean; location?: Location; error?: string };
       return result;
     } catch (error) {
       console.error('Error creating location', error);
@@ -136,7 +134,7 @@ export class LocationService {
     updatedById: number
   ): Promise<{ success: boolean; location?: Location; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('location:update', id, input, updatedById);
+      const result = await window.electron.ipcRenderer.invoke('location:update', id, input, updatedById) as { success: boolean; location?: Location; error?: string };
       return result;
     } catch (error) {
       console.error('Error updating location', error);
@@ -155,7 +153,7 @@ export class LocationService {
     deletedById: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('location:delete', id, deletedById);
+      const result = await window.electron.ipcRenderer.invoke('location:delete', id, deletedById) as { success: boolean; error?: string };
       return result;
     } catch (error) {
       console.error('Error deleting location', error);
@@ -171,7 +169,7 @@ export class LocationService {
    */
   static async getDefault(): Promise<Location | null> {
     try {
-      const result = await ipcRenderer.invoke('location:getDefault');
+      const result = await window.electron.ipcRenderer.invoke('location:getDefault') as { success: boolean; location?: Location };
       if (result.success && result.location) {
         return result.location;
       }
@@ -187,7 +185,7 @@ export class LocationService {
    */
   static async ensureDefault(createdById: number = 1): Promise<{ success: boolean; location?: Location; error?: string }> {
     try {
-      const result = await ipcRenderer.invoke('location:ensureDefault', createdById);
+      const result = await window.electron.ipcRenderer.invoke('location:ensureDefault', createdById) as { success: boolean; location?: Location; error?: string };
       return result;
     } catch (error) {
       console.error('Error ensuring default location', error);

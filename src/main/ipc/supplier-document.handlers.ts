@@ -2,6 +2,7 @@ import { ipcMain, dialog } from 'electron';
 import { logger } from '../utils/logger';
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import {
   SupplierDocumentService,
   UploadDocumentInput,
@@ -122,7 +123,7 @@ export function registerSupplierDocumentHandlers(): void {
    * Show document file selection dialog
    * IPC: supplierDocument:showSelectDialog
    */
-  ipcMain.handle('supplierDocument:showSelectDialog', async (_event) => {
+  ipcMain.handle('supplierDocument:showSelectDialog', async () => {
     try {
       const result = await dialog.showOpenDialog({
         title: 'Select Document',
@@ -156,7 +157,7 @@ export function registerSupplierDocumentHandlers(): void {
    */
   ipcMain.handle('supplierDocument:copyToTemp', async (_event, sourcePath: string) => {
     try {
-      const tempDir = path.join(require('os').tmpdir(), 'digitalize-pos-documents');
+      const tempDir = path.join(os.tmpdir(), 'digitalize-pos-documents');
       await fs.ensureDir(tempDir);
 
       const fileName = path.basename(sourcePath);

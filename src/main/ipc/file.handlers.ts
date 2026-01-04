@@ -7,7 +7,6 @@ import fs from 'fs-extra';
 import { print, getPrinters } from 'pdf-to-printer';
 import https from 'https';
 import http from 'http';
-// @ts-expect-error - adm-zip types may not be available
 import AdmZip from 'adm-zip';
 import { logger } from '../utils/logger';
 
@@ -441,11 +440,15 @@ export function registerFileHandlers(): void {
                     sumatraPath,
                   });
                   
-                  // Use SumatraPDF command-line: -print-to "printer" -print-settings "1x" "file" -silent -exit-when-done
+                  // Use SumatraPDF command-line: -print-to "printer" -print-settings "..." "file" -silent -exit-when-done
                   // Note: SumatraPDF requires the file path to be last and properly quoted
+                  // For receipt printers: if content prints left-to-right, we need to rotate 90 degrees
+                  // SumatraPDF print settings format: "portrait,1x" or we can add rotation
+                  // Try rotating 90 degrees: "portrait,1x,rotate=90" or use landscape with rotation
+                  // Alternative: use "landscape" which might work better for receipt printers
                   const sumatraCommand = targetPrinter
-                    ? `"${sumatraPath}" -print-to "${targetPrinter}" -print-settings "1x" "${filePath}" -silent -exit-when-done`
-                    : `"${sumatraPath}" -print-settings "1x" "${filePath}" -silent -exit-when-done`;
+                    ? `"${sumatraPath}" -print-to "${targetPrinter}" -print-settings "landscape,1x" "${filePath}" -silent -exit-when-done`
+                    : `"${sumatraPath}" -print-settings "landscape,1x" "${filePath}" -silent -exit-when-done`;
                   
                   logger.posReceipt('Executing SumatraPDF command', { 
                     command: sumatraCommand,

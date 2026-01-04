@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { LICENSE_SERVER_URL } from '../../utils/constants';
 import { logger } from '../../utils/logger';
-import { licenseStorage, LicenseData } from './licenseStorage';
+import { licenseStorage } from './licenseStorage';
 import { getHardwareId, getMachineName } from './hardwareFingerprint';
 import { databaseService } from '../database/database.service';
 import { licenseService } from './license.service';
@@ -432,7 +432,14 @@ export class LicenseTransferService {
       const skip = (page - 1) * pageSize;
 
       // Build where clause
-      const where: any = {};
+      const where: {
+        status?: LicenseTransferStatus;
+        licenseKey?: string;
+        initiatedAt?: {
+          gte?: Date;
+          lte?: Date;
+        };
+      } = {};
       
       if (options.status) {
         where.status = options.status;

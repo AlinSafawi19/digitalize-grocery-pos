@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import fs from 'fs-extra';
 import path from 'path';
 import { logger } from '../../utils/logger';
-import { ProductService, CreateProductInput, ProductWithRelations } from './product.service';
+import { CreateProductInput, ProductWithRelations } from './product.service';
 import { CategoryService } from '../category/category.service';
 import { SupplierService } from '../supplier/supplier.service';
 

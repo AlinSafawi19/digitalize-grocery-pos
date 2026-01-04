@@ -7,6 +7,8 @@ import { RECEIPTS_DIR } from '../../utils/constants';
 import { TransactionService, TransactionWithRelations } from '../transaction/transaction.service';
 import { SettingsService } from '../settings/settings.service';
 import { CurrencyService } from '../currency/currency.service';
+import { ReceiptTemplateService } from './receipt-template.service';
+import { UserService } from '../user/user.service';
 import { tmpdir } from 'os';
 import sharp from 'sharp';
 import moment from 'moment-timezone';
@@ -291,6 +293,8 @@ export class ReceiptService {
     arabicFont: string | null;
     englishFontPath: string | null;
     arabicFontPath: string | null;
+    englishBoldFontPath: string | null;
+    arabicBoldFontPath: string | null;
   }> {
     const windowsFontDir = path.join(process.env.SYSTEMROOT || 'C:\\Windows', 'Fonts');
     
@@ -342,11 +346,17 @@ export class ReceiptService {
           
           // If this font supports Arabic, use it for both
           if (font.supportsArabic) {
+            let boldPath: string | null = null;
+            if (font.boldPath && await fs.pathExists(font.boldPath)) {
+              boldPath = font.boldPath;
+            }
             return {
               englishFont: font.name,
               arabicFont: font.name,
               englishFontPath: font.regularPath,
               arabicFontPath: font.regularPath,
+              englishBoldFontPath: boldPath,
+              arabicBoldFontPath: boldPath,
             };
           }
         }
@@ -361,6 +371,8 @@ export class ReceiptService {
     let arabicFont: string | null = null;
     let englishFontPath: string | null = null;
     let arabicFontPath: string | null = null;
+    let englishBoldFontPath: string | null = null;
+    let arabicBoldFontPath: string | null = null;
     
     // Find English font (Arial is clearer than Courier)
     for (const font of fontConfigs) {
@@ -368,7 +380,10 @@ export class ReceiptService {
         if (!font.supportsArabic && await fs.pathExists(font.regularPath)) {
           englishFont = font.name;
           englishFontPath = font.regularPath;
-          logger.posReceipt('English font found', { fontName: font.name });
+          if (font.boldPath && await fs.pathExists(font.boldPath)) {
+            englishBoldFontPath = font.boldPath;
+          }
+          logger.posReceipt('English font found', { fontName: font.name, hasBold: !!englishBoldFontPath });
           break;
         }
       } catch (error) {
@@ -382,7 +397,10 @@ export class ReceiptService {
         if (font.supportsArabic && await fs.pathExists(font.regularPath)) {
           arabicFont = font.name;
           arabicFontPath = font.regularPath;
-          logger.posReceipt('Arabic font found', { fontName: font.name });
+          if (font.boldPath && await fs.pathExists(font.boldPath)) {
+            arabicBoldFontPath = font.boldPath;
+          }
+          logger.posReceipt('Arabic font found', { fontName: font.name, hasBold: !!arabicBoldFontPath });
           break;
         }
       } catch (error) {
@@ -394,7 +412,7 @@ export class ReceiptService {
       logger.warn('No Arabic-compatible font found, Arabic text may not render correctly');
     }
     
-    return { englishFont, arabicFont, englishFontPath, arabicFontPath };
+    return { englishFont, arabicFont, englishFontPath, arabicFontPath, englishBoldFontPath, arabicBoldFontPath };
   }
 
   /**
@@ -481,23 +499,60 @@ export class ReceiptService {
       // We need to copy fonts to where PDFKit expects them
       
       // Determine the base path - PDFKit looks relative to __dirname or process.cwd()
-      // In Electron dev mode, __dirname is typically dist-electron/main/services/receipt
-      // So we need to go up to dist-electron
+      // In production (packaged app), use app.getAppPath() + 'dist-electron'
+      // In development, find dist-electron in __dirname path
       let basePath: string;
-      if (__dirname.includes('dist-electron')) {
-        // We're in dist-electron/main/services/receipt, go up to dist-electron
-        basePath = path.resolve(__dirname, '..', '..', '..');
+      
+      if (app.isPackaged) {
+        // Production: app is packaged, use app.getAppPath() + 'dist-electron'
+        // This matches the structure in main.ts where distDir = join(app.getAppPath(), 'dist-electron')
+        basePath = path.join(app.getAppPath(), 'dist-electron');
+        logger.posReceipt('Production build detected, using app.getAppPath()', {
+          isPackaged: app.isPackaged,
+          appPath: app.getAppPath(),
+          basePath,
+        });
+      } else if (__dirname.includes('dist-electron')) {
+        // Development: find the dist-electron directory by walking up from __dirname
+        const parts = __dirname.split(path.sep);
+        const distElectronIndex = parts.findIndex(part => part === 'dist-electron');
+        if (distElectronIndex !== -1) {
+          // Reconstruct path up to and including 'dist-electron'
+          basePath = parts.slice(0, distElectronIndex + 1).join(path.sep);
+          logger.posReceipt('Found dist-electron in path (dev mode)', { 
+            __dirname, 
+            distElectronIndex, 
+            basePath,
+            parts 
+          });
+        } else {
+          // Fallback: if __dirname ends with dist-electron, use it directly
+          if (__dirname.endsWith('dist-electron')) {
+            basePath = __dirname;
+          } else {
+            // Go up 3 levels from dist-electron/main/services/receipt
+            basePath = path.resolve(__dirname, '..', '..', '..');
+          }
+          logger.posReceipt('Using fallback basePath calculation (dev mode)', { __dirname, basePath });
+        }
       } else {
         // Development or other scenario, use process.cwd()
         basePath = process.cwd();
+        logger.posReceipt('Using process.cwd() as basePath', { basePath, __dirname });
       }
       
+      // This is the exact path where PDFKit is looking (from the error message)
       const fontDataDir = path.join(basePath, 'data');
+      
+      // Ensure the directory exists before we try to copy
+      await fs.ensureDir(fontDataDir);
       
       logger.posReceipt('Ensuring font data directory', { 
         __dirname, 
         basePath, 
         fontDataDir,
+        cwd: process.cwd(),
+        appPath: app.getAppPath(),
       });
       
       // Try multiple possible locations for source font files
@@ -506,12 +561,17 @@ export class ReceiptService {
         path.join(app.getAppPath(), 'node_modules', 'pdfkit', 'js', 'data'),
         path.join(__dirname, '..', '..', '..', '..', 'node_modules', 'pdfkit', 'js', 'data'),
         path.join(basePath, '..', 'node_modules', 'pdfkit', 'js', 'data'),
+        path.join(app.getAppPath(), '..', 'node_modules', 'pdfkit', 'js', 'data'),
+        // Also try in the project root
+        path.resolve(process.cwd(), 'node_modules', 'pdfkit', 'js', 'data'),
       ];
       
       let sourceFontPath: string | null = null;
       for (const possiblePath of possibleSourcePaths) {
         const testFile = path.join(possiblePath, 'Courier.afm');
-        if (await fs.pathExists(testFile)) {
+        const exists = await fs.pathExists(testFile);
+        logger.posReceipt('Checking font source path', { possiblePath, exists });
+        if (exists) {
           sourceFontPath = possiblePath;
           logger.posReceipt('Found font source directory', { sourceFontPath });
           break;
@@ -520,31 +580,146 @@ export class ReceiptService {
       
       const distFontPath = path.join(fontDataDir, 'Courier.afm');
       
+      // PDFKit might look for fonts in multiple locations. Copy to all possible locations.
+      const possibleDestPaths = [
+        fontDataDir, // Primary location: dist-electron/data or process.cwd()/data
+      ];
+      
+      // Also try copying to where PDFKit module might be looking
+      try {
+        const pdfkitModulePath = require.resolve('pdfkit');
+        const pdfkitDir = path.dirname(pdfkitModulePath);
+        // PDFKit looks for data directory relative to its js directory
+        const pdfkitJsDir = path.dirname(pdfkitDir); // Go up from pdfkit/index.js to pdfkit/
+        const pdfkitDataDir = path.join(pdfkitJsDir, 'data');
+        possibleDestPaths.push(pdfkitDataDir);
+        logger.posReceipt('Found PDFKit module path', { 
+          pdfkitModulePath, 
+          pdfkitDir,
+          pdfkitJsDir,
+          pdfkitDataDir 
+        });
+      } catch (e) {
+        logger.warn('Could not resolve PDFKit module path', { error: e });
+      }
+      
+      // Also try the dist-electron/data location explicitly (where the error shows it's looking)
+      if (__dirname.includes('dist-electron')) {
+        const distElectronDataDir = path.join(basePath, 'data');
+        if (!possibleDestPaths.includes(distElectronDataDir)) {
+          possibleDestPaths.push(distElectronDataDir);
+        }
+      }
+      
+      // Always ensure the directory exists
+      await fs.ensureDir(fontDataDir);
+      
       // If font files don't exist in destination, copy from source
-      if (!(await fs.pathExists(distFontPath))) {
+      const fontFileExists = await fs.pathExists(distFontPath);
+      logger.posReceipt('Checking if font file exists', { distFontPath, exists: fontFileExists });
+      
+      if (!fontFileExists) {
         if (sourceFontPath) {
-          await fs.ensureDir(fontDataDir);
           // Copy essential font files
           const fontFiles = ['Courier.afm', 'Courier-Bold.afm', 'Courier-Oblique.afm', 'Courier-BoldOblique.afm'];
-          for (const fontFile of fontFiles) {
-            const src = path.join(sourceFontPath, fontFile);
-            const dest = path.join(fontDataDir, fontFile);
-            if (await fs.pathExists(src)) {
-              await fs.copy(src, dest);
-              logger.posReceipt('Copied font file', { from: src, to: dest });
+          let totalCopiedCount = 0;
+          
+          // Copy to all possible destination paths
+          for (const destDir of possibleDestPaths) {
+            await fs.ensureDir(destDir);
+            let copiedCount = 0;
+            for (const fontFile of fontFiles) {
+              const src = path.join(sourceFontPath, fontFile);
+              const dest = path.join(destDir, fontFile);
+              if (await fs.pathExists(src)) {
+                try {
+                  await fs.copy(src, dest);
+                  copiedCount++;
+                  totalCopiedCount++;
+                  logger.posReceipt('Copied font file', { from: src, to: dest, destDir });
+                } catch (copyError) {
+                  logger.warn('Failed to copy font file', { src, dest, error: copyError });
+                }
+              } else {
+                logger.warn('Font file not found in source', { src, fontFile });
+              }
+            }
+            logger.posReceipt('Copied fonts to directory', { destDir, copiedCount, totalFiles: fontFiles.length });
+          }
+          
+          if (totalCopiedCount === 0) {
+            logger.error('No font files were copied', { 
+              sourceFontPath,
+              possibleDestPaths,
+              checkedFiles: fontFiles,
+            });
+            throw new Error('No PDFKit font files could be copied. Cannot generate receipt.');
+          }
+          
+          logger.posReceipt('PDFKit font files copied to data directories', { 
+            possibleDestPaths, 
+            totalCopiedCount,
+            totalFiles: fontFiles.length,
+          });
+          
+          // Verify the main font file exists after copying in at least one location
+          let foundInAnyLocation = false;
+          for (const destDir of possibleDestPaths) {
+            const testPath = path.join(destDir, 'Courier.afm');
+            if (await fs.pathExists(testPath)) {
+              foundInAnyLocation = true;
+              logger.posReceipt('Font file verified in location', { testPath });
+              break;
             }
           }
-          logger.posReceipt('PDFKit font files copied to data directory', { fontDataDir });
+          
+          if (!foundInAnyLocation) {
+            logger.error('Font file verification failed after copy in all locations', { 
+              possibleDestPaths,
+              sourceFontPath,
+            });
+            throw new Error('Font file was not copied successfully to any location. Cannot generate receipt.');
+          }
         } else {
           logger.error('PDFKit font files not found in any expected location', { 
             basePath,
             fontDataDir,
             possibleSourcePaths,
+            checkedPaths: possibleSourcePaths.map(p => ({ path: p, exists: 'unknown' })),
           });
-          throw new Error('PDFKit font files not found. Cannot generate receipt.');
+          
+          // Last resort: Try to find PDFKit's built-in fonts and use them directly
+          // PDFKit might have fonts bundled differently in newer versions
+          logger.warn('Attempting to use PDFKit without copying fonts - may fail if fonts are required');
+          // We'll let PDFKit try to use its built-in fonts or fail with a clearer error
+          throw new Error(`PDFKit font files not found. Checked ${possibleSourcePaths.length} locations. Cannot generate receipt. Please ensure pdfkit is properly installed.`);
         }
       } else {
         logger.posReceipt('PDFKit font files already exist', { fontDataDir });
+        
+        // Verify the file is actually readable
+        try {
+          await fs.access(distFontPath, fs.constants.R_OK);
+          logger.posReceipt('Font file is readable', { distFontPath });
+        } catch (accessError) {
+          logger.error('Font file exists but is not readable', { 
+            distFontPath,
+            error: accessError,
+          });
+          // Try to re-copy
+          if (sourceFontPath) {
+            logger.warn('Attempting to re-copy font files due to access error');
+            const fontFiles = ['Courier.afm', 'Courier-Bold.afm', 'Courier-Oblique.afm', 'Courier-BoldOblique.afm'];
+            for (const fontFile of fontFiles) {
+              const src = path.join(sourceFontPath, fontFile);
+              const dest = path.join(fontDataDir, fontFile);
+              if (await fs.pathExists(src)) {
+                await fs.copy(src, dest, { overwrite: true });
+                logger.posReceipt('Re-copied font file', { from: src, to: dest });
+              }
+            }
+          }
+        }
       }
     } catch (error) {
       logger.error('Failed to ensure font data directory', { error });
@@ -555,9 +730,22 @@ export class ReceiptService {
   /**
    * Generate receipt PDF for a transaction
    */
-  static async generateReceipt(transactionId: number): Promise<string> {
+  static async generateReceipt(transactionId: number, requestedById?: number): Promise<string> {
     const startTime = Date.now();
     try {
+      // In development, ensure SumatraPDF is available on first receipt generation
+      // (In production, it's installed during app installation)
+      if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+        try {
+          // Import dynamically to avoid circular dependencies
+          const { ensureSumatraPDF } = await import('../../ipc/file.handlers');
+          await ensureSumatraPDF();
+        } catch (sumatraError) {
+          // Log but don't fail receipt generation if Sumatra check fails
+          logger.warn('Failed to ensure SumatraPDF in dev mode (non-critical)', { error: sumatraError });
+        }
+      }
+      
       // Ensure font data is available before creating PDF
       await this.ensureFontDataDir();
       
@@ -577,17 +765,48 @@ export class ReceiptService {
         total: transaction.total,
       });
 
-      // Get settings
-      const [printerSettings, storeInfo, taxConfig, exchangeRate] = await Promise.all([
-        SettingsService.getPrinterSettings(),
+      // Get settings and user info
+      const [storeInfo, taxConfig, exchangeRate, defaultTemplate, user] = await Promise.all([
         SettingsService.getStoreInfo(),
         SettingsService.getTaxConfig(),
         CurrencyService.getExchangeRate(),
+        ReceiptTemplateService.getDefault(),
+        requestedById ? UserService.getUserById(requestedById) : Promise.resolve(null),
       ]);
+      
+      // Get cashier username - use logged-in user if available, otherwise fall back to transaction cashier
+      const cashierUsername = user?.username || transaction.cashier?.username;
 
-      const paperWidth = printerSettings.paperWidth || 80;
+      // Get paper width and printer name from template, fallback to defaults
+      let paperWidth = 80;
+      let printerName = '';
+      const defaultThankYouMessage = 'Thank you for your purchase! We hope to see you again soon!';
+      let thankYouMessage = this.fixArabicTextOrder(defaultThankYouMessage);
+      let customFooterText = '';
+      
+      if (defaultTemplate) {
+        try {
+          const templateData = JSON.parse(defaultTemplate.template);
+          paperWidth = templateData.printing?.paperWidth || 80;
+          printerName = templateData.printing?.printerName || '';
+          // Extract footer messages from template and apply Arabic text fix
+          // (The template service will also apply the fix when rendering, so we need to match that)
+          if (templateData.footer?.thankYouMessage) {
+            thankYouMessage = this.fixArabicTextOrder(templateData.footer.thankYouMessage);
+          }
+          if (templateData.footer?.customText) {
+            // Apply Arabic fix to each line of custom footer text (handles multi-line)
+            const customTextLines = templateData.footer.customText.split('\n');
+            const fixedCustomTextLines = customTextLines.map((line: string) => this.fixArabicTextOrder(line));
+            customFooterText = fixedCustomTextLines.join('\n');
+          }
+        } catch (error) {
+          logger.warn('Failed to parse template data, using defaults', { error });
+        }
+      }
       logger.posReceipt('Settings loaded for receipt', {
         paperWidth,
+        printerName: printerName || 'default',
         storeName: storeInfo.name,
         hasLogo: !!storeInfo.logo,
         logoLength: storeInfo.logo?.length || 0,
@@ -626,14 +845,15 @@ export class ReceiptService {
       // Convert mm to points (1mm = 2.83465 points)
       const pageWidth = paperWidth * 2.83465;
       
-      // Generate hardcoded receipt content
-      const renderedTemplate = this.generateReceiptContent(
+      // Generate receipt content using template
+      const renderedTemplate = await ReceiptTemplateService.renderReceipt(
+        defaultTemplate?.id || null,
         storeInfo,
         transaction,
         exchangeRate,
         taxConfig.defaultTaxRate,
         paperWidth,
-        taxConfig.taxInclusive || false
+        cashierUsername
       );
       
       // Log receipt content for debugging
@@ -667,7 +887,7 @@ export class ReceiptService {
           if (trimmedLine === storeNameForHeight) {
             lineHeight = 16.8; // Font size 14: 14 * 1.2 line height
           } else if (trimmedLine.startsWith('Total USD:') || trimmedLine.startsWith('Total LBP:')) {
-            lineHeight = 14.4; // Font size 12: 12 * 1.2 line height
+            lineHeight = 14.4; // Font size 12: 12 * 1.2 line height (reduced from 16)
           }
           estimatedContentHeight += lineHeight;
           estimatedContentHeight += 0.3; // Very minimal spacing between lines
@@ -679,10 +899,14 @@ export class ReceiptService {
       const bottomMargin = 1;
       estimatedContentHeight += topMargin + bottomMargin;
       
-      // Use calculated height with absolute minimal safety margin (only 1% to account for rounding)
+      // Add extra space for footer to ensure "Powered by" and website are always visible
+      // Add approximately 2-3 lines worth of space (footer lines + spacing)
+      estimatedContentHeight += 30; // Extra space for footer (approximately 2-3 lines)
+      
+      // Use calculated height with safety margin (5% to account for rounding and ensure footer is visible)
       const minHeight = 20 * 2.83465; // 20mm minimum (absolute minimum for safety)
       const maxHeight = 297 * 2.83465; // A4 max (in case content is very long)
-      const calculatedHeight = Math.max(minHeight, Math.min(maxHeight, estimatedContentHeight * 1.01));
+      const calculatedHeight = Math.max(minHeight, Math.min(maxHeight, estimatedContentHeight * 1.05));
       
       logger.posReceipt('Page height calculation', {
         transactionId,
@@ -702,16 +926,52 @@ export class ReceiptService {
       const arabicFontName = fontInfo.arabicFont;
       const englishFontPath = fontInfo.englishFontPath;
       const arabicFontPath = fontInfo.arabicFontPath;
+      const englishBoldFontPath = fontInfo.englishBoldFontPath;
+      const arabicBoldFontPath = fontInfo.arabicBoldFontPath;
+
+      // Final check: Ensure font file exists before creating PDFDocument
+      // PDFKit will try to access Courier.afm when creating the document
+      // Determine basePath again (same logic as in ensureFontDataDir)
+      let finalBasePath: string;
+      if (app.isPackaged) {
+        // Production: use app.getAppPath() + 'dist-electron'
+        finalBasePath = path.join(app.getAppPath(), 'dist-electron');
+      } else if (__dirname.includes('dist-electron')) {
+        const parts = __dirname.split(path.sep);
+        const distElectronIndex = parts.findIndex(part => part === 'dist-electron');
+        if (distElectronIndex !== -1) {
+          finalBasePath = parts.slice(0, distElectronIndex + 1).join(path.sep);
+        } else if (__dirname.endsWith('dist-electron')) {
+          finalBasePath = __dirname;
+        } else {
+          finalBasePath = path.resolve(__dirname, '..', '..', '..');
+        }
+      } else {
+        finalBasePath = process.cwd();
+      }
+      const finalFontCheckPath = path.join(finalBasePath, 'data', 'Courier.afm');
+      if (!(await fs.pathExists(finalFontCheckPath))) {
+        logger.error('Font file missing before PDFDocument creation', { 
+          finalFontCheckPath,
+          finalBasePath,
+          __dirname,
+        });
+        // This shouldn't happen if ensureFontDataDir worked, but just in case
+        throw new Error(`Font file not found at ${finalFontCheckPath}. Receipt generation cannot proceed. Please check that PDFKit fonts were copied successfully.`);
+      }
+      logger.posReceipt('Font file verified before PDFDocument creation', { finalFontCheckPath });
 
       // Create PDF document with settings-based paper width and calculated height
       // Use 'Courier' in constructor (built-in font) to prevent PDFKit from trying to load font files
       // We'll register and switch to custom fonts after document creation
       // Absolute minimal margins for receipt printing - especially top margin to avoid whitespace
+      // Use portrait orientation (normal dimensions) for receipt printers that print top-to-bottom
+      // This ensures text flows vertically (top-to-bottom) instead of horizontally (left-to-right)
       const doc = new PDFDocument({
-        size: [pageWidth, calculatedHeight],
+        size: [pageWidth, calculatedHeight], // [width, height] - portrait orientation for top-to-bottom printing
         margins: {
-          top: 1,    // Absolute minimal top margin for receipt printing
-          bottom: 1, // Absolute minimal bottom margin
+          top: 1,    // Minimal top margin
+          bottom: 1, // Minimal bottom margin  
           left: 10,  // Small left margin
           right: 10, // Small right margin
         },
@@ -730,12 +990,34 @@ export class ReceiptService {
         }
       }
       
+      // Register bold English font if available
+      if (englishBoldFontPath && englishFont !== 'Courier') {
+        try {
+          const boldFontName = `${englishFont}-Bold`;
+          doc.registerFont(boldFontName, englishBoldFontPath);
+          logger.posReceipt('English bold font registered in document', { fontName: boldFontName, fontPath: englishBoldFontPath });
+        } catch (error) {
+          logger.warn('Failed to register English bold font in document', { fontPath: englishBoldFontPath, error });
+        }
+      }
+      
       if (arabicFontPath && arabicFontName && arabicFontName !== englishFont) {
         try {
           doc.registerFont(arabicFontName, arabicFontPath);
           logger.posReceipt('Arabic font registered in document', { fontName: arabicFontName, fontPath: arabicFontPath });
         } catch (error) {
           logger.error('Failed to register Arabic font in document', { fontName: arabicFontName, fontPath: arabicFontPath, error });
+        }
+      }
+      
+      // Register bold Arabic font if available
+      if (arabicBoldFontPath && arabicFontName && arabicFontName !== englishFont) {
+        try {
+          const boldFontName = `${arabicFontName}-Bold`;
+          doc.registerFont(boldFontName, arabicBoldFontPath);
+          logger.posReceipt('Arabic bold font registered in document', { fontName: boldFontName, fontPath: arabicBoldFontPath });
+        } catch (error) {
+          logger.warn('Failed to register Arabic bold font in document', { fontPath: arabicBoldFontPath, error });
         }
       }
       
@@ -757,6 +1039,7 @@ export class ReceiptService {
       doc.pipe(stream);
 
       // Start at the top margin (no extra spacing)
+      // With portrait orientation, text flows naturally top-to-bottom
       doc.y = doc.page.margins.top;
 
       // Add logo to PDF if available (always add if logo exists, not just if placeholder is in template)
@@ -1005,30 +1288,20 @@ export class ReceiptService {
       const storeAddress = storeInfo.address || '';
       const storePhone = storeInfo.phone || '';
       
-      // Footer messages to center
-      const thankYouMessage = 'Thank you for your purchase! We hope to see you again soon!';
+      // Footer messages to center (thankYouMessage and customFooterText are extracted from template above)
       const poweredByMessage = 'Powered by DigitalizePOS';
       const websiteMessage = 'www.digitalizepos.com';
       
+      // Render all lines - page height is calculated to accommodate all content
+      // No need to check page bounds since the height calculation accounts for all lines
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const isLastLine = i === lines.length - 1;
         
-        // Check if we're still within page bounds
-        if (doc.y > calculatedHeight - doc.page.margins.bottom - 20) {
-          logger.warn('Content exceeds page height, stopping rendering', {
-            transactionId,
-            currentY: doc.y,
-            pageHeight: calculatedHeight,
-            lineIndex: i,
-          });
-          break;
-        }
-        
         if (line.trim() === '') {
-          // Only add minimal spacing for empty lines if not at the end
+          // Add proper spacing for empty lines to create section breaks
           if (!isLastLine) {
-            doc.moveDown(0.05);
+            doc.moveDown(0.3); // Increased spacing for section breaks
           }
           continue;
         }
@@ -1038,10 +1311,13 @@ export class ReceiptService {
           const currentY = doc.y;
           const leftMargin = doc.page.margins.left;
           const rightMargin = doc.page.margins.right;
-          doc.moveTo(leftMargin, currentY).lineTo(pageWidth - rightMargin, currentY).stroke();
+          // With portrait orientation, page width is the narrow dimension
+          const pageWidthForLine = doc.page.width;
+          doc.moveTo(leftMargin, currentY).lineTo(pageWidthForLine - rightMargin, currentY).stroke();
           doc.moveDown(0.1);
         } else {
           // Check if this line should be centered
+          // Note: trimmedLine was already defined above for the page bounds check, but we redefine it here for clarity
           const trimmedLine = line.trim();
           const isStoreNameLine = trimmedLine === storeName;
           const isStoreAddressLine = storeAddress && trimmedLine === storeAddress;
@@ -1049,42 +1325,86 @@ export class ReceiptService {
           const isExchangeRateLine = trimmedLine.startsWith('Our exchange rate is');
           const isVATRateLine = trimmedLine.startsWith('VAT ');
           const isThankYouLine = trimmedLine === thankYouMessage;
+          // Check if line is part of custom footer text (handles both single-line and multi-line custom text)
+          const isCustomFooterLine = customFooterText ? 
+            customFooterText.split('\n').map(t => t.trim()).includes(trimmedLine) : false;
           const isCashierLine = trimmedLine.startsWith('You have been assisted by');
           const isPoweredByLine = trimmedLine === poweredByMessage;
           const isWebsiteLine = trimmedLine === websiteMessage;
           const isTotalUSDLine = trimmedLine.startsWith('Total USD:');
           const isTotalLBPLine = trimmedLine.startsWith('Total LBP:');
           const shouldCenter = isStoreNameLine || isStoreAddressLine || isStorePhoneLine || 
-                              isExchangeRateLine || isVATRateLine || isThankYouLine || isCashierLine || isPoweredByLine || isWebsiteLine;
+                              isExchangeRateLine || isVATRateLine || isThankYouLine || isCustomFooterLine || isCashierLine || isPoweredByLine || isWebsiteLine;
           
           // Switch font based on whether line contains Arabic
           // Use Arabic font for lines with Arabic (if registered), otherwise use English font
-          if (arabicFontPath && arabicFontName && this.containsArabic(line)) {
+          // For totals, use bold font if available
+          if (isTotalUSDLine || isTotalLBPLine) {
+            // Use bold font for totals if available
+            if (arabicFontPath && arabicFontName && this.containsArabic(line)) {
+              const boldFontName = `${arabicFontName}-Bold`;
+              if (arabicBoldFontPath) {
+                try {
+                  doc.font(boldFontName);
+                } catch {
+                  doc.font(arabicFontName);
+                }
+              } else {
+                doc.font(arabicFontName);
+              }
+            } else {
+              const boldFontName = `${effectiveEnglishFont}-Bold`;
+              if (englishBoldFontPath) {
+                try {
+                  doc.font(boldFontName);
+                } catch {
+                  doc.font(effectiveEnglishFont);
+                }
+              } else {
+                doc.font(effectiveEnglishFont);
+              }
+            }
+          } else if (arabicFontPath && arabicFontName && this.containsArabic(line)) {
             doc.font(arabicFontName);
           } else {
             // Use the configured English font (clearer than Courier) or fall back to Courier
             doc.font(effectiveEnglishFont);
           }
           
-          // Make store name and totals bigger
+          // Make store name bigger, totals slightly bigger
           if (isStoreNameLine) {
             doc.fontSize(14); // Larger size for store name
           } else if (isTotalUSDLine || isTotalLBPLine) {
-            doc.fontSize(12); // Larger size for Total USD and Total LBP
+            doc.fontSize(12); // Slightly bigger size for Total USD and Total LBP (reduced from 16)
           } else {
             doc.fontSize(9); // Regular size for other text
           }
           
           // Render line - use text() method that automatically advances Y position
           // Center store info, exchange/VAT rate messages, thank you message, and powered by message; left-align everything else
+          // With portrait orientation: doc.page.width = pageWidth (narrow dimension), doc.page.height = calculatedHeight (long dimension)
+          // Text width is limited by the page width (narrow dimension)
+          const textWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+          
+          // Ensure text doesn't get cut off - use the full available width
           doc.text(line, {
-            width: pageWidth - doc.page.margins.left - doc.page.margins.right,
+            width: textWidth,
             align: shouldCenter ? 'center' : 'left',
+            ellipsis: false, // Don't truncate text with ellipsis
+            lineGap: 0, // No extra line gap
           });
           
-          // Reset font size after store name or totals
+          // Reset font size and font weight after store name or totals
           if (isStoreNameLine || isTotalUSDLine || isTotalLBPLine) {
             doc.fontSize(9);
+            // Reset to regular font after totals
+            if (isTotalUSDLine || isTotalLBPLine) {
+              if (arabicFontPath && arabicFontName && this.containsArabic(line)) {
+                doc.font(arabicFontName);
+              } else {
+                doc.font(effectiveEnglishFont);
+              }
+            }
           }
           
           // Move down for next line (text() already advances Y, but we add absolute minimal spacing)
@@ -1094,11 +1414,21 @@ export class ReceiptService {
         }
       }
       
+      // Verify that footer lines were rendered
+      const renderedContent = renderedTemplate;
+      const hasPoweredBy = renderedContent.includes('Powered by DigitalizePOS');
+      const hasWebsite = renderedContent.includes('www.digitalizepos.com');
+      const lastFewLines = lines.slice(Math.max(0, lines.length - 5));
+      
       logger.posReceipt('Receipt rendering completed', {
         transactionId,
         finalY: doc.y,
         pageHeight: calculatedHeight,
         contentHeight: doc.y - doc.page.margins.top,
+        totalLines: lines.length,
+        hasPoweredBy,
+        hasWebsite,
+        lastFewLines: lastFewLines.map(l => l.trim()),
       });
 
       // Finalize PDF
@@ -1241,5 +1571,6 @@ export class ReceiptService {
     }
   }
 }
+
 
 

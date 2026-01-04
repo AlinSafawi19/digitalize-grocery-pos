@@ -8,7 +8,6 @@ import {
 } from '../services/product/product.service';
 import { ProductImportExportService } from '../services/product/product-import-export.service';
 import path from 'path';
-import fs from 'fs-extra';
 
 /**
  * Register product management IPC handlers

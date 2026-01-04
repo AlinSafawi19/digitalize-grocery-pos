@@ -13,7 +13,6 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Alert,
   CircularProgress,
   Autocomplete,
   Select,
@@ -23,12 +22,11 @@ import {
 } from '@mui/material';
 import { Add, Delete, ArrowBack } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../store';
 import {
   StockTransferService,
   CreateStockTransferInput,
-  StockTransfer,
 } from '../../services/stock-transfer.service';
 import { LocationService, Location } from '../../services/location.service';
 import { ProductService, Product } from '../../services/product.service';
@@ -45,9 +43,8 @@ interface StockTransferItemInput {
 
 const StockTransferForm: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { showToast } = useToast();
+  const { toast, showToast, hideToast } = useToast();
 
   const [loading, setLoading] = useState(false);
   const [fromLocationId, setFromLocationId] = useState<number | null>(null);
@@ -75,15 +72,16 @@ const StockTransferForm: React.FC = () => {
   }, [user?.id]);
 
   const loadProducts = useCallback(async (search: string) => {
+    if (!user?.id) return;
     try {
-      const result = await ProductService.getList({ search, page: 1, pageSize: 50 });
+      const result = await ProductService.getProducts({ search, page: 1, pageSize: 50 }, user.id);
       if (result.success && result.products) {
         setProducts(result.products);
       }
     } catch (error) {
       console.error('Error loading products', error);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadLocations();
@@ -103,7 +101,7 @@ const StockTransferForm: React.FC = () => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof StockTransferItemInput, value: any) => {
+  const handleItemChange = (index: number, field: keyof StockTransferItemInput, value: string | number | null) => {
     const newItems = [...items];
     if (field === 'productId') {
       const product = products.find((p) => p.id === value);
@@ -338,7 +336,7 @@ const StockTransferForm: React.FC = () => {
           </Grid>
         </Paper>
 
-        <Toast />
+        <Toast toast={toast} onClose={hideToast} />
       </Box>
     </MainLayout>
   );

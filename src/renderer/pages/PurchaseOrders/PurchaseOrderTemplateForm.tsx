@@ -16,19 +16,17 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
-  Tooltip,
   FormControlLabel,
   Checkbox,
 } from '@mui/material';
 import { Add, Delete, ArrowBack } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { RootState } from '../../store';
 import {
   PurchaseOrderTemplateService,
   CreatePurchaseOrderTemplateInput,
   UpdatePurchaseOrderTemplateInput,
-  PurchaseOrderTemplate,
 } from '../../services/purchase-order-template.service';
 import { SupplierService } from '../../services/supplier.service';
 import { ProductService, Supplier, Product } from '../../services/product.service';
@@ -56,14 +54,12 @@ interface TemplateItemInput {
 const PurchaseOrderTemplateForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const location = useLocation();
   const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
 
   const [loading, setLoading] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [template, setTemplate] = useState<PurchaseOrderTemplate | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     supplierId?: string;
@@ -95,7 +91,6 @@ const PurchaseOrderTemplateForm: React.FC = () => {
       PurchaseOrderTemplateService.getById(parseInt(id))
         .then((result) => {
           if (result.success && result.template) {
-            setTemplate(result.template);
             setName(result.template.name);
             setDescription(result.template.description || '');
             setSupplierId(result.template.supplierId);
@@ -243,18 +238,18 @@ const PurchaseOrderTemplateForm: React.FC = () => {
   }, []);
 
   const handleItemChange = useCallback(
-    (index: number, field: keyof TemplateItemInput, value: any) => {
+    (index: number, field: keyof TemplateItemInput, value: string | number | null) => {
       setItems((prev) => {
         const newItems = [...prev];
         const item = { ...newItems[index] };
 
         if (field === 'productId') {
           const product = products.find((p) => p.id === value);
-          item.productId = value;
+          item.productId = value as number | null;
           item.productName = product?.name || '';
           item.unitPrice = product?.costPrice || item.unitPrice || 0;
         } else {
-          (item as any)[field] = value;
+          (item as Record<string, unknown>)[field] = value;
         }
 
         item.subtotal = item.quantity * item.unitPrice;
@@ -483,7 +478,7 @@ const PurchaseOrderTemplateForm: React.FC = () => {
 
           {items.length === 0 ? (
             <Alert severity="info">
-              No items added yet. Click "Add Item" to start building your template.
+              No items added yet. Click &quot;Add Item&quot; to start building your template.
             </Alert>
           ) : (
             <TableContainer>

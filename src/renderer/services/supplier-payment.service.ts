@@ -1,5 +1,4 @@
 import {
-  SupplierPaymentService as MainSupplierPaymentService,
   CreateSupplierPaymentInput,
   UpdateSupplierPaymentInput,
   SupplierPaymentListOptions,

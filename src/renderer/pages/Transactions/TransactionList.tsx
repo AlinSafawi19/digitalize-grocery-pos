@@ -25,7 +25,7 @@ import { RootState } from '../../store';
 import { TransactionService, Transaction, TransactionListOptions } from '../../services/transaction.service';
 import { UserService, User } from '../../services/user.service';
 import { ReceiptService } from '../../services/receipt.service';
-import { SettingsService } from '../../services/settings.service';
+import { ReceiptTemplateService } from '../../services/receipt-template.service';
 import MainLayout from '../../components/layout/MainLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { formatLBPCurrency } from '../../utils/currency';
@@ -541,9 +541,17 @@ const TransactionList: React.FC = () => {
 
     setReprintingReceipt(transaction.id);
     try {
-      // Get printer settings
-      const printerResult = await SettingsService.getPrinterSettings(user.id);
-      const printerName = printerResult.printerSettings?.printerName;
+      // Get printer name from receipt template
+      const templateResult = await ReceiptTemplateService.getDefaultTemplate();
+      let printerName: string | undefined = undefined;
+      if (templateResult.success && templateResult.template) {
+        try {
+          const templateData = ReceiptTemplateService.parseTemplate(templateResult.template.template);
+          printerName = templateData.printing?.printerName || undefined;
+        } catch (error) {
+          console.error('Failed to parse template for printer name:', error);
+        }
+      }
 
       const result = await ReceiptService.reprintReceipt(
         transaction.id,

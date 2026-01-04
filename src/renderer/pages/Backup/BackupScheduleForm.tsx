@@ -82,6 +82,20 @@ export default function BackupScheduleForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const loadExternalDrives = useCallback(async () => {
+    setLoadingDrives(true);
+    try {
+      const result = await BackupService.getAvailableExternalDrives();
+      if (result.success && result.drives) {
+        setExternalDrives(result.drives.filter(d => d.isWritable));
+      }
+    } catch (error) {
+      console.error('Error loading external drives:', error);
+    } finally {
+      setLoadingDrives(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (open) {
       loadExternalDrives();
@@ -112,21 +126,7 @@ export default function BackupScheduleForm({
       }
       setErrors({});
     }
-  }, [open, editingSchedule]);
-
-  const loadExternalDrives = useCallback(async () => {
-    setLoadingDrives(true);
-    try {
-      const result = await BackupService.getAvailableExternalDrives();
-      if (result.success && result.drives) {
-        setExternalDrives(result.drives.filter(d => d.isWritable));
-      }
-    } catch (error) {
-      console.error('Error loading external drives:', error);
-    } finally {
-      setLoadingDrives(false);
-    }
-  }, []);
+  }, [open, editingSchedule, loadExternalDrives]);
 
   const handleSelectDestination = useCallback(async () => {
     const destinationPath = await showFolderDialog(

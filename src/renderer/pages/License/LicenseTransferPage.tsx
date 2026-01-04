@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -31,15 +31,13 @@ import {
   TransferWithinAStation,
   CheckCircle,
   Cancel,
-  Error as ErrorIcon,
   ContentCopy as CopyIcon,
   Check as CheckIcon,
   Refresh,
-  Delete,
 } from '@mui/icons-material';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { AppDispatch, RootState } from '../../store';
+import { RootState } from '../../store';
 import { ROUTES } from '../../utils/constants';
 import MainLayout from '../../components/layout/MainLayout';
 import { formatDate } from '../../utils/dateUtils';
@@ -54,7 +52,6 @@ import {
 } from '../../services/license-transfer.service';
 
 export default function LicenseTransferPage() {
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
@@ -402,7 +399,7 @@ export default function LicenseTransferPage() {
                       <TableCell>
                         <Chip
                           label={formatStatus(transfer.status)}
-                          color={getStatusColor(transfer.status) as any}
+                          color={getStatusColor(transfer.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                           size="small"
                         />
                       </TableCell>
@@ -560,12 +557,7 @@ export default function LicenseTransferPage() {
           </DialogActions>
         </Dialog>
 
-        <Toast
-          open={toast.open}
-          message={toast.message}
-          severity={toast.severity}
-          onClose={hideToast}
-        />
+        <Toast toast={toast} onClose={hideToast} />
       </Box>
     </MainLayout>
   );

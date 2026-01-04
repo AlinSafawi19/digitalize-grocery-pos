@@ -73,7 +73,6 @@ const LogsPage = lazy(() => import('./pages/Logs/LogsPage'));
 const LogDetails = lazy(() => import('./pages/Logs/LogDetails'));
 const CashierList = lazy(() => import('./pages/Cashiers/CashierList'));
 const SystemMaintenancePage = lazy(() => import('./pages/System/SystemMaintenance'));
-const ReceiptTemplateList = lazy(() => import('./pages/Receipts/ReceiptTemplateList'));
 const ReceiptTemplateEditor = lazy(() => import('./pages/Receipts/ReceiptTemplateEditor'));
 const AlertRuleList = lazy(() => import('./pages/Alerts/AlertRuleList'));
 const AlertHistory = lazy(() => import('./pages/Alerts/AlertHistory'));
@@ -985,14 +984,6 @@ function AppContent() {
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />
             )
-          }
-        />
-        <Route
-          path={ROUTES.RECEIPT_TEMPLATES}
-          element={
-            <ProtectedRoute>
-              <ReceiptTemplateList />
-            </ProtectedRoute>
           }
         />
         <Route

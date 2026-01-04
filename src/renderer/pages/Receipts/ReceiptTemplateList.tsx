@@ -39,7 +39,11 @@ import Toast from '../../components/common/Toast';
 import MainLayout from '../../components/layout/MainLayout';
 import { formatDate } from '../../utils/formatters';
 
-const ReceiptTemplateList: React.FC = () => {
+interface ReceiptTemplateListProps {
+  skipLayout?: boolean;
+}
+
+const ReceiptTemplateList: React.FC<ReceiptTemplateListProps> = ({ skipLayout = false }) => {
   const navigate = useNavigate();
   const userId = useSelector((state: RootState) => state.auth.user?.id);
   const { toast, showToast, hideToast } = useToast();
@@ -51,6 +55,18 @@ const ReceiptTemplateList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<ReceiptTemplate | null>(null);
+
+  // Check if a template can be deleted
+  const canDeleteTemplate = (template: ReceiptTemplate): boolean => {
+    // Can delete if not default, or if there are other templates with the same name (duplicates)
+    if (!template.isDefault) {
+      return true;
+    }
+    
+    // Check if there are other templates with the same name
+    const duplicateCount = templates.filter(t => t.name === template.name && t.id !== template.id).length;
+    return duplicateCount > 0 || templates.length > 1;
+  };
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -139,31 +155,34 @@ const ReceiptTemplateList: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <MainLayout>
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-          <CircularProgress />
-        </Box>
-      </MainLayout>
-    );
-  }
-
-  return (
-    <MainLayout>
-      <Box sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
-            Receipt Templates
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => navigate('/receipts/templates/new')}
-          >
-            New Template
-          </Button>
-        </Box>
+  const content = (
+    <>
+      <Box sx={{ p: skipLayout ? 0 : 3 }}>
+        {!skipLayout && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h4" component="h1">
+              Receipt Templates
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate('/receipts/templates/new')}
+            >
+              New Template
+            </Button>
+          </Box>
+        )}
+        {skipLayout && (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate('/receipts/templates/new')}
+            >
+              New Template
+            </Button>
+          </Box>
+        )}
 
         {templates.length === 0 ? (
           <Alert severity="info">
@@ -255,12 +274,21 @@ const ReceiptTemplateList: React.FC = () => {
                             <ContentCopy />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete">
+                        <Tooltip title={canDeleteTemplate(template) ? "Delete" : "Cannot delete default template"}>
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteClick(template)}
                             color="error"
-                            disabled={template.isDefault}
+                            disabled={!canDeleteTemplate(template)}
+                            sx={{
+                              color: '#d32f2f',
+                              '&:hover': {
+                                backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                              },
+                              '&.Mui-disabled': {
+                                color: 'rgba(211, 47, 47, 0.26)',
+                              },
+                            }}
                           >
                             <Delete />
                           </IconButton>
@@ -304,8 +332,19 @@ const ReceiptTemplateList: React.FC = () => {
       </Dialog>
 
       <Toast toast={toast} onClose={hideToast} />
-    </MainLayout>
+    </>
   );
+
+  if (loading) {
+    const loadingContent = (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+    return skipLayout ? loadingContent : <MainLayout>{loadingContent}</MainLayout>;
+  }
+
+  return skipLayout ? content : <MainLayout>{content}</MainLayout>;
 };
 
 export default ReceiptTemplateList;

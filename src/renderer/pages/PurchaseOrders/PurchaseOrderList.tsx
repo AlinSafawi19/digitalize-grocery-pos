@@ -459,27 +459,29 @@ const PurchaseOrderList: React.FC = () => {
               </span>
             </Tooltip>
             {canCreate && (
-              <Tooltip title="New Purchase Order - Create a new purchase order to order products from a supplier.">
-                <Button
-                  variant="contained"
-                  startIcon={<Add sx={{ fontSize: '18px' }} />}
-                  onClick={handleAddPurchaseOrder}
-                  color="primary"
-                  sx={addButtonSx}
-                >
-                  New Purchase Order
-                </Button>
-              </Tooltip>
-              <Tooltip title="Manage Templates - Create and manage reusable purchase order templates.">
-                <Button
-                  variant="outlined"
-                  startIcon={<FileCopy sx={{ fontSize: '18px' }} />}
-                  onClick={handleManageTemplates}
-                  sx={addButtonSx}
-                >
-                  Templates
-                </Button>
-              </Tooltip>
+              <>
+                <Tooltip title="New Purchase Order - Create a new purchase order to order products from a supplier.">
+                  <Button
+                    variant="contained"
+                    startIcon={<Add sx={{ fontSize: '18px' }} />}
+                    onClick={handleAddPurchaseOrder}
+                    color="primary"
+                    sx={addButtonSx}
+                  >
+                    New Purchase Order
+                  </Button>
+                </Tooltip>
+                <Tooltip title="Manage Templates - Create and manage reusable purchase order templates.">
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileCopy sx={{ fontSize: '18px' }} />}
+                    onClick={handleManageTemplates}
+                    sx={addButtonSx}
+                  >
+                    Templates
+                  </Button>
+                </Tooltip>
+              </>
             )}
           </Box>
         </Box>
