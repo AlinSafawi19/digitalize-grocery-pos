@@ -32,14 +32,18 @@ import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { usePermission } from '../../hooks/usePermission';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
+import { usePermission } from '../../hooks/usePermission';
 
 const BarcodeLabelTemplateList: React.FC = () => {
   const { toast, showToast, hideToast } = useToast();
   const navigate = useNavigate();
-  const canManage = usePermission('barcode.manage');
+
+  // Permission checks
+  const canCreate = usePermission('barcode_labels.create');
+  const canUpdate = usePermission('barcode_labels.update');
+  const canDelete = usePermission('barcode_labels.delete');
 
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<BarcodeLabelTemplate[]>([]);
@@ -147,16 +151,6 @@ const BarcodeLabelTemplateList: React.FC = () => {
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
-  if (!canManage) {
-    return (
-      <MainLayout>
-        <Box sx={containerBoxSx}>
-          <Typography>You don&apos;t have permission to manage barcode label templates.</Typography>
-        </Box>
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
       <Box sx={containerBoxSx}>
@@ -171,13 +165,15 @@ const BarcodeLabelTemplateList: React.FC = () => {
             >
               Refresh
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleAdd}
-            >
-              Add Template
-            </Button>
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleAdd}
+              >
+                Add Template
+              </Button>
+            )}
           </Box>
         </Box>
 
@@ -196,13 +192,13 @@ const BarcodeLabelTemplateList: React.FC = () => {
                       <TableCell>Size</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Default</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      {(canUpdate || canDelete) && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {templates.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center">
+                        <TableCell colSpan={(canUpdate || canDelete) ? 5 : 4} align="center">
                           <Typography>No templates found</Typography>
                         </TableCell>
                       </TableRow>
@@ -240,18 +236,24 @@ const BarcodeLabelTemplateList: React.FC = () => {
                               </IconButton>
                             )}
                           </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="Edit">
-                              <IconButton onClick={() => handleEdit(template)} size="small">
-                                <Edit />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton onClick={() => handleDelete(template)} size="small" color="error">
-                                <Delete />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
+                          {(canUpdate || canDelete) && (
+                            <TableCell align="right">
+                              {canUpdate && (
+                                <Tooltip title="Edit">
+                                  <IconButton onClick={() => handleEdit(template)} size="small">
+                                    <Edit />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {canDelete && (
+                                <Tooltip title="Delete">
+                                  <IconButton onClick={() => handleDelete(template)} size="small" color="error">
+                                    <Delete />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Grid, TextField, InputAdornment, Paper, Button, ButtonGroup, IconButton, Menu, MenuItem, Typography, Tooltip, useMediaQuery, useTheme } from '@mui/material';
-import { Search, QrCodeScanner, Home, Menu as MenuIcon, Dashboard, Inventory, Category, LocalShipping, Receipt, Warehouse, ShoppingCart as ShoppingCartIcon, LocalOffer, Assessment, Analytics, History, Settings, Backup, VpnKey, People, AccountBalanceWallet, ChatBubble as MessageCircle, SwapHoriz, QrCode, Notifications as NotificationsIcon } from '@mui/icons-material';
+import { Search, QrCodeScanner, Home, Menu as MenuIcon, Inventory, Category, LocalShipping, Receipt, Warehouse, ShoppingCart as ShoppingCartIcon, LocalOffer, Assessment, Analytics, History, Settings, Backup, VpnKey, People, AccountBalanceWallet, ChatBubble as MessageCircle, SwapHoriz, QrCode, Notifications as NotificationsIcon, Build, AccountCircle } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
@@ -39,6 +39,11 @@ const POSPage: React.FC = () => {
   const [processingCheckout, setProcessingCheckout] = useState(false);
   const [transactionType, setTransactionType] = useState<TransactionType>('sale');
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [alertsSubmenuEl, setAlertsSubmenuEl] = useState<null | HTMLElement>(null);
+  const [reportsSubmenuEl, setReportsSubmenuEl] = useState<null | HTMLElement>(null);
+  const [inventorySubmenuEl, setInventorySubmenuEl] = useState<null | HTMLElement>(null);
+  const [purchasingSubmenuEl, setPurchasingSubmenuEl] = useState<null | HTMLElement>(null);
+  const [systemSubmenuEl, setSystemSubmenuEl] = useState<null | HTMLElement>(null);
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
   const [taxRate, setTaxRate] = useState<number>(0);
   const [taxInclusive, setTaxInclusive] = useState<boolean>(false);
@@ -62,6 +67,9 @@ const POSPage: React.FC = () => {
   const canAccessReports = useRoutePermission(ROUTES.REPORTS);
   const canAccessAnalytics = useRoutePermission(ROUTES.ANALYTICS);
   const canAccessSettings = useRoutePermission(ROUTES.SETTINGS);
+  const canAccessNotifications = useRoutePermission(ROUTES.NOTIFICATIONS);
+  const canAccessAlertRules = useRoutePermission(ROUTES.ALERT_RULES);
+  const canAccessAlertHistory = useRoutePermission(ROUTES.ALERT_HISTORY);
 
   // Sync cart transaction type with local state on mount
   useEffect(() => {
@@ -139,6 +147,76 @@ const POSPage: React.FC = () => {
 
   const handleMenuClose = useCallback(() => {
     setMenuAnchorEl(null);
+    setAlertsSubmenuEl(null);
+    setReportsSubmenuEl(null);
+    setInventorySubmenuEl(null);
+    setPurchasingSubmenuEl(null);
+    setSystemSubmenuEl(null);
+  }, []);
+
+  const handleAlertsSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (alertsSubmenuEl) {
+      setAlertsSubmenuEl(null);
+    } else {
+      setAlertsSubmenuEl(event.currentTarget);
+    }
+  }, [alertsSubmenuEl]);
+
+  const handleAlertsSubmenuClose = useCallback(() => {
+    setAlertsSubmenuEl(null);
+  }, []);
+
+  const handleReportsSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (reportsSubmenuEl) {
+      setReportsSubmenuEl(null);
+    } else {
+      setReportsSubmenuEl(event.currentTarget);
+    }
+  }, [reportsSubmenuEl]);
+
+  const handleReportsSubmenuClose = useCallback(() => {
+    setReportsSubmenuEl(null);
+  }, []);
+
+  const handleInventorySubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (inventorySubmenuEl) {
+      setInventorySubmenuEl(null);
+    } else {
+      setInventorySubmenuEl(event.currentTarget);
+    }
+  }, [inventorySubmenuEl]);
+
+  const handleInventorySubmenuClose = useCallback(() => {
+    setInventorySubmenuEl(null);
+  }, []);
+
+  const handlePurchasingSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (purchasingSubmenuEl) {
+      setPurchasingSubmenuEl(null);
+    } else {
+      setPurchasingSubmenuEl(event.currentTarget);
+    }
+  }, [purchasingSubmenuEl]);
+
+  const handlePurchasingSubmenuClose = useCallback(() => {
+    setPurchasingSubmenuEl(null);
+  }, []);
+
+  const handleSystemSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (systemSubmenuEl) {
+      setSystemSubmenuEl(null);
+    } else {
+      setSystemSubmenuEl(event.currentTarget);
+    }
+  }, [systemSubmenuEl]);
+
+  const handleSystemSubmenuClose = useCallback(() => {
+    setSystemSubmenuEl(null);
   }, []);
 
   // PERFORMANCE FIX: Reduce initial load and implement pagination
@@ -730,7 +808,29 @@ const POSPage: React.FC = () => {
     }
     navigate(route);
     handleMenuClose();
+    setReportsSubmenuEl(null);
+    setInventorySubmenuEl(null);
+    setPurchasingSubmenuEl(null);
+    setSystemSubmenuEl(null);
   }, [navigate, handleMenuClose, user?.id]);
+
+  const handleNavigateToSystemMaintenance = useCallback(() => {
+    // Only main user (ID = 1) can access system maintenance page
+    if (user?.id !== 1) {
+      navigate(ROUTES.ACCESS_DENIED);
+      handleMenuClose();
+      return;
+    }
+    navigate(ROUTES.SYSTEM_MAINTENANCE);
+    handleMenuClose();
+    setSystemSubmenuEl(null);
+  }, [navigate, handleMenuClose, user?.id]);
+
+  const handleNavigateToProfile = useCallback(() => {
+    navigate(ROUTES.PROFILE);
+    handleMenuClose();
+    setSystemSubmenuEl(null);
+  }, [navigate, handleMenuClose]);
 
   // Memoize transaction type change handlers
   const handleTransactionTypeChange = useCallback((type: TransactionType) => {
@@ -776,10 +876,6 @@ const POSPage: React.FC = () => {
               onClose={handleMenuClose}
               PaperProps={{ sx: menuPaperSx }}
             >
-              <MenuItem onClick={() => handleNavigate(ROUTES.DASHBOARD)} sx={menuItemSx}>
-                <Dashboard sx={{ mr: 1 }} />
-                Dashboard
-              </MenuItem>
               {canAccessProducts && (
                 <MenuItem onClick={() => handleNavigate(ROUTES.PRODUCTS)} sx={menuItemSx}>
                   <Inventory sx={{ mr: 1 }} />
@@ -790,12 +886,6 @@ const POSPage: React.FC = () => {
                 <MenuItem onClick={() => handleNavigate(ROUTES.CATEGORIES)} sx={menuItemSx}>
                   <Category sx={{ mr: 1 }} />
                   Categories
-                </MenuItem>
-              )}
-              {canAccessSuppliers && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.SUPPLIERS)} sx={menuItemSx}>
-                  <LocalShipping sx={{ mr: 1 }} />
-                  Suppliers
                 </MenuItem>
               )}
               {canAccessCashiers && (
@@ -810,23 +900,75 @@ const POSPage: React.FC = () => {
                   Transactions
                 </MenuItem>
               )}
-              {canAccessInventory && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.INVENTORY)} sx={menuItemSx}>
-                  <Warehouse sx={{ mr: 1 }} />
-                  Inventory
-                </MenuItem>
+              {(canAccessInventory || canAccessStockTransfers) && (
+                <>
+                  <MenuItem onClick={handleInventorySubmenuToggle} sx={menuItemSx}>
+                    <Warehouse sx={{ mr: 1 }} />
+                    Inventory
+                  </MenuItem>
+                  <Menu
+                    anchorEl={inventorySubmenuEl}
+                    open={Boolean(inventorySubmenuEl)}
+                    onClose={handleInventorySubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{ sx: menuPaperSx }}
+                  >
+                    {canAccessInventory && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.INVENTORY)} sx={menuItemSx}>
+                        <Warehouse sx={{ mr: 1 }} />
+                        Inventory Overview
+                      </MenuItem>
+                    )}
+                    {canAccessStockTransfers && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.STOCK_TRANSFERS)} sx={menuItemSx}>
+                        <SwapHoriz sx={{ mr: 1 }} />
+                        Stock Transfers
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
-              {canAccessPurchaseOrders && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.PURCHASE_ORDERS)} sx={menuItemSx}>
-                  <ShoppingCartIcon sx={{ mr: 1 }} />
-                  Purchase Orders
-                </MenuItem>
-              )}
-              {canAccessStockTransfers && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.STOCK_TRANSFERS)} sx={menuItemSx}>
-                  <SwapHoriz sx={{ mr: 1 }} />
-                  Stock Transfers
-                </MenuItem>
+              {(canAccessPurchaseOrders || canAccessSuppliers) && (
+                <>
+                  <MenuItem onClick={handlePurchasingSubmenuToggle} sx={menuItemSx}>
+                    <ShoppingCartIcon sx={{ mr: 1 }} />
+                    Purchasing
+                  </MenuItem>
+                  <Menu
+                    anchorEl={purchasingSubmenuEl}
+                    open={Boolean(purchasingSubmenuEl)}
+                    onClose={handlePurchasingSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{ sx: menuPaperSx }}
+                  >
+                    {canAccessPurchaseOrders && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.PURCHASE_ORDERS)} sx={menuItemSx}>
+                        <ShoppingCartIcon sx={{ mr: 1 }} />
+                        Purchase Orders
+                      </MenuItem>
+                    )}
+                    {canAccessSuppliers && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.SUPPLIERS)} sx={menuItemSx}>
+                        <LocalShipping sx={{ mr: 1 }} />
+                        Suppliers
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
               {canAccessPricing && (
                 <MenuItem onClick={() => handleNavigate(ROUTES.PRICING_RULES)} sx={menuItemSx}>
@@ -834,17 +976,40 @@ const POSPage: React.FC = () => {
                   Pricing
                 </MenuItem>
               )}
-              {canAccessReports && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.REPORTS)} sx={menuItemSx}>
-                  <Assessment sx={{ mr: 1 }} />
-                  Reports
-                </MenuItem>
-              )}
-              {canAccessAnalytics && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.ANALYTICS)} sx={menuItemSx}>
-                  <Analytics sx={{ mr: 1 }} />
-                  Analytics
-                </MenuItem>
+              {(canAccessReports || canAccessAnalytics) && (
+                <>
+                  <MenuItem onClick={handleReportsSubmenuToggle} sx={menuItemSx}>
+                    <Assessment sx={{ mr: 1 }} />
+                    Reports & Analytics
+                  </MenuItem>
+                  <Menu
+                    anchorEl={reportsSubmenuEl}
+                    open={Boolean(reportsSubmenuEl)}
+                    onClose={handleReportsSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{ sx: menuPaperSx }}
+                  >
+                    {canAccessReports && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.REPORTS)} sx={menuItemSx}>
+                        <Assessment sx={{ mr: 1 }} />
+                        Reports
+                      </MenuItem>
+                    )}
+                    {canAccessAnalytics && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.ANALYTICS)} sx={menuItemSx}>
+                        <Analytics sx={{ mr: 1 }} />
+                        Analytics
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
               {user?.id === 1 && (
                 <MenuItem onClick={() => handleNavigate(ROUTES.LOGS)} sx={menuItemSx}>
@@ -852,36 +1017,98 @@ const POSPage: React.FC = () => {
                   Logs
                 </MenuItem>
               )}
-              {canAccessSettings && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.SETTINGS)} sx={menuItemSx}>
-                  <Settings sx={{ mr: 1 }} />
-                  Settings
-                </MenuItem>
+              {(canAccessNotifications || canAccessAlertRules || canAccessAlertHistory) && (
+                <>
+                  <MenuItem onClick={handleAlertsSubmenuToggle} sx={menuItemSx}>
+                    <NotificationsIcon sx={{ mr: 1 }} />
+                    Alerts & Notifications
+                  </MenuItem>
+                  <Menu
+                    anchorEl={alertsSubmenuEl}
+                    open={Boolean(alertsSubmenuEl)}
+                    onClose={handleAlertsSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{ sx: menuPaperSx }}
+                  >
+                    {canAccessNotifications && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.NOTIFICATIONS)} sx={menuItemSx}>
+                        <NotificationsIcon sx={{ mr: 1 }} />
+                        Notifications
+                      </MenuItem>
+                    )}
+                    {canAccessAlertRules && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.ALERT_RULES)} sx={menuItemSx}>
+                        <NotificationsIcon sx={{ mr: 1 }} />
+                        Alert Rules
+                      </MenuItem>
+                    )}
+                    {canAccessAlertHistory && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.ALERT_HISTORY)} sx={menuItemSx}>
+                        <History sx={{ mr: 1 }} />
+                        Alert History
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
-              <MenuItem onClick={() => handleNavigate(ROUTES.ALERT_RULES)} sx={menuItemSx}>
-                <NotificationsIcon sx={{ mr: 1 }} />
-                Alert Rules
-              </MenuItem>
-              <MenuItem onClick={() => handleNavigate(ROUTES.ALERT_HISTORY)} sx={menuItemSx}>
-                <History sx={{ mr: 1 }} />
-                Alert History
-              </MenuItem>
               <MenuItem onClick={() => handleNavigate(ROUTES.BARCODE_LABELS)} sx={menuItemSx}>
                 <QrCode sx={{ mr: 1 }} />
                 Barcode Labels
               </MenuItem>
-              {user?.id === 1 && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.BACKUP)} sx={menuItemSx}>
-                  <Backup sx={{ mr: 1 }} />
-                  Backup and Restore
+              <>
+                <MenuItem onClick={handleSystemSubmenuToggle} sx={menuItemSx}>
+                  <Settings sx={{ mr: 1 }} />
+                  System
                 </MenuItem>
-              )}
-              {user?.id === 1 && (
-                <MenuItem onClick={() => handleNavigate(ROUTES.LICENSE)} sx={menuItemSx}>
-                  <VpnKey sx={{ mr: 1 }} />
-                  License
-                </MenuItem>
-              )}
+                  <Menu
+                    anchorEl={systemSubmenuEl}
+                    open={Boolean(systemSubmenuEl)}
+                    onClose={handleSystemSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{ sx: menuPaperSx }}
+                  >
+                    <MenuItem onClick={handleNavigateToProfile} sx={menuItemSx}>
+                      <AccountCircle sx={{ mr: 1 }} />
+                      Profile
+                    </MenuItem>
+                    {canAccessSettings && (
+                      <MenuItem onClick={() => handleNavigate(ROUTES.SETTINGS)} sx={menuItemSx}>
+                        <Settings sx={{ mr: 1 }} />
+                        Settings
+                      </MenuItem>
+                    )}
+                    {user?.id === 1 && (
+                      <>
+                        <MenuItem onClick={() => handleNavigate(ROUTES.BACKUP)} sx={menuItemSx}>
+                          <Backup sx={{ mr: 1 }} />
+                          Backup & Restore
+                        </MenuItem>
+                        <MenuItem onClick={handleNavigateToSystemMaintenance} sx={menuItemSx}>
+                          <Build sx={{ mr: 1 }} />
+                          System Maintenance
+                        </MenuItem>
+                        <MenuItem onClick={() => handleNavigate(ROUTES.LICENSE)} sx={menuItemSx}>
+                          <VpnKey sx={{ mr: 1 }} />
+                          License
+                        </MenuItem>
+                      </>
+                    )}
+                  </Menu>
+                </>
             </Menu>
           </Grid>
           {/* Transaction Type Selector */}

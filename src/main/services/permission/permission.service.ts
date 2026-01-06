@@ -87,6 +87,17 @@ export class PermissionService {
     // Permissions
     { code: 'permissions.view', name: 'View Permissions', description: 'View user permissions', category: 'permissions' },
     { code: 'permissions.manage', name: 'Manage Permissions', description: 'Assign and revoke user permissions', category: 'permissions' },
+    
+    // Alerts
+    { code: 'alerts.manage', name: 'Manage Alert Rules', description: 'Create, edit, and delete alert rules', category: 'alerts' },
+    { code: 'alerts.view', name: 'View Alerts', description: 'View alert history', category: 'alerts' },
+    
+    // Barcode Labels
+    { code: 'barcode_labels.view', name: 'View Barcode Labels', description: 'View barcode label templates', category: 'barcode_labels' },
+    { code: 'barcode_labels.create', name: 'Create Barcode Labels', description: 'Create new barcode label templates', category: 'barcode_labels' },
+    { code: 'barcode_labels.update', name: 'Update Barcode Labels', description: 'Edit existing barcode label templates', category: 'barcode_labels' },
+    { code: 'barcode_labels.delete', name: 'Delete Barcode Labels', description: 'Delete barcode label templates', category: 'barcode_labels' },
+    { code: 'barcode.manage', name: 'Manage Barcode Labels', description: 'Full access to manage barcode label templates', category: 'barcode_labels' },
   ];
 
   /**

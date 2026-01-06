@@ -31,6 +31,7 @@ import { RootState } from '../../store';
 import {
   AlertRuleService,
   AlertHistoryItem,
+  AlertPriority,
 } from '../../services/alert-rule.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
@@ -41,9 +42,9 @@ import { usePermission } from '../../hooks/usePermission';
 const AlertHistory: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { toast, showToast, hideToast } = useToast();
-  const canViewAlerts = usePermission('alerts.view');
-  const canManageAlerts = usePermission('alerts.manage');
-  const canView = canViewAlerts || canManageAlerts;
+
+  // Permission checks
+  const canManage = usePermission('alerts.manage');
 
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<AlertHistoryItem[]>([]);
@@ -153,16 +154,6 @@ const AlertHistory: React.FC = () => {
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
-  if (!canView) {
-    return (
-      <MainLayout>
-        <Box sx={containerBoxSx}>
-          <Typography>You don&apos;t have permission to view alert history.</Typography>
-        </Box>
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
       <Box sx={containerBoxSx}>
@@ -211,13 +202,13 @@ const AlertHistory: React.FC = () => {
                       <TableCell>Message</TableCell>
                       <TableCell>Severity</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      {canManage && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {alerts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} align="center">
+                        <TableCell colSpan={canManage ? 8 : 7} align="center">
                           <Typography>No alerts found</Typography>
                         </TableCell>
                       </TableRow>
@@ -239,7 +230,7 @@ const AlertHistory: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={AlertRuleService.getPriorityDisplayName(alert.severity)}
+                              label={AlertRuleService.getPriorityDisplayName(alert.severity as AlertPriority)}
                               color={getSeverityColor(alert.severity) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                               size="small"
                             />
@@ -256,19 +247,21 @@ const AlertHistory: React.FC = () => {
                               <Chip label="Active" color="warning" size="small" />
                             )}
                           </TableCell>
-                          <TableCell align="right">
-                            {!alert.isResolved && (
-                              <Tooltip title="Mark as Resolved">
-                                <IconButton
-                                  onClick={() => handleResolve(alert.id)}
-                                  size="small"
-                                  color="success"
-                                >
-                                  <CheckCircle />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </TableCell>
+                          {canManage && (
+                            <TableCell align="right">
+                              {!alert.isResolved && (
+                                <Tooltip title="Mark as Resolved">
+                                  <IconButton
+                                    onClick={() => handleResolve(alert.id)}
+                                    size="small"
+                                    color="success"
+                                  >
+                                    <CheckCircle />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     )}

@@ -75,6 +75,7 @@ const CashierList = lazy(() => import('./pages/Cashiers/CashierList'));
 const SystemMaintenancePage = lazy(() => import('./pages/System/SystemMaintenance'));
 const ReceiptTemplateEditor = lazy(() => import('./pages/Receipts/ReceiptTemplateEditor'));
 const AlertRuleList = lazy(() => import('./pages/Alerts/AlertRuleList'));
+const AlertRuleForm = lazy(() => import('./pages/Alerts/AlertRuleForm'));
 const AlertHistory = lazy(() => import('./pages/Alerts/AlertHistory'));
 const BarcodeLabelTemplateList = lazy(() => import('./pages/BarcodeLabels/BarcodeLabelTemplateList'));
 const BarcodeLabelTemplateEditor = lazy(() => import('./pages/BarcodeLabels/BarcodeLabelTemplateEditor'));
@@ -997,41 +998,57 @@ function AppContent() {
         <Route
           path={ROUTES.ALERT_RULES}
           element={
-            <ProtectedRoute>
+            <PermissionProtectedRoute>
               <AlertRuleList />
-            </ProtectedRoute>
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ALERT_RULES_NEW}
+          element={
+            <PermissionProtectedRoute>
+              <AlertRuleForm />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.ALERT_RULES_EDIT}
+          element={
+            <PermissionProtectedRoute>
+              <AlertRuleForm />
+            </PermissionProtectedRoute>
           }
         />
         <Route
           path={ROUTES.ALERT_HISTORY}
           element={
-            <ProtectedRoute>
+            <PermissionProtectedRoute>
               <AlertHistory />
-            </ProtectedRoute>
+            </PermissionProtectedRoute>
           }
         />
         <Route
           path={ROUTES.BARCODE_LABELS}
           element={
-            <ProtectedRoute>
+            <PermissionProtectedRoute>
               <BarcodeLabelTemplateList />
-            </ProtectedRoute>
+            </PermissionProtectedRoute>
           }
         />
         <Route
           path={ROUTES.BARCODE_LABELS_NEW}
           element={
-            <ProtectedRoute>
+            <PermissionProtectedRoute>
               <BarcodeLabelTemplateEditor />
-            </ProtectedRoute>
+            </PermissionProtectedRoute>
           }
         />
         <Route
           path={ROUTES.BARCODE_LABELS_EDIT}
           element={
-            <ProtectedRoute>
+            <PermissionProtectedRoute>
               <BarcodeLabelTemplateEditor />
-            </ProtectedRoute>
+            </PermissionProtectedRoute>
           }
         />
         <Route

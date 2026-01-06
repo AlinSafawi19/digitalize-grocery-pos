@@ -26,7 +26,6 @@ import {
   CheckCircleOutline,
   Home,
   Menu as MenuIcon,
-  Dashboard,
   Inventory,
   Category,
   LocalShipping,
@@ -46,6 +45,8 @@ import {
   SwapHoriz,
   QrCode,
   Notifications as NotificationsIcon,
+  Build,
+  AccountCircle,
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -83,6 +84,11 @@ export default function NotificationsPage() {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [alertsSubmenuEl, setAlertsSubmenuEl] = useState<null | HTMLElement>(null);
+  const [reportsSubmenuEl, setReportsSubmenuEl] = useState<null | HTMLElement>(null);
+  const [inventorySubmenuEl, setInventorySubmenuEl] = useState<null | HTMLElement>(null);
+  const [purchasingSubmenuEl, setPurchasingSubmenuEl] = useState<null | HTMLElement>(null);
+  const [systemSubmenuEl, setSystemSubmenuEl] = useState<null | HTMLElement>(null);
   const [selectedNotifications, setSelectedNotifications] = useState<Set<number>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -103,6 +109,8 @@ export default function NotificationsPage() {
   const canAccessReports = useRoutePermission(ROUTES.REPORTS);
   const canAccessAnalytics = useRoutePermission(ROUTES.ANALYTICS);
   const canAccessSettings = useRoutePermission(ROUTES.SETTINGS);
+  const canAccessAlertRules = useRoutePermission(ROUTES.ALERT_RULES);
+  const canAccessAlertHistory = useRoutePermission(ROUTES.ALERT_HISTORY);
 
   // Memoize helper functions
   const getNotificationColor = useCallback((priority: string) => {
@@ -363,12 +371,77 @@ export default function NotificationsPage() {
 
   const handleNavMenuClose = useCallback(() => {
     setMenuAnchorEl(null);
+    setAlertsSubmenuEl(null);
+    setReportsSubmenuEl(null);
+    setInventorySubmenuEl(null);
+    setPurchasingSubmenuEl(null);
+    setSystemSubmenuEl(null);
   }, []);
 
-  const handleNavigateToDashboard = useCallback(() => {
-    navigate(ROUTES.DASHBOARD);
-    handleNavMenuClose();
-  }, [navigate, handleNavMenuClose]);
+  const handleAlertsSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (alertsSubmenuEl) {
+      setAlertsSubmenuEl(null);
+    } else {
+      setAlertsSubmenuEl(event.currentTarget);
+    }
+  }, [alertsSubmenuEl]);
+
+  const handleAlertsSubmenuClose = useCallback(() => {
+    setAlertsSubmenuEl(null);
+  }, []);
+
+  const handleReportsSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (reportsSubmenuEl) {
+      setReportsSubmenuEl(null);
+    } else {
+      setReportsSubmenuEl(event.currentTarget);
+    }
+  }, [reportsSubmenuEl]);
+
+  const handleReportsSubmenuClose = useCallback(() => {
+    setReportsSubmenuEl(null);
+  }, []);
+
+  const handleInventorySubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (inventorySubmenuEl) {
+      setInventorySubmenuEl(null);
+    } else {
+      setInventorySubmenuEl(event.currentTarget);
+    }
+  }, [inventorySubmenuEl]);
+
+  const handleInventorySubmenuClose = useCallback(() => {
+    setInventorySubmenuEl(null);
+  }, []);
+
+  const handlePurchasingSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (purchasingSubmenuEl) {
+      setPurchasingSubmenuEl(null);
+    } else {
+      setPurchasingSubmenuEl(event.currentTarget);
+    }
+  }, [purchasingSubmenuEl]);
+
+  const handlePurchasingSubmenuClose = useCallback(() => {
+    setPurchasingSubmenuEl(null);
+  }, []);
+
+  const handleSystemSubmenuToggle = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (systemSubmenuEl) {
+      setSystemSubmenuEl(null);
+    } else {
+      setSystemSubmenuEl(event.currentTarget);
+    }
+  }, [systemSubmenuEl]);
+
+  const handleSystemSubmenuClose = useCallback(() => {
+    setSystemSubmenuEl(null);
+  }, []);
 
   const handleNavigateToProducts = useCallback(() => {
     navigate(ROUTES.PRODUCTS);
@@ -383,6 +456,7 @@ export default function NotificationsPage() {
   const handleNavigateToSuppliers = useCallback(() => {
     navigate(ROUTES.SUPPLIERS);
     handleNavMenuClose();
+    setPurchasingSubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToCashiers = useCallback(() => {
@@ -398,16 +472,19 @@ export default function NotificationsPage() {
   const handleNavigateToInventory = useCallback(() => {
     navigate(ROUTES.INVENTORY);
     handleNavMenuClose();
+    setInventorySubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToPurchaseOrders = useCallback(() => {
     navigate(ROUTES.PURCHASE_ORDERS);
     handleNavMenuClose();
+    setPurchasingSubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToStockTransfers = useCallback(() => {
     navigate(ROUTES.STOCK_TRANSFERS);
     handleNavMenuClose();
+    setInventorySubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToPricingRules = useCallback(() => {
@@ -418,11 +495,13 @@ export default function NotificationsPage() {
   const handleNavigateToReports = useCallback(() => {
     navigate(ROUTES.REPORTS);
     handleNavMenuClose();
+    setReportsSubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToAnalytics = useCallback(() => {
     navigate(ROUTES.ANALYTICS);
     handleNavMenuClose();
+    setReportsSubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToLogs = useCallback(() => {
@@ -469,15 +548,34 @@ export default function NotificationsPage() {
     handleNavMenuClose();
   }, [navigate, handleNavMenuClose, user?.id]);
 
+  const handleNavigateToSystemMaintenance = useCallback(() => {
+    // Only main user (ID = 1) can access system maintenance page
+    if (user?.id !== 1) {
+      navigate(ROUTES.ACCESS_DENIED);
+      handleNavMenuClose();
+      return;
+    }
+    navigate(ROUTES.SYSTEM_MAINTENANCE);
+    handleNavMenuClose();
+    setSystemSubmenuEl(null);
+  }, [navigate, handleNavMenuClose, user?.id]);
+
+  const handleNavigateToProfile = useCallback(() => {
+    navigate(ROUTES.PROFILE);
+    handleNavMenuClose();
+  }, [navigate, handleNavMenuClose]);
+
 
   const handleNavigateToAlertRules = useCallback(() => {
     navigate(ROUTES.ALERT_RULES);
     handleNavMenuClose();
+    setAlertsSubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToAlertHistory = useCallback(() => {
     navigate(ROUTES.ALERT_HISTORY);
     handleNavMenuClose();
+    setAlertsSubmenuEl(null);
   }, [navigate, handleNavMenuClose]);
 
   const handleNavigateToBarcodeLabels = useCallback(() => {
@@ -578,15 +676,16 @@ export default function NotificationsPage() {
   const menuPaperSx = useMemo(() => ({
     borderRadius: 0,
     border: '1px solid #c0c0c0',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-    mt: 1,
+    boxShadow: 'none',
   }), []);
 
   const menuItemSx = useMemo(() => ({
-    fontSize: '13px',
+    fontSize: '16px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
-    '&:hover': {
-      backgroundColor: '#f5f5f5',
+    minHeight: 44,
+    padding: '10px 16px',
+    '& .MuiSvgIcon-root': {
+      fontSize: 20,
     },
   }), []);
 
@@ -943,112 +1042,245 @@ export default function NotificationsPage() {
                 sx: menuPaperSx,
               }}
             >
-              <MenuItem onClick={handleNavigateToDashboard} sx={menuItemSx}>
-                <Dashboard sx={{ mr: 1, fontSize: '18px' }} />
-                Dashboard
-              </MenuItem>
               {canAccessProducts && (
                 <MenuItem onClick={handleNavigateToProducts} sx={menuItemSx}>
-                  <Inventory sx={{ mr: 1, fontSize: '18px' }} />
+                  <Inventory sx={{ mr: 1 }} />
                   Products
                 </MenuItem>
               )}
               {canAccessCategories && (
                 <MenuItem onClick={handleNavigateToCategories} sx={menuItemSx}>
-                  <Category sx={{ mr: 1, fontSize: '18px' }} />
+                  <Category sx={{ mr: 1 }} />
                   Categories
-                </MenuItem>
-              )}
-              {canAccessSuppliers && (
-                <MenuItem onClick={handleNavigateToSuppliers} sx={menuItemSx}>
-                  <LocalShipping sx={{ mr: 1, fontSize: '18px' }} />
-                  Suppliers
                 </MenuItem>
               )}
               {canAccessCashiers && (
                 <MenuItem onClick={handleNavigateToCashiers} sx={menuItemSx}>
-                  <People sx={{ mr: 1, fontSize: '18px' }} />
+                  <People sx={{ mr: 1 }} />
                   Cashiers
                 </MenuItem>
               )}
               {canAccessTransactions && (
                 <MenuItem onClick={handleNavigateToTransactions} sx={menuItemSx}>
-                  <Receipt sx={{ mr: 1, fontSize: '18px' }} />
+                  <Receipt sx={{ mr: 1 }} />
                   Transactions
                 </MenuItem>
               )}
-              {canAccessInventory && (
-                <MenuItem onClick={handleNavigateToInventory} sx={menuItemSx}>
-                  <Warehouse sx={{ mr: 1, fontSize: '18px' }} />
-                  Inventory
-                </MenuItem>
+              {(canAccessInventory || canAccessStockTransfers) && (
+                <>
+                  <MenuItem onClick={handleInventorySubmenuToggle} sx={menuItemSx}>
+                    <Warehouse sx={{ mr: 1 }} />
+                    Inventory
+                  </MenuItem>
+                  <Menu
+                    anchorEl={inventorySubmenuEl}
+                    open={Boolean(inventorySubmenuEl)}
+                    onClose={handleInventorySubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: menuPaperSx,
+                    }}
+                  >
+                    {canAccessInventory && (
+                      <MenuItem onClick={handleNavigateToInventory} sx={menuItemSx}>
+                        <Warehouse sx={{ mr: 1 }} />
+                        Inventory Overview
+                      </MenuItem>
+                    )}
+                    {canAccessStockTransfers && (
+                      <MenuItem onClick={handleNavigateToStockTransfers} sx={menuItemSx}>
+                        <SwapHoriz sx={{ mr: 1 }} />
+                        Stock Transfers
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
-              {canAccessPurchaseOrders && (
-                <MenuItem onClick={handleNavigateToPurchaseOrders} sx={menuItemSx}>
-                  <ShoppingCartIcon sx={{ mr: 1, fontSize: '18px' }} />
-                  Purchase Orders
-                </MenuItem>
-              )}
-              {canAccessStockTransfers && (
-                <MenuItem onClick={handleNavigateToStockTransfers} sx={menuItemSx}>
-                  <SwapHoriz sx={{ mr: 1, fontSize: '18px' }} />
-                  Stock Transfers
-                </MenuItem>
+              {(canAccessPurchaseOrders || canAccessSuppliers) && (
+                <>
+                  <MenuItem onClick={handlePurchasingSubmenuToggle} sx={menuItemSx}>
+                    <ShoppingCartIcon sx={{ mr: 1 }} />
+                    Purchasing
+                  </MenuItem>
+                  <Menu
+                    anchorEl={purchasingSubmenuEl}
+                    open={Boolean(purchasingSubmenuEl)}
+                    onClose={handlePurchasingSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: menuPaperSx,
+                    }}
+                  >
+                    {canAccessPurchaseOrders && (
+                      <MenuItem onClick={handleNavigateToPurchaseOrders} sx={menuItemSx}>
+                        <ShoppingCartIcon sx={{ mr: 1 }} />
+                        Purchase Orders
+                      </MenuItem>
+                    )}
+                    {canAccessSuppliers && (
+                      <MenuItem onClick={handleNavigateToSuppliers} sx={menuItemSx}>
+                        <LocalShipping sx={{ mr: 1 }} />
+                        Suppliers
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
               {canAccessPricing && (
                 <MenuItem onClick={handleNavigateToPricingRules} sx={menuItemSx}>
-                  <LocalOffer sx={{ mr: 1, fontSize: '18px' }} />
+                  <LocalOffer sx={{ mr: 1 }} />
                   Pricing
                 </MenuItem>
               )}
-              {canAccessReports && (
-                <MenuItem onClick={handleNavigateToReports} sx={menuItemSx}>
-                  <Assessment sx={{ mr: 1, fontSize: '18px' }} />
-                  Reports
-                </MenuItem>
-              )}
-              {canAccessAnalytics && (
-                <MenuItem onClick={handleNavigateToAnalytics} sx={menuItemSx}>
-                  <Analytics sx={{ mr: 1, fontSize: '18px' }} />
-                  Analytics
-                </MenuItem>
+              {(canAccessReports || canAccessAnalytics) && (
+                <>
+                  <MenuItem onClick={handleReportsSubmenuToggle} sx={menuItemSx}>
+                    <Assessment sx={{ mr: 1 }} />
+                    Reports & Analytics
+                  </MenuItem>
+                  <Menu
+                    anchorEl={reportsSubmenuEl}
+                    open={Boolean(reportsSubmenuEl)}
+                    onClose={handleReportsSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: menuPaperSx,
+                    }}
+                  >
+                    {canAccessReports && (
+                      <MenuItem onClick={handleNavigateToReports} sx={menuItemSx}>
+                        <Assessment sx={{ mr: 1 }} />
+                        Reports
+                      </MenuItem>
+                    )}
+                    {canAccessAnalytics && (
+                      <MenuItem onClick={handleNavigateToAnalytics} sx={menuItemSx}>
+                        <Analytics sx={{ mr: 1 }} />
+                        Analytics
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
               )}
               {user?.id === 1 && (
                 <MenuItem onClick={handleNavigateToLogs} sx={menuItemSx}>
-                  <History sx={{ mr: 1, fontSize: '18px' }} />
+                  <History sx={{ mr: 1 }} />
                   Logs
                 </MenuItem>
               )}
               {canAccessSettings && (
                 <MenuItem onClick={handleNavigateToSettings} sx={menuItemSx}>
-                  <Settings sx={{ mr: 1, fontSize: '18px' }} />
+                  <Settings sx={{ mr: 1 }} />
                   Settings
                 </MenuItem>
               )}
-              <MenuItem onClick={handleNavigateToAlertRules} sx={menuItemSx}>
-                <NotificationsIcon sx={{ mr: 1, fontSize: '18px' }} />
-                Alert Rules
-              </MenuItem>
-              <MenuItem onClick={handleNavigateToAlertHistory} sx={menuItemSx}>
-                <History sx={{ mr: 1, fontSize: '18px' }} />
-                Alert History
-              </MenuItem>
+              {(canAccessAlertRules || canAccessAlertHistory) && (
+                <>
+                  <MenuItem onClick={handleAlertsSubmenuToggle} sx={menuItemSx}>
+                    <NotificationsIcon sx={{ mr: 1 }} />
+                    Alerts & Notifications
+                  </MenuItem>
+                  <Menu
+                    anchorEl={alertsSubmenuEl}
+                    open={Boolean(alertsSubmenuEl)}
+                    onClose={handleAlertsSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: menuPaperSx,
+                    }}
+                  >
+                    <MenuItem onClick={handleNavigateToAlertRules} sx={menuItemSx}>
+                      <NotificationsIcon sx={{ mr: 1 }} />
+                      Alert Rules
+                    </MenuItem>
+                    <MenuItem onClick={handleNavigateToAlertHistory} sx={menuItemSx}>
+                      <History sx={{ mr: 1 }} />
+                      Alert History
+                    </MenuItem>
+                  </Menu>
+                </>
+              )}
               <MenuItem onClick={handleNavigateToBarcodeLabels} sx={menuItemSx}>
-                <QrCode sx={{ mr: 1, fontSize: '18px' }} />
+                <QrCode sx={{ mr: 1 }} />
                 Barcode Labels
               </MenuItem>
-              {user?.id === 1 && (
-                <MenuItem onClick={handleNavigateToBackup} sx={menuItemSx}>
-                  <Backup sx={{ mr: 1, fontSize: '18px' }} />
-                  Backup and Restore
+              <>
+                <MenuItem onClick={handleSystemSubmenuToggle} sx={menuItemSx}>
+                  <Settings sx={{ mr: 1 }} />
+                  System
                 </MenuItem>
-              )}
-              {user?.id === 1 && (
-                <MenuItem onClick={handleNavigateToLicense} sx={menuItemSx}>
-                  <VpnKey sx={{ mr: 1, fontSize: '18px' }} />
-                  License
-                </MenuItem>
-              )}
+                  <Menu
+                    anchorEl={systemSubmenuEl}
+                    open={Boolean(systemSubmenuEl)}
+                    onClose={handleSystemSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: menuPaperSx,
+                    }}
+                  >
+                    <MenuItem onClick={handleNavigateToProfile} sx={menuItemSx}>
+                      <AccountCircle sx={{ mr: 1 }} />
+                      Profile
+                    </MenuItem>
+                    {user?.id === 1 && (
+                      <MenuItem onClick={handleNavigateToSettings} sx={menuItemSx}>
+                        <Settings sx={{ mr: 1 }} />
+                        Settings
+                      </MenuItem>
+                    )}
+                    {user?.id === 1 && (
+                      <>
+                        <MenuItem onClick={handleNavigateToBackup} sx={menuItemSx}>
+                          <Backup sx={{ mr: 1 }} />
+                          Backup & Restore
+                        </MenuItem>
+                        <MenuItem onClick={handleNavigateToSystemMaintenance} sx={menuItemSx}>
+                          <Build sx={{ mr: 1 }} />
+                          System Maintenance
+                        </MenuItem>
+                        <MenuItem onClick={handleNavigateToLicense} sx={menuItemSx}>
+                          <VpnKey sx={{ mr: 1 }} />
+                          License
+                        </MenuItem>
+                      </>
+                    )}
+                  </Menu>
+                </>
             </Menu>
           </Grid>
           <Grid item xs>

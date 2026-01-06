@@ -88,6 +88,17 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   [ROUTES.PROMOTIONS_EDIT]: 'products.update',
   [ROUTES.PROMOTIONS_VIEW]: 'products.view',
   [ROUTES.PRICING_HISTORY]: 'products.view',
+
+  // Alerts
+  [ROUTES.ALERT_RULES]: 'alerts.manage',
+  [ROUTES.ALERT_RULES_NEW]: 'alerts.manage',
+  [ROUTES.ALERT_RULES_EDIT]: 'alerts.manage',
+  [ROUTES.ALERT_HISTORY]: 'alerts.view', // Alert history requires view permission
+
+  // Barcode Labels
+  [ROUTES.BARCODE_LABELS]: 'barcode_labels.view',
+  [ROUTES.BARCODE_LABELS_NEW]: 'barcode_labels.create',
+  [ROUTES.BARCODE_LABELS_EDIT]: 'barcode_labels.update',
 };
 
 /**

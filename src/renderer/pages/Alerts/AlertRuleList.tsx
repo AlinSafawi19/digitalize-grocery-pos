@@ -15,18 +15,6 @@ import {
   CircularProgress,
   Chip,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Switch,
-  FormControlLabel,
-  SelectChangeEvent,
 } from '@mui/material';
 import {
   Add,
@@ -36,60 +24,34 @@ import {
   Notifications,
   NotificationsOff,
 } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertRuleService,
   AlertRule,
   AlertRuleType,
   AlertPriority,
-  CreateAlertRuleInput,
-  UpdateAlertRuleInput,
-  AlertRuleConditions,
 } from '../../services/alert-rule.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/common/Toast';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { ROUTES } from '../../utils/constants';
 import { usePermission } from '../../hooks/usePermission';
-import { CategoryService } from '../../services/category.service';
 
 const AlertRuleList: React.FC = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
   const { toast, showToast, hideToast } = useToast();
+
+  // Permission checks
   const canManage = usePermission('alerts.manage');
 
   const [loading, setLoading] = useState(true);
   const [rules, setRules] = useState<AlertRule[]>([]);
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
   const [deletingRule, setDeletingRule] = useState<AlertRule | null>(null);
-
-  // Form state
-  const [formData, setFormData] = useState<{
-    name: string;
-    description: string;
-    categoryId: number | null;
-    ruleType: AlertRuleType;
-    priority: AlertPriority;
-    isActive: boolean;
-    threshold?: number;
-    daysBeforeExpiry?: number;
-  }>({
-    name: '',
-    description: '',
-    categoryId: null,
-    ruleType: 'low_stock',
-    priority: 'normal',
-    isActive: true,
-    threshold: 10,
-    daysBeforeExpiry: 30,
-  });
 
   const loadRules = useCallback(async () => {
     setLoading(true);
@@ -112,121 +74,24 @@ const AlertRuleList: React.FC = () => {
     }
   }, [page, pageSize, showToast]);
 
-  const loadCategories = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const result = await CategoryService.getAllCategories(user.id);
-      if (result.success && result.categories) {
-        setCategories(result.categories.map(cat => ({ id: cat.id, name: cat.name })));
-      }
-    } catch (error) {
-      console.error('Error loading categories', error);
-    }
-  }, [user?.id]);
-
   useEffect(() => {
     loadRules();
-    loadCategories();
-  }, [loadRules, loadCategories]);
+  }, [loadRules]);
 
   const handleAdd = useCallback(() => {
-    setEditingRule(null);
-    setFormData({
-      name: '',
-      description: '',
-      categoryId: null,
-      ruleType: 'low_stock',
-      priority: 'normal',
-      isActive: true,
-      threshold: 10,
-      daysBeforeExpiry: 30,
-    });
-    setDialogOpen(true);
-  }, []);
+    navigate(ROUTES.ALERT_RULES_NEW, { state: { returnPath: ROUTES.ALERT_RULES } });
+  }, [navigate]);
 
   const handleEdit = useCallback((rule: AlertRule) => {
-    setEditingRule(rule);
-    const conditions = AlertRuleService.parseConditions(rule.conditions);
-    setFormData({
-      name: rule.name,
-      description: rule.description || '',
-      categoryId: rule.categoryId,
-      ruleType: rule.ruleType as AlertRuleType,
-      priority: rule.priority as AlertPriority,
-      isActive: rule.isActive,
-      threshold: conditions.threshold,
-      daysBeforeExpiry: conditions.daysBeforeExpiry,
+    navigate(ROUTES.ALERT_RULES_EDIT.replace(':id', rule.id.toString()), { 
+      state: { returnPath: ROUTES.ALERT_RULES } 
     });
-    setDialogOpen(true);
-  }, []);
+  }, [navigate]);
 
   const handleDelete = useCallback((rule: AlertRule) => {
     setDeletingRule(rule);
     setDeleteDialogOpen(true);
   }, []);
-
-  const handleSave = useCallback(async () => {
-    if (!user?.id) return;
-
-    try {
-      const conditions: AlertRuleConditions = {};
-      
-      if (formData.ruleType === 'low_stock' || formData.ruleType === 'out_of_stock') {
-        if (formData.threshold !== undefined) {
-          conditions.threshold = formData.threshold;
-        }
-      }
-      
-      if (formData.ruleType === 'expiry_warning') {
-        if (formData.daysBeforeExpiry !== undefined) {
-          conditions.daysBeforeExpiry = formData.daysBeforeExpiry;
-        }
-      }
-
-      if (editingRule) {
-        const updateData: UpdateAlertRuleInput = {
-          name: formData.name,
-          description: formData.description || undefined,
-          categoryId: formData.categoryId,
-          ruleType: formData.ruleType,
-          priority: formData.priority,
-          isActive: formData.isActive,
-          conditions,
-        };
-
-        const result = await AlertRuleService.updateRule(editingRule.id, updateData);
-        if (result.success) {
-          showToast('Alert rule updated successfully', 'success');
-          setDialogOpen(false);
-          loadRules();
-        } else {
-          showToast(result.error || 'Failed to update alert rule', 'error');
-        }
-      } else {
-        const createData: CreateAlertRuleInput = {
-          name: formData.name,
-          description: formData.description || undefined,
-          categoryId: formData.categoryId,
-          ruleType: formData.ruleType,
-          priority: formData.priority,
-          isActive: formData.isActive,
-          conditions,
-          createdBy: user.id,
-        };
-
-        const result = await AlertRuleService.createRule(createData);
-        if (result.success) {
-          showToast('Alert rule created successfully', 'success');
-          setDialogOpen(false);
-          loadRules();
-        } else {
-          showToast(result.error || 'Failed to create alert rule', 'error');
-        }
-      }
-    } catch {
-      showToast('An error occurred while saving alert rule', 'error');
-    }
-  }, [user, formData, editingRule, showToast, loadRules]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingRule) return;
@@ -293,16 +158,6 @@ const AlertRuleList: React.FC = () => {
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
-  if (!canManage) {
-    return (
-      <MainLayout>
-        <Box sx={containerBoxSx}>
-          <Typography>You don&apos;t have permission to manage alert rules.</Typography>
-        </Box>
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
       <Box sx={containerBoxSx}>
@@ -317,13 +172,15 @@ const AlertRuleList: React.FC = () => {
             >
               Refresh
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleAdd}
-            >
-              Add Rule
-            </Button>
+            {canManage && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleAdd}
+              >
+                Add Rule
+              </Button>
+            )}
           </Box>
         </Box>
 
@@ -343,13 +200,13 @@ const AlertRuleList: React.FC = () => {
                       <TableCell>Category</TableCell>
                       <TableCell>Priority</TableCell>
                       <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      {canManage && <TableCell align="right">Actions</TableCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {rules.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center">
+                        <TableCell colSpan={canManage ? 6 : 5} align="center">
                           <Typography>No alert rules found</Typography>
                         </TableCell>
                       </TableRow>
@@ -383,16 +240,20 @@ const AlertRuleList: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell align="right">
-                            <Tooltip title="Edit">
-                              <IconButton onClick={() => handleEdit(rule)} size="small">
-                                <Edit />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton onClick={() => handleDelete(rule)} size="small" color="error">
-                                <Delete />
-                              </IconButton>
-                            </Tooltip>
+                            {canManage && (
+                              <>
+                                <Tooltip title="Edit">
+                                  <IconButton onClick={() => handleEdit(rule)} size="small">
+                                    <Edit />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete">
+                                  <IconButton onClick={() => handleDelete(rule)} size="small" color="error">
+                                    <Delete />
+                                  </IconButton>
+                                </Tooltip>
+                              </>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
@@ -412,114 +273,6 @@ const AlertRuleList: React.FC = () => {
             </>
           )}
         </Paper>
-
-        {/* Add/Edit Dialog */}
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>{editingRule ? 'Edit Alert Rule' : 'Add Alert Rule'}</DialogTitle>
-          <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-              <TextField
-                label="Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                fullWidth
-                required
-              />
-              <TextField
-                label="Description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                fullWidth
-                multiline
-                rows={2}
-              />
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={formData.categoryId || ''}
-                  onChange={(e: SelectChangeEvent<number>) =>
-                    setFormData({ ...formData, categoryId: e.target.value as number | null })
-                  }
-                  label="Category"
-                >
-                  <MenuItem value="">All Categories</MenuItem>
-                  {categories.map((cat) => (
-                    <MenuItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel>Rule Type</InputLabel>
-                <Select
-                  value={formData.ruleType}
-                  onChange={(e: SelectChangeEvent<AlertRuleType>) =>
-                    setFormData({ ...formData, ruleType: e.target.value as AlertRuleType })
-                  }
-                  label="Rule Type"
-                >
-                  <MenuItem value="low_stock">Low Stock</MenuItem>
-                  <MenuItem value="out_of_stock">Out of Stock</MenuItem>
-                  <MenuItem value="expiry_warning">Expiry Warning</MenuItem>
-                  <MenuItem value="price_change">Price Change</MenuItem>
-                </Select>
-              </FormControl>
-              {(formData.ruleType === 'low_stock' || formData.ruleType === 'out_of_stock') && (
-                <TextField
-                  label="Threshold (Quantity)"
-                  type="number"
-                  value={formData.threshold || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, threshold: parseInt(e.target.value, 10) || undefined })
-                  }
-                  fullWidth
-                />
-              )}
-              {formData.ruleType === 'expiry_warning' && (
-                <TextField
-                  label="Days Before Expiry"
-                  type="number"
-                  value={formData.daysBeforeExpiry || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, daysBeforeExpiry: parseInt(e.target.value, 10) || undefined })
-                  }
-                  fullWidth
-                />
-              )}
-              <FormControl fullWidth>
-                <InputLabel>Priority</InputLabel>
-                <Select
-                  value={formData.priority}
-                  onChange={(e: SelectChangeEvent<AlertPriority>) =>
-                    setFormData({ ...formData, priority: e.target.value as AlertPriority })
-                  }
-                  label="Priority"
-                >
-                  <MenuItem value="low">Low</MenuItem>
-                  <MenuItem value="normal">Normal</MenuItem>
-                  <MenuItem value="high">High</MenuItem>
-                  <MenuItem value="urgent">Urgent</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  />
-                }
-                label="Active"
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} variant="contained" disabled={!formData.name}>
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <ConfirmDialog
