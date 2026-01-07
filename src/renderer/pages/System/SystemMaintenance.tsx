@@ -154,6 +154,38 @@ const SystemMaintenancePage: React.FC = () => {
     return `${(ms / 60000).toFixed(1)}m`;
   };
 
+  const refreshButtonSx = {
+    fontSize: '16px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    textTransform: 'none',
+    borderRadius: 0,
+    borderColor: '#c0c0c0',
+    color: '#1a237e',
+    padding: '8px 20px',
+    minHeight: '44px',
+    '&:hover': {
+      borderColor: '#1a237e',
+      backgroundColor: '#f5f5f5',
+    },
+    '&:disabled': {
+      borderColor: '#e0e0e0',
+      color: '#9e9e9e',
+    },
+  };
+
+  const tableSx = {
+    '& .MuiTableCell-root': {
+      fontSize: '16px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      borderColor: '#e0e0e0',
+      padding: '12px 16px',
+    },
+    '& .MuiTableHead-root .MuiTableCell-root': {
+      fontWeight: 600,
+      backgroundColor: '#f5f5f5',
+    },
+  };
+
   if (loading && !stats) {
     return (
       <MainLayout>
@@ -168,7 +200,15 @@ const SystemMaintenancePage: React.FC = () => {
     <MainLayout>
       <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
+          <Typography 
+            variant="h4" 
+            component="h1"
+            fontWeight="bold"
+            sx={{
+              fontSize: { xs: '20px', sm: '24px', md: '28px' },
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+          >
             System Maintenance
           </Typography>
           <Button
@@ -176,6 +216,7 @@ const SystemMaintenancePage: React.FC = () => {
             startIcon={<Refresh />}
             onClick={loadData}
             disabled={loading}
+            sx={refreshButtonSx}
           >
             Refresh
           </Button>
@@ -284,7 +325,7 @@ const SystemMaintenancePage: React.FC = () => {
             <Alert severity="info">No maintenance operations recorded yet.</Alert>
           ) : (
             <TableContainer>
-              <Table>
+              <Table sx={tableSx}>
                 <TableHead>
                   <TableRow>
                     <TableCell>Operation</TableCell>

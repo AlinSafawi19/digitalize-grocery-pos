@@ -24,6 +24,7 @@ export const ROUTES = {
   PRODUCTS_NEW: '/products/new',
   PRODUCTS_EDIT: '/products/edit/:id',
   PRODUCTS_VIEW: '/products/view/:id',
+  PRODUCTS_IMAGES: '/products/:id/images',
   CATEGORIES: '/categories',
   CATEGORIES_NEW: '/categories/new',
   CATEGORIES_EDIT: '/categories/edit/:id',

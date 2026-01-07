@@ -90,6 +90,10 @@ const InventoryList: React.FC = () => {
     navigate(ROUTES.INVENTORY_ADJUST_STOCK.replace(':productId', item.productId.toString()));
   }, [navigate]);
 
+  const handleProductClick = useCallback((productId: number) => {
+    navigate(`${ROUTES.PRODUCTS}/view/${productId}`);
+  }, [navigate]);
+
   const handleClearFilters = useCallback(() => {
     setSearch('');
     setLowStockOnly(false);
@@ -333,6 +337,11 @@ const InventoryList: React.FC = () => {
   const productNameTypographySx = useMemo(() => ({
     fontSize: '16px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
+    cursor: 'pointer',
+    color: '#1a237e',
+    '&:hover': {
+      textDecoration: 'underline',
+    },
   }), []);
 
   const codeTypographySx = useMemo(() => ({
@@ -342,6 +351,12 @@ const InventoryList: React.FC = () => {
   }), []);
 
   const categoryChipSx = useMemo(() => ({
+    fontSize: '11px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    fontWeight: 500,
+  }), []);
+
+  const supplierChipSx = useMemo(() => ({
     fontSize: '11px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     fontWeight: 500,
@@ -490,6 +505,7 @@ const InventoryList: React.FC = () => {
                     <TableCell>Product</TableCell>
                     <TableCell>Code</TableCell>
                     <TableCell>Category</TableCell>
+                    <TableCell>Supplier</TableCell>
                     <TableCell align="right">Quantity</TableCell>
                     <TableCell align="right">Reorder Level</TableCell>
                     <TableCell>Status</TableCell>
@@ -500,7 +516,7 @@ const InventoryList: React.FC = () => {
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center">
+                      <TableCell colSpan={9} align="center">
                         <Typography
                           variant="body2"
                           color="text.secondary"
@@ -516,7 +532,12 @@ const InventoryList: React.FC = () => {
                       return (
                         <TableRow key={item.id} hover>
                           <TableCell>
-                            <Typography variant="body2" fontWeight="medium" sx={productNameTypographySx}>
+                            <Typography 
+                              variant="body2" 
+                              fontWeight="medium" 
+                              sx={productNameTypographySx}
+                              onClick={() => handleProductClick(item.product.id)}
+                            >
                               {item.product.name}
                             </Typography>
                           </TableCell>
@@ -532,6 +553,19 @@ const InventoryList: React.FC = () => {
                                 size="small"
                                 sx={categoryChipSx}
                               />
+                            ) : (
+                              <Typography variant="body2" color="text.secondary" sx={codeTypographySx}>
+                                -
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {item.product.supplier ? (
+                               <Chip
+                               label={item.product.supplier.name}
+                               size="small"
+                               sx={supplierChipSx}
+                             />
                             ) : (
                               <Typography variant="body2" color="text.secondary" sx={codeTypographySx}>
                                 -

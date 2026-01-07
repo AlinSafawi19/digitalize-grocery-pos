@@ -134,7 +134,6 @@ const BarcodeLabelTemplateList: React.FC = () => {
 
   const containerBoxSx = useMemo(() => ({
     p: 3,
-    backgroundColor: '#f5f5f5',
     minHeight: '100vh',
   }), []);
 
@@ -146,22 +145,78 @@ const BarcodeLabelTemplateList: React.FC = () => {
   }), []);
 
   const titleTypographySx = useMemo(() => ({
-    fontSize: '20px',
-    fontWeight: 600,
+    fontSize: { xs: '20px', sm: '24px', md: '28px' },
     fontFamily: 'system-ui, -apple-system, sans-serif',
+  }), []);
+
+  const refreshButtonSx = useMemo(() => ({
+    fontSize: '16px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    textTransform: 'none',
+    borderRadius: 0,
+    borderColor: '#c0c0c0',
+    color: '#1a237e',
+    padding: '8px 20px',
+    minHeight: '44px',
+    '&:hover': {
+      borderColor: '#1a237e',
+      backgroundColor: '#f5f5f5',
+    },
+    '&:disabled': {
+      borderColor: '#e0e0e0',
+      color: '#9e9e9e',
+    },
+  }), []);
+
+  const addButtonSx = useMemo(() => ({
+    backgroundColor: '#1a237e',
+    color: '#ffffff',
+    borderRadius: 0,
+    fontSize: '16px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    textTransform: 'none',
+    padding: '8px 20px',
+    minHeight: '44px',
+    border: '1px solid #000051',
+    boxShadow: 'none',
+    '&:hover': {
+      backgroundColor: '#534bae',
+      boxShadow: 'none',
+    },
+  }), []);
+
+  const tableContainerSx = useMemo(() => ({
+    borderRadius: 0,
+    border: '1px solid #c0c0c0',
+    boxShadow: 'none',
+    backgroundColor: '#ffffff',
+  }), []);
+
+  const tableSx = useMemo(() => ({
+    '& .MuiTableCell-root': {
+      fontSize: '16px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      borderColor: '#e0e0e0',
+      padding: '12px 16px',
+    },
+    '& .MuiTableHead-root .MuiTableCell-root': {
+      fontWeight: 600,
+      backgroundColor: '#f5f5f5',
+    },
   }), []);
 
   return (
     <MainLayout>
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
-          <Typography sx={titleTypographySx}>Barcode Label Templates</Typography>
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>Barcode Label Templates</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="outlined"
               startIcon={<Refresh />}
               onClick={loadTemplates}
               disabled={loading}
+              sx={refreshButtonSx}
             >
               Refresh
             </Button>
@@ -170,6 +225,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
                 variant="contained"
                 startIcon={<Add />}
                 onClick={handleAdd}
+                sx={addButtonSx}
               >
                 Add Template
               </Button>
@@ -177,89 +233,87 @@ const BarcodeLabelTemplateList: React.FC = () => {
           </Box>
         </Box>
 
-        <Paper>
+        <TableContainer component={Paper} sx={tableContainerSx}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
             </Box>
           ) : (
             <>
-              <TableContainer>
-                <Table>
-                  <TableHead>
+              <Table sx={tableSx}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Size</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Default</TableCell>
+                    {(canUpdate || canDelete) && <TableCell align="right">Actions</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {templates.length === 0 ? (
                     <TableRow>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Size</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Default</TableCell>
-                      {(canUpdate || canDelete) && <TableCell align="right">Actions</TableCell>}
+                      <TableCell colSpan={(canUpdate || canDelete) ? 5 : 4} align="center">
+                        <Typography>No templates found</Typography>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {templates.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={(canUpdate || canDelete) ? 5 : 4} align="center">
-                          <Typography>No templates found</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      templates.map((template) => (
-                        <TableRow key={template.id}>
-                          <TableCell>
-                            <Typography>{template.name}</Typography>
-                            {template.description && (
-                              <Typography variant="caption" color="text.secondary">
-                                {template.description}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {template.width}&quot; × {template.height}&quot;
-                          </TableCell>
-                          <TableCell>
-                            {template.isActive ? (
-                              <Chip label="Active" color="success" size="small" />
-                            ) : (
-                              <Chip label="Inactive" color="default" size="small" />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {template.isDefault ? (
-                              <Chip icon={<Star />} label="Default" color="primary" size="small" />
-                            ) : (
-                              <IconButton
-                                size="small"
-                                onClick={() => handleSetDefault(template)}
-                                title="Set as Default"
-                              >
-                                <StarBorder />
-                              </IconButton>
-                            )}
-                          </TableCell>
-                          {(canUpdate || canDelete) && (
-                            <TableCell align="right">
-                              {canUpdate && (
-                                <Tooltip title="Edit">
-                                  <IconButton onClick={() => handleEdit(template)} size="small">
-                                    <Edit />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              {canDelete && (
-                                <Tooltip title="Delete">
-                                  <IconButton onClick={() => handleDelete(template)} size="small" color="error">
-                                    <Delete />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </TableCell>
+                  ) : (
+                    templates.map((template) => (
+                      <TableRow key={template.id}>
+                        <TableCell>
+                          <Typography>{template.name}</Typography>
+                          {template.description && (
+                            <Typography variant="caption" color="text.secondary">
+                              {template.description}
+                            </Typography>
                           )}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                        </TableCell>
+                        <TableCell>
+                          {template.width}&quot; × {template.height}&quot;
+                        </TableCell>
+                        <TableCell>
+                          {template.isActive ? (
+                            <Chip label="Active" color="success" size="small" />
+                          ) : (
+                            <Chip label="Inactive" color="default" size="small" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {template.isDefault ? (
+                            <Chip icon={<Star />} label="Default" color="primary" size="small" />
+                          ) : (
+                            <IconButton
+                              size="small"
+                              onClick={() => handleSetDefault(template)}
+                              title="Set as Default"
+                            >
+                              <StarBorder />
+                            </IconButton>
+                          )}
+                        </TableCell>
+                        {(canUpdate || canDelete) && (
+                          <TableCell align="right">
+                            {canUpdate && (
+                              <Tooltip title="Edit">
+                                <IconButton onClick={() => handleEdit(template)} size="small">
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canDelete && (
+                              <Tooltip title="Delete">
+                                <IconButton onClick={() => handleDelete(template)} size="small" color="error">
+                                  <Delete />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
               <TablePagination
                 component="div"
                 count={total}
@@ -271,7 +325,7 @@ const BarcodeLabelTemplateList: React.FC = () => {
               />
             </>
           )}
-        </Paper>
+        </TableContainer>
 
         {/* Delete Confirmation Dialog */}
         <ConfirmDialog

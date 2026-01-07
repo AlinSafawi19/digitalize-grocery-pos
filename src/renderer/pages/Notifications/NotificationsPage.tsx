@@ -811,9 +811,10 @@ export default function NotificationsPage() {
 
   const tableSx = useMemo(() => ({
     '& .MuiTableCell-root': {
-      fontSize: '13px',
+      fontSize: '16px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       borderColor: '#e0e0e0',
+      padding: '12px 16px',
     },
     '& .MuiTableHead-root .MuiTableCell-root': {
       fontWeight: 600,
@@ -836,7 +837,7 @@ export default function NotificationsPage() {
   }), []);
 
   const emptyStateTypographySx = useMemo(() => ({
-    fontSize: '13px',
+    fontSize: '16px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     color: '#616161',
   }), []);
@@ -849,12 +850,12 @@ export default function NotificationsPage() {
   }), []);
 
   const typeTypographySx = useMemo(() => ({
-    fontSize: '13px',
+    fontSize: '16px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
   const getTitleTypographySx = useCallback((isRead: boolean) => ({
-    fontSize: '13px',
+    fontSize: '16px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     fontWeight: isRead ? 400 : 600,
   }), []);

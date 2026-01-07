@@ -11,6 +11,8 @@ export interface ImportPreview {
       price: number;
       costPrice?: number | null;
       currency: string;
+      quantity?: number;
+      reorderLevel?: number;
     };
     warnings: string[];
   }>;

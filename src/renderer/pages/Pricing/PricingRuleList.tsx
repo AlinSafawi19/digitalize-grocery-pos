@@ -343,8 +343,7 @@ const PricingRuleList: React.FC = () => {
   }), []);
 
   const titleTypographySx = useMemo(() => ({
-    fontSize: '20px',
-    fontWeight: 600,
+    fontSize: { xs: '20px', sm: '24px', md: '28px' },
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
@@ -541,7 +540,7 @@ const PricingRuleList: React.FC = () => {
     <MainLayout>
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
-          <Typography sx={titleTypographySx}>Pricing & Promotions</Typography>
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>Pricing & Promotions</Typography>
           <Box sx={buttonBoxSx}>
           {selectedRules.size > 0 && activeTab === 0 && canDelete && (
               <Tooltip title={`Delete Selected Pricing Rules - Permanently delete ${selectedRules.size} selected pricing rule(s). This action cannot be undone.`}>

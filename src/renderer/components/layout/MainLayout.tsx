@@ -238,8 +238,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       return;
     }
     navigate(ROUTES.REPORTS);
+    handleMoreMenuClose();
     setReportsToolbarSubmenuEl(null);
-  }, [navigate, shouldBlockNavigation, getExpiredLicenseRoute]);
+  }, [navigate, handleMoreMenuClose, shouldBlockNavigation, getExpiredLicenseRoute]);
 
   const handleNavigateToSuppliers = useCallback(() => {
     if (shouldBlockNavigation()) {
@@ -928,76 +929,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
               )}
             </>
           )}
-          {(canAccessReports || canAccessAnalytics) && (
-            <>
-              <Tooltip title="Reports & Analytics - Generate reports and view business analytics">
-                <Button
-                  color="inherit"
-                  startIcon={<Assessment sx={{ fontSize: { xs: '24px', sm: '28px' } }} />}
-                  onClick={canAccessReports && canAccessAnalytics ? handleReportsToolbarSubmenuToggle : (canAccessReports ? handleNavigateToReports : handleNavigateToAnalytics)}
-                  sx={[
-                    getHeaderButtonStyles(ROUTES.REPORTS, routeStates.isReportsAndAnalyticsActive),
-                    {
-                      display: { xs: 'none', lg: 'flex' },
-                      '& .MuiButton-startIcon': {
-                        marginRight: { xs: 0, sm: '6px' },
-                      },
-                    },
-                  ]}
-                >
-                  Reports & Analytics
-                </Button>
-              </Tooltip>
-              <Tooltip title="Reports & Analytics - Generate reports and view business analytics">
-                <IconButton
-                  color="inherit"
-                  onClick={canAccessReports && canAccessAnalytics ? handleReportsToolbarSubmenuToggle : (canAccessReports ? handleNavigateToReports : handleNavigateToAnalytics)}
-                  sx={[
-                    iconButtonSx,
-                    {
-                      display: { xs: 'flex', lg: 'none' },
-                      backgroundColor: routeStates.isReportsAndAnalyticsActive ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-                    },
-                  ]}
-                >
-                  <Assessment />
-                </IconButton>
-              </Tooltip>
-              {canAccessReports && canAccessAnalytics && (
-                <Menu
-                  anchorEl={reportsToolbarSubmenuEl}
-                  open={Boolean(reportsToolbarSubmenuEl)}
-                  onClose={handleReportsToolbarSubmenuClose}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  }}
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                  }}
-                  PaperProps={{
-                    sx: menuPaperSx,
-                  }}
-                >
-                  <MenuItem
-                    onClick={handleNavigateToReports}
-                    selected={routeStates.isReportsActive}
-                  >
-                    <Assessment sx={{ mr: 1, fontSize: '18px' }} />
-                    Reports
-                  </MenuItem>
-                  <MenuItem
-                    onClick={handleNavigateToAnalytics}
-                    selected={routeStates.isAnalyticsActive}
-                  >
-                    <Analytics sx={{ mr: 1, fontSize: '18px' }} />
-                    Analytics
-                  </MenuItem>
-                </Menu>
-              )}
-            </>
-          )}
           <Tooltip title="More Options - Access additional sections including Purchasing, Cashiers, Pricing, Reports & Analytics, and System">
             <IconButton
               color="inherit"
@@ -1086,6 +1017,50 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <LocalOffer sx={{ mr: 1, fontSize: '24px' }} />
                 Pricing
               </MenuItem>
+            )}
+            {(canAccessReports || canAccessAnalytics) && (
+              <>
+                <MenuItem
+                  onClick={canAccessReports && canAccessAnalytics ? handleReportsToolbarSubmenuToggle : (canAccessReports ? handleNavigateToReports : handleNavigateToAnalytics)}
+                  selected={routeStates.isReportsAndAnalyticsActive}
+                >
+                  <Assessment sx={{ mr: 1, fontSize: '24px' }} />
+                  Reports & Analytics
+                </MenuItem>
+                {canAccessReports && canAccessAnalytics && (
+                  <Menu
+                    anchorEl={reportsToolbarSubmenuEl}
+                    open={Boolean(reportsToolbarSubmenuEl)}
+                    onClose={handleReportsToolbarSubmenuClose}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: menuPaperSx,
+                    }}
+                  >
+                    <MenuItem
+                      onClick={handleNavigateToReports}
+                      selected={routeStates.isReportsActive}
+                    >
+                      <Assessment sx={{ mr: 1, fontSize: '18px' }} />
+                      Reports
+                    </MenuItem>
+                    <MenuItem
+                      onClick={handleNavigateToAnalytics}
+                      selected={routeStates.isAnalyticsActive}
+                    >
+                      <Analytics sx={{ mr: 1, fontSize: '18px' }} />
+                      Analytics
+                    </MenuItem>
+                  </Menu>
+                )}
+              </>
             )}
             {user?.id === 1 && (
               <MenuItem

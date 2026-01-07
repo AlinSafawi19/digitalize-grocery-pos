@@ -14,6 +14,8 @@ export interface CreateProductInput {
   costPrice?: number | null;
   currency?: string;
   supplierId?: number | null;
+  quantity?: number; // Initial stock quantity
+  reorderLevel?: number; // Minimum stock level before reorder alert
 }
 
 export interface UpdateProductInput {
@@ -672,6 +674,7 @@ export class ProductService {
         include: {
           category: true,
           supplier: true,
+          inventory: true,
         },
         orderBy: { name: 'asc' },
       });
@@ -817,6 +820,24 @@ export class ProductService {
                         costPrice: input.costPrice || null,
                         currency: input.currency || 'USD',
                         supplierId: input.supplierId || null,
+                      },
+                    });
+
+                    // Initialize inventory with quantity and reorder level if provided
+                    const quantity = input.quantity ?? 0;
+                    const reorderLevel = input.reorderLevel ?? 0;
+                    
+                    // Create inventory record within the transaction
+                    await tx.inventory.upsert({
+                      where: { productId: product.id },
+                      create: {
+                        productId: product.id,
+                        quantity,
+                        reorderLevel,
+                      },
+                      update: {
+                        quantity,
+                        reorderLevel,
                       },
                     });
 

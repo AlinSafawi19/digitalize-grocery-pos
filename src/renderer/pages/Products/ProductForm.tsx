@@ -14,7 +14,7 @@ import {
   Alert,
   AlertTitle,
 } from '@mui/material';
-import { ArrowBack, Add, QrCode, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
+import { ArrowBack, Add, QrCode, CheckCircle, Error as ErrorIcon, Edit } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RootState } from '../../store';
@@ -28,7 +28,6 @@ import { InventoryService } from '../../services/inventory.service';
 import { BarcodeService, BarcodeFormat } from '../../services/barcode.service';
 import { BarcodeValidationEnhancedService } from '../../services/barcode-validation-enhanced.service';
 import ProductImageGallery from '../../components/product-image/ProductImageGallery';
-import ProductImageUpload from '../../components/product-image/ProductImageUpload';
 import { ProductImageService } from '../../services/product-image.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { useToast } from '../../hooks/useToast';
@@ -189,7 +188,7 @@ const ProductForm: React.FC = () => {
       return;
     }
 
-    if (id && user?.id) {
+      if (id && user?.id) {
       const productId = parseInt(id);
       
       // If product is already loaded for this id and formData is populated, skip reload
@@ -213,11 +212,16 @@ const ProductForm: React.FC = () => {
         };
         setFormData(loadedFormData);
         setInitialFormData(loadedFormData);
+        // Reset barcode validation ref when populating form data
+        initialBarcodeValidatedRef.current = null;
         return;
       }
 
       setIsEditMode(true);
       setLoadingProduct(true);
+      
+      // Reset barcode validation ref when loading a new product
+      initialBarcodeValidatedRef.current = null;
 
       // Create new abort controller
       const abortController = new AbortController();
@@ -246,6 +250,9 @@ const ProductForm: React.FC = () => {
             };
             setFormData(loadedFormData);
             setInitialFormData(loadedFormData);
+            
+            // Reset barcode validation ref to trigger validation for loaded barcode
+            initialBarcodeValidatedRef.current = null;
 
             // Load image count
             ProductImageService.getByProductId(prod.id).then((images) => {
@@ -304,6 +311,9 @@ const ProductForm: React.FC = () => {
       });
       setInitialQuantity('0');
       setReorderLevel('0');
+      // Reset barcode validation ref when switching to create mode
+      initialBarcodeValidatedRef.current = null;
+      setBarcodeValidation({ valid: false, checking: false });
     }
 
     return () => {
@@ -606,6 +616,9 @@ const ProductForm: React.FC = () => {
 
   // Barcode validation timeout ref
   const barcodeValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track if initial barcode validation has been done for loaded product
+  const initialBarcodeValidatedRef = useRef<string | null>(null);
 
   // Validate barcode with debouncing
   const validateBarcodeDebounced = useCallback((barcode: string) => {
@@ -701,6 +714,21 @@ const ProductForm: React.FC = () => {
     }, 500);
   }, [isEditMode, product, user?.id]);
 
+  // Validate barcode when product is loaded in edit mode
+  useEffect(() => {
+    if (
+      isEditMode && 
+      formData.barcode && 
+      formData.barcode.trim() !== '' && 
+      initialBarcodeValidatedRef.current !== formData.barcode &&
+      !barcodeValidation.checking
+    ) {
+      // Validate the barcode if it hasn't been validated yet for this barcode value
+      initialBarcodeValidatedRef.current = formData.barcode;
+      validateBarcodeDebounced(formData.barcode);
+    }
+  }, [isEditMode, formData.barcode, barcodeValidation.checking, validateBarcodeDebounced]);
+
   const handleBarcodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData((prev) => ({ ...prev, barcode: value || null }));
@@ -711,8 +739,9 @@ const ProductForm: React.FC = () => {
       return prev;
     });
     
-    // Reset validation state
+    // Reset validation state and ref when barcode changes manually
     setBarcodeValidation({ valid: false, checking: false });
+    initialBarcodeValidatedRef.current = null;
     
     // Validate barcode with debouncing
     if (value && value.trim() !== '') {
@@ -857,7 +886,8 @@ const ProductForm: React.FC = () => {
             // Product was created but inventory initialization failed
             showToast('Product created, but failed to initialize inventory. You can add inventory manually.', 'warning');
           }
-          navigate('/products');
+          // Navigate to product view page
+          navigate(`${ROUTES.PRODUCTS}/view/${result.product.id}`);
         } else {
           showToast(result.error || 'Failed to create product', 'error');
         }
@@ -1575,7 +1605,7 @@ const ProductForm: React.FC = () => {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Box>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                           <Box sx={{ flex: 1 }}>
                             <Tooltip title="Barcode - Enter a unique barcode (EAN, UPC, or custom) for this product. This barcode can be scanned at the POS to quickly add the product to a transaction. This is a required field.">
                               <TextField
@@ -1977,37 +2007,63 @@ const ProductForm: React.FC = () => {
                   </Grid>
                 )}
 
-                {/* Product Images - Only show in edit mode or after product is created */}
+                {/* Product Images - Show preview in edit mode with link to manage */}
                 {isEditMode && product && (
                   <Grid item xs={12}>
-                    <Typography variant="h6" gutterBottom sx={sectionTitleTypographySx}>
-                      Product Images
-                    </Typography>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <ProductImageUpload
-                          productId={product.id}
-                          onUploadComplete={() => {
-                            setImageRefreshKey((prev) => prev + 1);
-                            setImageCount((prev) => prev + 1);
-                          }}
-                          currentImageCount={imageCount}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <ProductImageGallery
-                          key={imageRefreshKey}
-                          productId={product.id}
-                          onImageChange={() => {
-                            setImageRefreshKey((prev) => prev + 1);
-                            // Reload image count
-                            ProductImageService.getByProductId(product.id).then((images) => {
-                              setImageCount(images.length);
-                            });
-                          }}
-                        />
-                      </Grid>
-                    </Grid>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" gutterBottom sx={{ ...sectionTitleTypographySx, mb: 0 }}>
+                        Product Images
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        onClick={() => navigate(`${ROUTES.PRODUCTS}/${product.id}/images`)}
+                        sx={{
+                          fontSize: '16px',
+                          fontFamily: 'system-ui, -apple-system, sans-serif',
+                          textTransform: 'none',
+                          borderRadius: 0,
+                          borderColor: '#1a237e',
+                          color: '#1a237e',
+                          padding: '8px 20px',
+                          minHeight: '44px',
+                          '&:hover': {
+                            borderColor: '#534bae',
+                            backgroundColor: '#f5f5f5',
+                          },
+                        }}
+                      >
+                        Manage Images
+                      </Button>
+                    </Box>
+                    <Box sx={{ 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: 1, 
+                      p: 2, 
+                      backgroundColor: '#fafafa',
+                      minHeight: '200px',
+                    }}>
+                      <ProductImageGallery
+                        key={imageRefreshKey}
+                        productId={product.id}
+                        onImageChange={() => {
+                          setImageRefreshKey((prev) => prev + 1);
+                          // Reload image count
+                          ProductImageService.getByProductId(product.id).then((images) => {
+                            setImageCount(images.length);
+                          });
+                        }}
+                        maxImages={4}
+                        showPrimaryBadge={true}
+                      />
+                      {imageCount > 4 && (
+                        <Box sx={{ textAlign: 'center', mt: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            +{imageCount - 4} more image{imageCount - 4 !== 1 ? 's' : ''}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
                   </Grid>
                 )}
               </Grid>

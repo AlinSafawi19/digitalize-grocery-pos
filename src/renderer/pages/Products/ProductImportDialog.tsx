@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -47,6 +47,7 @@ export default function ProductImportDialog({
   const [importProgress, setImportProgress] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
+  const hasOpenedFileDialog = useRef(false);
 
   const handleSelectFile = useCallback(async () => {
     try {
@@ -55,7 +56,8 @@ export default function ProductImportDialog({
       const result = await ProductImportExportService.showImportDialog();
       
       if (result.canceled) {
-        onClose();
+        setLoading(false);
+        // Don't close dialog if user cancels - let them try again or close manually
         return;
       }
 
@@ -82,7 +84,7 @@ export default function ProductImportDialog({
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -93,7 +95,16 @@ export default function ProductImportDialog({
       setImporting(false);
       setImportProgress('');
       setError(null);
-      handleSelectFile();
+      hasOpenedFileDialog.current = false;
+      
+      // Auto-open file dialog only once when dialog first opens
+      if (!hasOpenedFileDialog.current) {
+        hasOpenedFileDialog.current = true;
+        handleSelectFile();
+      }
+    } else {
+      // Reset flag when dialog closes
+      hasOpenedFileDialog.current = false;
     }
   }, [open, handleSelectFile]);
 
@@ -123,7 +134,10 @@ export default function ProductImportDialog({
         onImportComplete();
         onClose();
       } else {
-        setError(result.error || 'Import failed');
+        const errorMsg = result.errors.length > 0 
+          ? `Import failed: ${result.errors[0].error}` 
+          : 'Import failed';
+        setError(errorMsg);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -243,19 +257,25 @@ export default function ProductImportDialog({
                         <TableCell sx={{ fontWeight: 600 }}>Supplier</TableCell>
                         <TableCell sx={{ fontWeight: 600 }} align="right">Price</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }} align="right">Quantity</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }} align="right">Reorder Level</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {preview.products.slice(0, 50).map((item, idx) => (
+                      {preview.products.slice(0, 50).map((item, idx) => {
+                        const supplierId = (item.data as Record<string, unknown>).supplierId as number | null | undefined;
+                        return (
                         <TableRow key={idx}>
                           <TableCell>{item.row}</TableCell>
                           <TableCell>{item.data.barcode || '-'}</TableCell>
                           <TableCell>{item.data.name}</TableCell>
                           <TableCell>{item.data.categoryId ? `ID: ${item.data.categoryId}` : '-'}</TableCell>
-                          <TableCell>{item.data.supplierId ? `ID: ${item.supplierId}` : '-'}</TableCell>
+                          <TableCell>{supplierId ? `ID: ${supplierId}` : '-'}</TableCell>
                           <TableCell align="right">{item.data.price.toFixed(2)} {item.data.currency}</TableCell>
                           <TableCell>{item.data.unit}</TableCell>
+                          <TableCell align="right">{item.data.quantity ?? 0}</TableCell>
+                          <TableCell align="right">{item.data.reorderLevel ?? 0}</TableCell>
                           <TableCell>
                             {item.warnings.length > 0 ? (
                               <Chip
@@ -274,7 +294,8 @@ export default function ProductImportDialog({
                             )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>

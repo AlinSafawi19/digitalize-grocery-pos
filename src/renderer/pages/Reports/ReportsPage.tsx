@@ -334,8 +334,7 @@ const ReportsPage: React.FC = () => {
   }), []);
 
   const titleTypographySx = useMemo(() => ({
-    fontSize: '20px',
-    fontWeight: 600,
+    fontSize: { xs: '20px', sm: '24px', md: '28px' },
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
@@ -498,7 +497,7 @@ const ReportsPage: React.FC = () => {
     return (
       <MainLayout>
         <Box sx={containerBoxSx}>
-          <Typography sx={titleTypographySx}>Reports & Analytics</Typography>
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>Reports & Analytics</Typography>
         </Box>
         <Toast toast={toast} onClose={hideToast} />
       </MainLayout>
@@ -512,8 +511,8 @@ const ReportsPage: React.FC = () => {
     <MainLayout>
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
-          <Typography sx={titleTypographySx}>
-            Reports & Analytics
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>
+            Reports
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             {actualTabIndex !== 6 && (

@@ -477,7 +477,7 @@ const CashierList: React.FC = () => {
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
           <Box>
-            <Typography variant="h4" component="h1" sx={titleTypographySx}>
+            <Typography variant="h4" component="h1" fontWeight="bold" sx={titleTypographySx}>
               Cashiers
             </Typography>
             {userCount !== null && userLimit !== null && (

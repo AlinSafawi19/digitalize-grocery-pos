@@ -137,7 +137,6 @@ const AlertHistory: React.FC = () => {
 
   const containerBoxSx = useMemo(() => ({
     p: 3,
-    backgroundColor: '#f5f5f5',
     minHeight: '100vh',
   }), []);
 
@@ -149,16 +148,54 @@ const AlertHistory: React.FC = () => {
   }), []);
 
   const titleTypographySx = useMemo(() => ({
-    fontSize: '20px',
-    fontWeight: 600,
+    fontSize: { xs: '20px', sm: '24px', md: '28px' },
     fontFamily: 'system-ui, -apple-system, sans-serif',
+  }), []);
+
+  const refreshButtonSx = useMemo(() => ({
+    fontSize: '16px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    textTransform: 'none',
+    borderRadius: 0,
+    borderColor: '#c0c0c0',
+    color: '#1a237e',
+    padding: '8px 20px',
+    minHeight: '44px',
+    '&:hover': {
+      borderColor: '#1a237e',
+      backgroundColor: '#f5f5f5',
+    },
+    '&:disabled': {
+      borderColor: '#e0e0e0',
+      color: '#9e9e9e',
+    },
+  }), []);
+
+  const tableContainerSx = useMemo(() => ({
+    borderRadius: 0,
+    border: '1px solid #c0c0c0',
+    boxShadow: 'none',
+    backgroundColor: '#ffffff',
+  }), []);
+
+  const tableSx = useMemo(() => ({
+    '& .MuiTableCell-root': {
+      fontSize: '16px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      borderColor: '#e0e0e0',
+      padding: '12px 16px',
+    },
+    '& .MuiTableHead-root .MuiTableCell-root': {
+      fontWeight: 600,
+      backgroundColor: '#f5f5f5',
+    },
   }), []);
 
   return (
     <MainLayout>
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
-          <Typography sx={titleTypographySx}>Alert History</Typography>
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>Alert History</Typography>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <InputLabel>Status</InputLabel>
@@ -178,96 +215,95 @@ const AlertHistory: React.FC = () => {
               startIcon={<Refresh />}
               onClick={loadAlerts}
               disabled={loading}
+              sx={refreshButtonSx}
             >
               Refresh
             </Button>
           </Box>
         </Box>
 
-        <Paper>
+        <TableContainer component={Paper} sx={tableContainerSx}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
             </Box>
           ) : (
             <>
-              <TableContainer>
-                <Table>
-                  <TableHead>
+              <Table sx={tableSx}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Alert Rule</TableCell>
+                    <TableCell>Product</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Message</TableCell>
+                    <TableCell>Severity</TableCell>
+                    <TableCell>Status</TableCell>
+                    {canManage && <TableCell align="right">Actions</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {alerts.length === 0 ? (
                     <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Alert Rule</TableCell>
-                      <TableCell>Product</TableCell>
-                      <TableCell>Category</TableCell>
-                      <TableCell>Message</TableCell>
-                      <TableCell>Severity</TableCell>
-                      <TableCell>Status</TableCell>
-                      {canManage && <TableCell align="right">Actions</TableCell>}
+                      <TableCell colSpan={canManage ? 8 : 7} align="center">
+                        <Typography>No alerts found</Typography>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {alerts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={canManage ? 8 : 7} align="center">
-                          <Typography>No alerts found</Typography>
+                  ) : (
+                    alerts.map((alert) => (
+                      <TableRow key={alert.id}>
+                        <TableCell>{formatDate(alert.createdAt)}</TableCell>
+                        <TableCell>
+                          {alert.alertRule?.name || 'Unknown Rule'}
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      alerts.map((alert) => (
-                        <TableRow key={alert.id}>
-                          <TableCell>{formatDate(alert.createdAt)}</TableCell>
-                          <TableCell>
-                            {alert.alertRule?.name || 'Unknown Rule'}
-                          </TableCell>
-                          <TableCell>
-                            {alert.product?.name || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {alert.category?.name || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{alert.message}</Typography>
-                          </TableCell>
-                          <TableCell>
+                        <TableCell>
+                          {alert.product?.name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {alert.category?.name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">{alert.message}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={AlertRuleService.getPriorityDisplayName(alert.severity as AlertPriority)}
+                            color={getSeverityColor(alert.severity) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {alert.isResolved ? (
                             <Chip
-                              label={AlertRuleService.getPriorityDisplayName(alert.severity as AlertPriority)}
-                              color={getSeverityColor(alert.severity) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
+                              icon={<CheckCircle />}
+                              label="Resolved"
+                              color="success"
                               size="small"
                             />
-                          </TableCell>
-                          <TableCell>
-                            {alert.isResolved ? (
-                              <Chip
-                                icon={<CheckCircle />}
-                                label="Resolved"
-                                color="success"
-                                size="small"
-                              />
-                            ) : (
-                              <Chip label="Active" color="warning" size="small" />
+                          ) : (
+                            <Chip label="Active" color="warning" size="small" />
+                          )}
+                        </TableCell>
+                        {canManage && (
+                          <TableCell align="right">
+                            {!alert.isResolved && (
+                              <Tooltip title="Mark as Resolved">
+                                <IconButton
+                                  onClick={() => handleResolve(alert.id)}
+                                  size="small"
+                                  color="success"
+                                >
+                                  <CheckCircle />
+                                </IconButton>
+                              </Tooltip>
                             )}
                           </TableCell>
-                          {canManage && (
-                            <TableCell align="right">
-                              {!alert.isResolved && (
-                                <Tooltip title="Mark as Resolved">
-                                  <IconButton
-                                    onClick={() => handleResolve(alert.id)}
-                                    size="small"
-                                    color="success"
-                                  >
-                                    <CheckCircle />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                        )}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
               <TablePagination
                 component="div"
                 count={total}
@@ -279,7 +315,7 @@ const AlertHistory: React.FC = () => {
               />
             </>
           )}
-        </Paper>
+        </TableContainer>
 
         <Toast toast={toast} onClose={hideToast} />
       </Box>

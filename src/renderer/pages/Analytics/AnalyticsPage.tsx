@@ -285,8 +285,7 @@ const AnalyticsPage: React.FC = () => {
   }), []);
 
   const titleTypographySx = useMemo(() => ({
-    fontSize: '18px',
-    fontWeight: 600,
+    fontSize: { xs: '20px', sm: '24px', md: '28px' },
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
@@ -436,7 +435,7 @@ const AnalyticsPage: React.FC = () => {
     <MainLayout>
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
-          <Typography sx={titleTypographySx}>
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>
             Analytics Dashboard
           </Typography>
           <Tooltip title={loading ? "Refreshing analytics..." : "Refresh Analytics - Reload all analytics data and charts to get the latest information from the database."}>

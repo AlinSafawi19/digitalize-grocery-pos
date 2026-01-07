@@ -22,6 +22,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ProductList = lazy(() => import('./pages/Products/ProductList'));
 const ProductForm = lazy(() => import('./pages/Products/ProductForm'));
 const ProductDetails = lazy(() => import('./pages/Products/ProductDetails'));
+const ProductImageManagement = lazy(() => import('./pages/Products/ProductImageManagement'));
 const CategoryList = lazy(() => import('./pages/Categories/CategoryList'));
 const CategoryForm = lazy(() => import('./pages/Categories/CategoryForm'));
 const CategoryDetails = lazy(() => import('./pages/Categories/CategoryDetails'));
@@ -437,6 +438,14 @@ function AppContent() {
           element={
             <PermissionProtectedRoute>
               <ProductDetails />
+            </PermissionProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.PRODUCTS_IMAGES}
+          element={
+            <PermissionProtectedRoute>
+              <ProductImageManagement />
             </PermissionProtectedRoute>
           }
         />

@@ -17,7 +17,7 @@ import {
   Checkbox,
   Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility, Refresh, Upload, Download, FileDownload } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, Refresh, Upload, Download, FileDownload, Image as ImageIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -25,6 +25,7 @@ import { ProductService, Product, ProductListOptions, Category } from '../../ser
 import { CategoryService } from '../../services/category.service';
 import { SupplierService } from '../../services/supplier.service';
 import { Supplier } from '../../services/product.service';
+import { ProductImageService, ProductImage } from '../../services/product-image.service';
 import MainLayout from '../../components/layout/MainLayout';
 import { ROUTES } from '../../utils/constants';
 import { formatCurrency } from '../../utils/currency';
@@ -42,6 +43,10 @@ import { ProductImportExportService } from '../../services/product-import-export
 interface ProductRowProps {
   product: Product;
   dualCurrency?: { price: { usd: number; lbp: number }; costPrice?: { usd: number; lbp: number } };
+  productImages?: Array<{ image: ProductImage; dataUrl: string | null }>;
+  currentImageIndex?: number;
+  onImageChange?: (productId: number, index: number) => void;
+  onImageHover?: (productId: number, isHovering: boolean) => void;
   onView: (product: Product) => void;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
@@ -52,7 +57,7 @@ interface ProductRowProps {
 }
 
 /* eslint-disable react/prop-types */
-const ProductRow = memo<ProductRowProps>(({ product, dualCurrency, onView, onEdit, onDelete, selected, onSelect, canUpdate, canDelete }) => {
+const ProductRow = memo<ProductRowProps>(({ product, dualCurrency, productImages = [], currentImageIndex = 0, onImageChange, onImageHover, onView, onEdit, onDelete, selected, onSelect, canUpdate, canDelete }) => {
   // Memoize sx prop objects
   const bodyTypographySx = useMemo(() => ({
     fontSize: '16px',
@@ -116,6 +121,92 @@ const ProductRow = memo<ProductRowProps>(({ product, dualCurrency, onView, onEdi
     },
   }), []);
 
+  const imageContainerSx = useMemo(() => ({
+    width: 60,
+    height: 60,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 1,
+    overflow: 'hidden',
+    flexShrink: 0,
+    position: 'relative',
+    '&:hover .image-nav-button': {
+      opacity: 1,
+    },
+  }), []);
+
+  const productImageSx = useMemo(() => ({
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  }), []);
+
+  const navButtonSx = useMemo(() => ({
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    color: 'white',
+    padding: '2px',
+    minWidth: 'auto',
+    width: '16px',
+    height: '16px',
+    opacity: 0,
+    transition: 'opacity 0.2s',
+    zIndex: 2,
+    '&:hover': {
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+  }), []);
+
+  const imageDotsSx = useMemo(() => ({
+    position: 'absolute',
+    bottom: 2,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    gap: 1,
+    zIndex: 2,
+  }), []);
+
+  const getImageDotSx = useCallback((isActive: boolean) => ({
+    width: isActive ? 4 : 3,
+    height: isActive ? 4 : 3,
+    borderRadius: '50%',
+    backgroundColor: isActive ? '#1a237e' : 'rgba(255, 255, 255, 0.5)',
+    border: isActive ? '1px solid #1a237e' : '1px solid rgba(0, 0, 0, 0.2)',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  }), []);
+
+  const currentImage = productImages[currentImageIndex];
+  const hasMultipleImages = productImages.length > 1;
+
+  const handlePreviousImage = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onImageChange && productImages.length > 0) {
+      const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : productImages.length - 1;
+      onImageChange(product.id, newIndex);
+    }
+  }, [product.id, currentImageIndex, productImages.length, onImageChange]);
+
+  const handleNextImage = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onImageChange && productImages.length > 0) {
+      const newIndex = currentImageIndex < productImages.length - 1 ? currentImageIndex + 1 : 0;
+      onImageChange(product.id, newIndex);
+    }
+  }, [product.id, currentImageIndex, productImages.length, onImageChange]);
+
+  const handleDotClick = useCallback((index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onImageChange) {
+      onImageChange(product.id, index);
+    }
+  }, [product.id, onImageChange]);
+
   return (
     <TableRow hover>
       {canDelete && (
@@ -132,6 +223,69 @@ const ProductRow = memo<ProductRowProps>(({ product, dualCurrency, onView, onEdi
           />
         </TableCell>
       )}
+      <TableCell>
+        {/* Product Image */}
+        <Box 
+          sx={imageContainerSx}
+          onMouseEnter={() => {
+            if (onImageHover && hasMultipleImages) {
+              onImageHover(product.id, true);
+            }
+          }}
+          onMouseLeave={() => {
+            if (onImageHover && hasMultipleImages) {
+              onImageHover(product.id, false);
+            }
+          }}
+        >
+          {currentImage?.dataUrl ? (
+            <>
+              <Box
+                component="img"
+                src={currentImage.dataUrl}
+                alt={currentImage.image.altText || product.name}
+                sx={productImageSx}
+                onError={() => {
+                  // Image failed to load, will show placeholder on next render
+                }}
+              />
+              {/* Navigation buttons for multiple images */}
+              {hasMultipleImages && (
+                <>
+                  <IconButton
+                    className="image-nav-button"
+                    sx={{ ...navButtonSx, left: 2 }}
+                    onClick={handlePreviousImage}
+                    size="small"
+                  >
+                    <ChevronLeft sx={{ fontSize: 12 }} />
+                  </IconButton>
+                  <IconButton
+                    className="image-nav-button"
+                    sx={{ ...navButtonSx, right: 2 }}
+                    onClick={handleNextImage}
+                    size="small"
+                  >
+                    <ChevronRight sx={{ fontSize: 12 }} />
+                  </IconButton>
+                  {/* Image dots indicator */}
+                  <Box sx={imageDotsSx}>
+                    {productImages.map((_, index) => (
+                      <Box
+                        key={index}
+                        sx={getImageDotSx(index === currentImageIndex)}
+                        onClick={(e) => handleDotClick(index, e)}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
+            </>
+          ) : (
+            <ImageIcon sx={{ fontSize: 32, color: '#bdbdbd' }} />
+          )}
+        </Box>
+      </TableCell>
       <TableCell>
         <Typography variant="body2" sx={bodyTypographySx}>
           {product.barcode || '-'}
@@ -267,6 +421,14 @@ const ProductList: React.FC = () => {
   const [productDualCurrencies, setProductDualCurrencies] = useState<
     Record<number, { price: { usd: number; lbp: number }; costPrice?: { usd: number; lbp: number } }>
   >({});
+  const [productImages, setProductImages] = useState<
+    Record<number, Array<{ image: ProductImage; dataUrl: string | null }>>
+  >({});
+  const [currentImageIndex, setCurrentImageIndex] = useState<Record<number, number>>({});
+  const loadingImagesRef = useRef<Set<number>>(new Set());
+  const loadedProductIdsRef = useRef<Set<number>>(new Set());
+  const autoChangeIntervalsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  const pausedProductsRef = useRef<Set<number>>(new Set());
   const [supplierFilter, setSupplierFilter] = useState<number | ''>('');
   const [sortBy, setSortBy] = useState<'name' | 'barcode' | 'price' | 'createdAt'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -579,6 +741,154 @@ const ProductList: React.FC = () => {
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, [products.length, loadedCurrencyRange, loadCurrenciesForRange]);
+
+  // Load product images
+  useEffect(() => {
+    const loadProductImages = async () => {
+      // Load images for products that don't have them yet
+      const productsToLoad = products.filter(
+        (p) => !loadedProductIdsRef.current.has(p.id) && !loadingImagesRef.current.has(p.id)
+      );
+
+      if (productsToLoad.length === 0) return;
+
+      // Mark products as loading
+      productsToLoad.forEach((p) => {
+        loadingImagesRef.current.add(p.id);
+      });
+
+      // Load images in parallel
+      const imagePromises = productsToLoad.map(async (product) => {
+        try {
+          const images = await ProductImageService.getByProductId(product.id);
+          if (images.length > 0) {
+            // Sort images: primary first, then by displayOrder
+            const sortedImages = [...images].sort((a, b) => {
+              if (a.isPrimary) return -1;
+              if (b.isPrimary) return 1;
+              return (a.displayOrder || 0) - (b.displayOrder || 0);
+            });
+
+            // Load all image data URLs
+            const imageDataPromises = sortedImages.map(async (img) => {
+              const relativePath = img.thumbnailPath || img.filePath;
+              const dataUrl = await ProductImageService.getImageDataUrl(relativePath);
+              return {
+                image: img,
+                dataUrl,
+              };
+            });
+
+            const imageData = await Promise.all(imageDataPromises);
+            
+            return {
+              productId: product.id,
+              images: imageData.filter((item) => item.dataUrl !== null),
+            };
+          }
+          return { productId: product.id, images: [] };
+        } catch (error) {
+          console.error(`Error loading image for product ${product.id}:`, error);
+          return { productId: product.id, images: [] };
+        }
+      });
+
+      const results = await Promise.all(imagePromises);
+      
+      // Update state with loaded images
+      setProductImages((prev) => {
+        const updated = { ...prev };
+        results.forEach((result) => {
+          if (result.images && result.images.length > 0) {
+            updated[result.productId] = result.images;
+            // Set initial image index to 0
+            setCurrentImageIndex((prevIndex) => ({
+              ...prevIndex,
+              [result.productId]: 0,
+            }));
+            loadedProductIdsRef.current.add(result.productId);
+          } else {
+            // Mark as loaded even if no image to avoid retrying
+            loadedProductIdsRef.current.add(result.productId);
+          }
+          // Remove from loading set
+          loadingImagesRef.current.delete(result.productId);
+        });
+        return updated;
+      });
+    };
+
+    if (products.length > 0) {
+      loadProductImages();
+    } else {
+      // Clear images when no products
+      setProductImages({});
+      setCurrentImageIndex({});
+      loadingImagesRef.current.clear();
+      loadedProductIdsRef.current.clear();
+    }
+  }, [products]);
+
+  // Auto-change images for products with multiple images
+  useEffect(() => {
+    // Clear all existing intervals
+    autoChangeIntervalsRef.current.forEach((interval) => {
+      clearInterval(interval);
+    });
+    autoChangeIntervalsRef.current.clear();
+
+    // Set up auto-change for products with multiple images
+    Object.keys(productImages).forEach((productIdStr) => {
+      const productId = parseInt(productIdStr, 10);
+      const images = productImages[productId];
+      
+      if (images && images.length > 1) {
+        const interval = setInterval(() => {
+          // Skip if paused (e.g., user is hovering or manually navigating)
+          if (pausedProductsRef.current.has(productId)) {
+            return;
+          }
+
+          setCurrentImageIndex((prev) => {
+            const currentIndex = prev[productId] || 0;
+            const newIndex = currentIndex < images.length - 1 ? currentIndex + 1 : 0;
+            return { ...prev, [productId]: newIndex };
+          });
+        }, 3000); // Change image every 3 seconds
+
+        autoChangeIntervalsRef.current.set(productId, interval);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      autoChangeIntervalsRef.current.forEach((interval) => {
+        clearInterval(interval);
+      });
+      autoChangeIntervalsRef.current.clear();
+    };
+  }, [productImages]);
+
+  const handleImageChange = useCallback((productId: number, index: number) => {
+    // Temporarily pause auto-change when user manually navigates
+    pausedProductsRef.current.add(productId);
+    setTimeout(() => {
+      pausedProductsRef.current.delete(productId);
+    }, 5000); // Resume after 5 seconds
+    
+    setCurrentImageIndex((prev) => ({
+      ...prev,
+      [productId]: index,
+    }));
+  }, []);
+
+  const handleImageHover = useCallback((productId: number, isHovering: boolean) => {
+    if (isHovering) {
+      pausedProductsRef.current.add(productId);
+    } else {
+      pausedProductsRef.current.delete(productId);
+    }
+  }, []);
 
   const handleDeleteClick = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -1284,6 +1594,7 @@ const ProductList: React.FC = () => {
                         />
                       </TableCell>
                     )}
+                    <TableCell>Image</TableCell>
                     <TableCell>Barcode</TableCell>
                     <TableCell>Name</TableCell>
                     <TableCell>Category</TableCell>
@@ -1301,6 +1612,10 @@ const ProductList: React.FC = () => {
                       key={product.id}
                       product={product}
                       dualCurrency={productDualCurrencies[product.id]}
+                      productImages={productImages[product.id] || []}
+                      currentImageIndex={currentImageIndex[product.id] || 0}
+                      onImageChange={handleImageChange}
+                      onImageHover={handleImageHover}
                       onView={handleView}
                       onEdit={handleEdit}
                       onDelete={handleDeleteClick}
@@ -1311,7 +1626,7 @@ const ProductList: React.FC = () => {
                     />
                   )}
                   emptyMessage="No products found"
-                  emptyColSpan={canDelete ? 9 : 8}
+                  emptyColSpan={canDelete ? 10 : 9}
                   rowHeight={80}
                   overscan={5}
                   tableContainerRef={tableContainerRef}

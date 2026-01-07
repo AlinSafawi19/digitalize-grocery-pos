@@ -1,5 +1,6 @@
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, shell } from 'electron';
 import { logger } from '../utils/logger';
+import fs from 'fs-extra';
 import {
   ProductService,
   CreateProductInput,
@@ -318,8 +319,11 @@ export function registerProductHandlers(): void {
         message: `Importing ${prepared.validRows} products...`,
       });
 
+      // Extract products from the new structure
+      const productsToImport = prepared.products.map(item => item.product);
+
       // Import products using bulk create
-      const result = await ProductService.bulkCreate(prepared.products, userId);
+      const result = await ProductService.bulkCreate(productsToImport, userId);
 
       // Send completion update
       event.sender.send('product:import:progress', {
@@ -364,6 +368,16 @@ export function registerProductHandlers(): void {
         exportedPath = await ProductImportExportService.exportToExcel(products, filePath);
       }
 
+      // Open the file immediately after export
+      if (exportedPath && await fs.pathExists(exportedPath)) {
+        try {
+          await shell.openPath(exportedPath);
+        } catch (openError) {
+          logger.warn('Failed to open exported file', { exportedPath, error: openError });
+          // Don't fail the export if opening fails
+        }
+      }
+
       return {
         success: true,
         filePath: exportedPath,
@@ -385,6 +399,17 @@ export function registerProductHandlers(): void {
   ipcMain.handle('product:generateTemplate', async (_event, filePath: string, format: 'csv' | 'xlsx' = 'xlsx') => {
     try {
       const templatePath = await ProductImportExportService.generateTemplate(filePath, format);
+      
+      // Open the file immediately after generation
+      if (templatePath && await fs.pathExists(templatePath)) {
+        try {
+          await shell.openPath(templatePath);
+        } catch (openError) {
+          logger.warn('Failed to open template file', { templatePath, error: openError });
+          // Don't fail the template generation if opening fails
+        }
+      }
+      
       return {
         success: true,
         filePath: templatePath,
@@ -407,8 +432,9 @@ export function registerProductHandlers(): void {
       const result = await dialog.showOpenDialog({
         title: 'Select Product Import File',
         filters: [
-          { name: 'CSV Files', extensions: ['csv'] },
+          { name: 'Supported Files', extensions: ['csv', 'xlsx', 'xls'] },
           { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+          { name: 'CSV Files', extensions: ['csv'] },
           { name: 'All Files', extensions: ['*'] },
         ],
         properties: ['openFile'],
@@ -444,6 +470,7 @@ export function registerProductHandlers(): void {
         title: 'Save Product Export File',
         defaultPath: defaultFileName,
         filters: [
+          { name: 'Supported Files', extensions: ['xlsx', 'csv'] },
           { name: 'Excel Files', extensions: ['xlsx'] },
           { name: 'CSV Files', extensions: ['csv'] },
           { name: 'All Files', extensions: ['*'] },

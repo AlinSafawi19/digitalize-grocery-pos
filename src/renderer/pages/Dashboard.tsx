@@ -434,6 +434,21 @@ const Dashboard: React.FC = () => {
     backgroundColor: '#ffffff',
   }), []);
 
+  const performanceCardSx = useMemo(() => ({
+    ...statCardSx,
+    height: '100%',
+    minHeight: '140px',
+    display: 'flex',
+    flexDirection: 'column',
+  }), [statCardSx]);
+
+  const activityCardSx = useMemo(() => ({
+    ...statCardSx,
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+  }), [statCardSx]);
+
   const statLabelTypographySx = useMemo(() => ({
     fontSize: '14px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -760,9 +775,9 @@ const Dashboard: React.FC = () => {
             </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6} lg={3}>
-              <Card sx={statCardSx}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Card sx={performanceCardSx}>
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant="body2"
@@ -806,9 +821,9 @@ const Dashboard: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} lg={3}>
-              <Card sx={statCardSx}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Card sx={performanceCardSx}>
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant="body2"
@@ -852,9 +867,9 @@ const Dashboard: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} lg={3}>
-              <Card sx={statCardSx}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Card sx={performanceCardSx}>
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant="body2"
@@ -880,9 +895,9 @@ const Dashboard: React.FC = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} lg={3}>
-              <Card sx={statCardSx}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Card sx={performanceCardSx}>
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant="body2"
@@ -1220,8 +1235,8 @@ const Dashboard: React.FC = () => {
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {/* Quick Actions */}
           <Grid item xs={12} md={4}>
-            <Card sx={statCardSx}>
-              <CardContent>
+            <Card sx={activityCardSx}>
+              <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Typography
                   variant="h6"
                   fontWeight="bold"
@@ -1331,8 +1346,8 @@ const Dashboard: React.FC = () => {
           {/* Today's Top Products */}
           {(canViewReports || canViewTransactions) && (
             <Grid item xs={12} md={4}>
-              <Card sx={statCardSx}>
-                <CardContent>
+              <Card sx={activityCardSx}>
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <Typography
                     variant="h6"
                     fontWeight="bold"
@@ -1342,7 +1357,7 @@ const Dashboard: React.FC = () => {
                     Top Products Today
                   </Typography>
                 {topProducts.length === 0 ? (
-                  <Box sx={emptyStateBoxSx}>
+                  <Box sx={{ ...emptyStateBoxSx, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                     <ShoppingCart sx={{ fontSize: 48, color: '#9e9e9e', mb: 2, opacity: 0.5 }} />
                     <Typography
                       variant="body1"
@@ -1363,7 +1378,7 @@ const Dashboard: React.FC = () => {
                     </Tooltip>
                   </Box>
                 ) : (
-                  <Box sx={{ mt: 2 }}>
+                  <Box sx={{ mt: 2, flex: 1 }}>
                     {topProducts.map((product, index) => (
                       <Box
                         key={product.productId}
@@ -1410,8 +1425,8 @@ const Dashboard: React.FC = () => {
           {/* Recent Transactions */}
           {canViewTransactions && (
             <Grid item xs={12} md={4}>
-            <Card sx={statCardSx}>
-              <CardContent>
+            <Card sx={activityCardSx}>
+              <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography
                     variant="h6"
@@ -1434,7 +1449,7 @@ const Dashboard: React.FC = () => {
                   </Tooltip>
                 </Box>
                 {recentTransactions.length === 0 ? (
-                  <Box sx={emptyStateBoxSx}>
+                  <Box sx={{ ...emptyStateBoxSx, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                     <Receipt sx={{ fontSize: 48, color: '#9e9e9e', mb: 2, opacity: 0.5 }} />
                     <Typography
                       variant="body1"
@@ -1455,7 +1470,7 @@ const Dashboard: React.FC = () => {
                     </Tooltip>
                   </Box>
                 ) : (
-                  <Box>
+                  <Box sx={{ flex: 1 }}>
                     {recentTransactions.slice(0, 5).map((transaction) => (
                       <Box
                         key={transaction.id}

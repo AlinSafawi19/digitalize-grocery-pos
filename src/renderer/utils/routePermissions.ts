@@ -14,6 +14,7 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   [ROUTES.PRODUCTS_NEW]: 'products.create',
   [ROUTES.PRODUCTS_EDIT]: 'products.update',
   [ROUTES.PRODUCTS_VIEW]: 'products.view',
+  [ROUTES.PRODUCTS_IMAGES]: 'products.update',
 
   // Categories
   [ROUTES.CATEGORIES]: 'categories.view',

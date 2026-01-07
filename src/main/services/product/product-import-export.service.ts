@@ -16,6 +16,8 @@ export interface ImportProductRow {
   price: number;
   costPrice?: number;
   currency?: string;
+  quantity?: number; // Initial stock quantity
+  reorderLevel?: number; // Minimum stock level before reorder alert
 }
 
 export interface ImportResult {
@@ -23,7 +25,7 @@ export interface ImportResult {
   totalRows: number;
   validRows: number;
   invalidRows: number;
-  products: CreateProductInput[];
+  products: Array<{ product: CreateProductInput; rowNumber: number }>;
   errors: Array<{ row: number; error: string }>;
   preview?: ImportPreview;
 }
@@ -68,7 +70,8 @@ export class ProductImportExportService {
     const headers = this.parseCSVLine(lines[0]);
     const headerMap: Record<string, number> = {};
     headers.forEach((header, index) => {
-      headerMap[header.toLowerCase().trim()] = index;
+      const normalizedHeader = this.normalizeHeaderName(header);
+      headerMap[normalizedHeader] = index;
     });
 
     // Validate required headers
@@ -88,13 +91,19 @@ export class ProductImportExportService {
         continue; // Skip empty rows
       }
 
+      // Check if row has at least one meaningful field (name or barcode)
+      const name = this.getValue(values, headerMap, 'name');
+      const barcode = this.getValue(values, headerMap, 'barcode');
+      if (!name && !barcode) {
+        continue; // Skip rows with no name or barcode
+      }
+
       const row: ImportProductRow = {
-        name: this.getValue(values, headerMap, 'name') || '',
+        name: name || '',
         price: parseFloat(this.getValue(values, headerMap, 'price') || '0'),
       };
 
       // Optional fields
-      const barcode = this.getValue(values, headerMap, 'barcode');
       if (barcode) row.barcode = barcode;
 
       const description = this.getValue(values, headerMap, 'description');
@@ -115,10 +124,24 @@ export class ProductImportExportService {
       const currency = this.getValue(values, headerMap, 'currency');
       if (currency) row.currency = currency;
 
+      const quantity = this.getValue(values, headerMap, 'quantity');
+      if (quantity) row.quantity = parseFloat(quantity);
+
+      const reorderLevel = this.getValue(values, headerMap, 'reorderlevel');
+      if (reorderLevel) row.reorderLevel = parseFloat(reorderLevel);
+
       rows.push(row);
     }
 
     return rows;
+  }
+
+  /**
+   * Normalize header name by removing asterisks, spaces, and trimming
+   * This allows "Cost Price*" to match "costprice" lookups
+   */
+  private static normalizeHeaderName(header: string): string {
+    return header.toLowerCase().trim().replace(/\*+$/, '').replace(/\s+/g, '').trim();
   }
 
   /**
@@ -192,8 +215,9 @@ export class ProductImportExportService {
     const headerRow = worksheet.getRow(1);
     const headerMap: Record<string, number> = {};
     headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-      const header = (cell.value?.toString() || '').toLowerCase().trim();
-      headerMap[header] = colNumber;
+      const header = cell.value?.toString() || '';
+      const normalizedHeader = this.normalizeHeaderName(header);
+      headerMap[normalizedHeader] = colNumber;
     });
 
     // Validate required headers
@@ -208,20 +232,26 @@ export class ProductImportExportService {
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       const row = worksheet.getRow(rowNumber);
       
-      // Skip empty rows
+      // Skip empty rows - check if row has any data
       let hasData = false;
       row.eachCell({ includeEmpty: false }, () => {
         hasData = true;
       });
       if (!hasData) continue;
 
+      // Check if row has at least one meaningful field (name or barcode)
+      const name = this.getCellValue(row, headerMap, 'name');
+      const barcode = this.getCellValue(row, headerMap, 'barcode');
+      if (!name && !barcode) {
+        continue; // Skip rows with no name or barcode
+      }
+
       const rowData: ImportProductRow = {
-        name: this.getCellValue(row, headerMap, 'name') || '',
+        name: name || '',
         price: parseFloat(this.getCellValue(row, headerMap, 'price') || '0'),
       };
 
       // Optional fields
-      const barcode = this.getCellValue(row, headerMap, 'barcode');
       if (barcode) rowData.barcode = barcode;
 
       const description = this.getCellValue(row, headerMap, 'description');
@@ -241,6 +271,12 @@ export class ProductImportExportService {
 
       const currency = this.getCellValue(row, headerMap, 'currency');
       if (currency) rowData.currency = currency;
+
+      const quantity = this.getCellValue(row, headerMap, 'quantity');
+      if (quantity) rowData.quantity = parseFloat(quantity);
+
+      const reorderLevel = this.getCellValue(row, headerMap, 'reorderlevel');
+      if (reorderLevel) rowData.reorderLevel = parseFloat(reorderLevel);
 
       rows.push(rowData);
     }
@@ -347,8 +383,10 @@ export class ProductImportExportService {
         errors.push('Price is required and must be greater than 0');
       }
 
-      // Validate barcode
-      if (row.barcode) {
+      // Validate barcode (required)
+      if (!row.barcode || row.barcode.trim() === '') {
+        errors.push('Barcode is required');
+      } else {
         if (barcodeSet.has(row.barcode)) {
           duplicateBarcodes.add(row.barcode);
           errors.push(`Duplicate barcode in import file: ${row.barcode}`);
@@ -357,11 +395,18 @@ export class ProductImportExportService {
         }
       }
 
-      // Validate cost price if provided
-      if (row.costPrice !== undefined && row.costPrice !== null) {
-        if (isNaN(row.costPrice) || row.costPrice < 0) {
-          errors.push('Cost price must be a valid number >= 0');
-        }
+      // Validate cost price (required)
+      if (row.costPrice === undefined || row.costPrice === null || isNaN(row.costPrice)) {
+        errors.push('Cost price is required');
+      } else if (row.costPrice < 0) {
+        errors.push('Cost price must be >= 0');
+      }
+
+      // Validate currency (required)
+      if (!row.currency || row.currency.trim() === '') {
+        errors.push('Currency is required');
+      } else if (row.currency !== 'USD' && row.currency !== 'LBP') {
+        errors.push('Currency must be either USD or LBP');
       }
 
       // Resolve category
@@ -395,15 +440,20 @@ export class ProductImportExportService {
       } else {
         result.validRows++;
         result.products.push({
-          barcode: row.barcode || null,
-          name: row.name.trim(),
-          description: row.description?.trim() || null,
-          categoryId,
-          supplierId,
-          unit: row.unit || 'pcs',
-          price: row.price,
-          costPrice: row.costPrice || null,
-          currency: row.currency || 'USD',
+          product: {
+            barcode: row.barcode!.trim(),
+            name: row.name.trim(),
+            description: row.description?.trim() || null,
+            categoryId,
+            supplierId,
+            unit: row.unit || 'pcs',
+            price: row.price,
+            costPrice: row.costPrice!,
+            currency: row.currency!.trim(),
+            quantity: row.quantity ?? 0,
+            reorderLevel: row.reorderLevel ?? 0,
+          },
+          rowNumber,
         });
       }
     }
@@ -438,9 +488,9 @@ export class ProductImportExportService {
       const prepared = await this.prepareImportData(rows);
 
       const preview: ImportPreview = {
-        products: prepared.products.map((product, index) => ({
-          row: index + 2, // +2 because row 1 is header, and arrays are 0-indexed
-          data: product,
+        products: prepared.products.map((item) => ({
+          row: item.rowNumber,
+          data: item.product,
           warnings: [], // Warnings are already handled in prepareImportData
         })),
         errors: prepared.errors,
@@ -473,22 +523,25 @@ export class ProductImportExportService {
     // Header row
     if (includeHeaders) {
       lines.push(
-        'Barcode,Name,Description,Category,Supplier,Unit,Price,Cost Price,Currency'
+        'Barcode,Name,Description,Category,Supplier,Unit,Price,Cost Price,Currency,Quantity,Reorder Level'
       );
     }
 
     // Data rows
     for (const product of products) {
+      const inventory = (product as any).inventory;
       const row = [
         this.escapeCSVValue(product.barcode || ''),
         this.escapeCSVValue(product.name),
-        this.escapeCSVValue(product.description || ''),
-        this.escapeCSVValue(product.category?.name || ''),
-        this.escapeCSVValue(product.supplier?.name || ''),
+        this.escapeCSVValue(product.description || '-'),
+        this.escapeCSVValue(product.category?.name || '-'),
+        this.escapeCSVValue(product.supplier?.name || '-'),
         this.escapeCSVValue(product.unit),
         product.price.toString(),
         product.costPrice?.toString() || '',
         this.escapeCSVValue(product.currency),
+        (inventory?.quantity ?? 0).toString(),
+        (inventory?.reorderLevel ?? 0).toString(),
       ];
       lines.push(row.join(','));
     }
@@ -520,18 +573,26 @@ export class ProductImportExportService {
 
     const includeHeaders = options.includeHeaders !== false;
 
+    // Fetch categories and suppliers for dropdown lists
+    const categories = await CategoryService.getAll({ includeRelations: false });
+    const suppliers = await SupplierService.getAll();
+    const categoryNames = categories.map((c) => c.name);
+    const supplierNames = suppliers.map((s) => s.name);
+
     // Header row
     if (includeHeaders) {
       worksheet.addRow([
-        'Barcode',
-        'Name',
+        'Barcode*',
+        'Name*',
         'Description',
         'Category',
         'Supplier',
         'Unit',
-        'Price',
-        'Cost Price',
-        'Currency',
+        'Price*',
+        'Cost Price*',
+        'Currency*',
+        'Quantity',
+        'Reorder Level',
       ]);
 
       // Style header row
@@ -545,18 +606,77 @@ export class ProductImportExportService {
     }
 
     // Data rows
-    for (const product of products) {
+    const startRow = includeHeaders ? 2 : 1;
+    for (let i = 0; i < products.length; i++) {
+      const product = products[i];
+      const inventory = (product as any).inventory;
+      const rowNumber = startRow + i;
+      
       worksheet.addRow([
         product.barcode || '',
         product.name,
-        product.description || '',
-        product.category?.name || '',
-        product.supplier?.name || '',
+        product.description || '-',
+        product.category?.name || '-',
+        product.supplier?.name || '-',
         product.unit,
         product.price,
         product.costPrice || '',
         product.currency,
+        inventory?.quantity ?? 0,
+        inventory?.reorderLevel ?? 0,
       ]);
+
+      // Add data validation for Category column (column D, index 4)
+      const categoryCell = worksheet.getCell(rowNumber, 4);
+      if (categoryNames.length > 0) {
+        // Format: comma-separated quoted values in a single string
+        const categoryList = categoryNames
+          .map(name => `"${name.replace(/"/g, '""')}"`)
+          .join(',');
+        categoryCell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [categoryList],
+          showErrorMessage: true,
+          errorStyle: 'warning',
+          errorTitle: 'Invalid Category',
+          error: 'Please select a category from the dropdown list.',
+        };
+      }
+
+      // Add data validation for Supplier column (column E, index 5)
+      const supplierCell = worksheet.getCell(rowNumber, 5);
+      if (supplierNames.length > 0) {
+        // Format: comma-separated quoted values in a single string
+        const supplierList = supplierNames
+          .map(name => `"${name.replace(/"/g, '""')}"`)
+          .join(',');
+        supplierCell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [supplierList],
+          showErrorMessage: true,
+          errorStyle: 'warning',
+          errorTitle: 'Invalid Supplier',
+          error: 'Please select a supplier from the dropdown list.',
+        };
+      }
+
+      // Add data validation for Unit column (column F, index 6)
+      const unitCell = worksheet.getCell(rowNumber, 6);
+      const unitOptions = ['pcs', 'kg', 'g', 'l', 'ml', 'm', 'cm'];
+      const unitList = unitOptions
+        .map(unit => `"${unit}"`)
+        .join(',');
+      unitCell.dataValidation = {
+        type: 'list',
+        allowBlank: false,
+        formulae: [unitList],
+        showErrorMessage: true,
+        errorStyle: 'stop',
+        errorTitle: 'Unit Required',
+        error: 'Unit is required. Please select a unit from the dropdown list.',
+      };
     }
 
     // Auto-size columns
@@ -582,7 +702,265 @@ export class ProductImportExportService {
     if (format === 'csv') {
       return await this.exportToCSV(emptyProducts, filePath, { includeHeaders: true });
     } else {
-      return await this.exportToExcel(emptyProducts, filePath, { includeHeaders: true });
+      // For Excel templates, we want to add dropdowns to at least a few rows
+      // so users can see and use them
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Products');
+
+      // Fetch categories and suppliers for dropdown lists
+      const categories = await CategoryService.getAll({ includeRelations: false });
+      const suppliers = await SupplierService.getAll();
+      const categoryNames = categories.map((c) => c.name);
+      const supplierNames = suppliers.map((s) => s.name);
+
+      // Create a helper sheet for dropdown lists (more reliable than inline formulas)
+      const listsSheet = workbook.addWorksheet('Lists');
+      listsSheet.state = 'hidden'; // Hide the sheet from users
+      
+      // Add categories to helper sheet
+      if (categoryNames.length > 0) {
+        categoryNames.forEach((name, index) => {
+          listsSheet.getCell(index + 1, 1).value = name;
+        });
+      } else {
+        listsSheet.getCell(1, 1).value = 'No categories available';
+      }
+      
+      // Add suppliers to helper sheet
+      if (supplierNames.length > 0) {
+        supplierNames.forEach((name, index) => {
+          listsSheet.getCell(index + 1, 2).value = name;
+        });
+      } else {
+        listsSheet.getCell(1, 2).value = 'No suppliers available';
+      }
+      
+      // Add currencies to helper sheet
+      listsSheet.getCell(1, 3).value = 'USD';
+      listsSheet.getCell(2, 3).value = 'LBP';
+      
+      // Add units to helper sheet
+      const unitOptions = ['pcs', 'kg', 'g', 'l', 'ml', 'm', 'cm'];
+      unitOptions.forEach((unit, index) => {
+        listsSheet.getCell(index + 1, 4).value = unit;
+      });
+      
+      // Define ranges for dropdowns
+      const categoryRange = categoryNames.length > 0 
+        ? `Lists!$A$1:$A$${categoryNames.length}`
+        : 'Lists!$A$1:$A$1';
+      const supplierRange = supplierNames.length > 0
+        ? `Lists!$B$1:$B$${supplierNames.length}`
+        : 'Lists!$B$1:$B$1';
+      const currencyRange = 'Lists!$C$1:$C$2';
+      const unitRange = `Lists!$D$1:$D$${unitOptions.length}`;
+
+      // Header row (data table starts at row 1)
+      worksheet.addRow([
+        'Barcode*',
+        'Name*',
+        'Description',
+        'Category',
+        'Supplier',
+        'Unit*',
+        'Price*',
+        'Cost Price*',
+        'Currency*',
+        'Quantity',
+        'Reorder Level',
+      ]);
+
+      // Style header row
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
+
+      // Add helpers in column L (column 12) next to the table
+      const helperColumn = 12; // Column L
+      let helperRow = 1;
+
+      // Helper title
+      const helperTitleCell = worksheet.getCell(helperRow, helperColumn);
+      helperTitleCell.value = '📋 Template Guide';
+      helperTitleCell.font = { bold: true, size: 12, color: { argb: 'FF000000' } };
+      helperTitleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6F3FF' },
+      };
+      helperRow++;
+
+      // Required fields info
+      const requiredFieldsCell = worksheet.getCell(helperRow, helperColumn);
+      requiredFieldsCell.value = 'Required Fields (*):\n• Barcode\n• Name\n• Unit (select from list)\n• Price (must be > 0)\n• Cost Price (must be >= 0)\n• Currency';
+      requiredFieldsCell.font = { bold: true, size: 10, color: { argb: 'FF333333' } };
+      requiredFieldsCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+      helperRow++;
+
+      // Dropdowns info
+      const dropdownsCell = worksheet.getCell(helperRow, helperColumn);
+      dropdownsCell.value = 'Dropdown Fields:\n• Category (select from list)\n• Supplier (select from list)\n• Unit* (required, select from list)\n• Currency* (required, USD or LBP)';
+      dropdownsCell.font = { size: 10, color: { argb: 'FF333333' } };
+      dropdownsCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+      helperRow++;
+
+      // Default values info
+      const defaultsCell = worksheet.getCell(helperRow, helperColumn);
+      defaultsCell.value = 'Default Values:\n• Price: 0 (update required)\n• Cost Price: 0 (update required)\n• Quantity: 0\n• Reorder Level: 0\n• Unit: pcs\n• Currency: USD';
+      defaultsCell.font = { size: 10, color: { argb: 'FF333333' } };
+      defaultsCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+      helperRow++;
+
+      // Add warning notes if categories or suppliers are empty
+      let warningMessages: string[] = [];
+      if (categoryNames.length === 0) {
+        warningMessages.push('⚠️ No categories found. Please add categories first, then redownload this template.');
+      }
+      if (supplierNames.length === 0) {
+        warningMessages.push('⚠️ No suppliers found. Please add suppliers first, then redownload this template.');
+      }
+
+      if (warningMessages.length > 0) {
+        const warningCell = worksheet.getCell(helperRow, helperColumn);
+        warningCell.value = warningMessages.join('\n\n');
+        warningCell.font = { bold: true, color: { argb: 'FFFF0000' }, size: 10 };
+        warningCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFE6E6' },
+        };
+        warningCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+        helperRow++;
+      }
+
+      // Set helper column width
+      worksheet.getColumn(helperColumn).width = 40;
+
+      // Data starts at row 2 (after header)
+      const dataStartRow = 2;
+
+      // Add data validation to rows for Category, Supplier, and Currency columns
+      // Show only one row of data in the template
+      const maxTemplateRows = 1;
+      
+      for (let rowNumber = dataStartRow; rowNumber <= dataStartRow + maxTemplateRows - 1; rowNumber++) {
+        // Add default values for Price, Cost Price, Quantity, and Reorder Level
+        const priceCell = worksheet.getCell(rowNumber, 7); // Price column (moved from 6 to 7)
+        priceCell.value = 0;
+        // Add data validation for Price - required and > 0
+        priceCell.dataValidation = {
+          type: 'decimal',
+          allowBlank: false,
+          operator: 'greaterThan',
+          formulae: [0],
+          showErrorMessage: true,
+          errorStyle: 'stop',
+          errorTitle: 'Price Required',
+          error: 'Price is required and must be greater than 0.',
+        };
+        
+        const costPriceCell = worksheet.getCell(rowNumber, 8); // Cost Price column (moved from 7 to 8)
+        costPriceCell.value = 0;
+        // Add data validation for Cost Price - required and >= 0
+        costPriceCell.dataValidation = {
+          type: 'decimal',
+          allowBlank: false,
+          operator: 'greaterThanOrEqual',
+          formulae: [0],
+          showErrorMessage: true,
+          errorStyle: 'stop',
+          errorTitle: 'Cost Price Required',
+          error: 'Cost Price is required and must be >= 0.',
+        };
+        
+        const quantityCell = worksheet.getCell(rowNumber, 10); // Quantity column (moved from 9 to 10)
+        quantityCell.value = 0;
+        
+        const reorderLevelCell = worksheet.getCell(rowNumber, 11); // Reorder Level column (moved from 10 to 11)
+        reorderLevelCell.value = 0;
+
+        // Add data validation for Barcode column (column A, index 1) - required
+        const barcodeCell = worksheet.getCell(rowNumber, 1);
+        barcodeCell.dataValidation = {
+          type: 'custom',
+          allowBlank: false,
+          formulae: ['LEN(TRIM(A' + rowNumber + '))>0'],
+          showErrorMessage: true,
+          errorStyle: 'stop',
+          errorTitle: 'Barcode Required',
+          error: 'Barcode is required and cannot be empty.',
+        };
+
+        // Add data validation for Category column (column D, index 4)
+        // Use range reference to helper sheet (more reliable than inline formulas)
+        const categoryCell = worksheet.getCell(rowNumber, 4);
+        categoryCell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [categoryRange],
+          showErrorMessage: true,
+          errorStyle: 'warning',
+          errorTitle: 'Invalid Category',
+          error: 'Please select a category from the dropdown list.',
+        };
+
+        // Add data validation for Supplier column (column E, index 5)
+        // Use range reference to helper sheet
+        const supplierCell = worksheet.getCell(rowNumber, 5);
+        supplierCell.dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [supplierRange],
+          showErrorMessage: true,
+          errorStyle: 'warning',
+          errorTitle: 'Invalid Supplier',
+          error: 'Please select a supplier from the dropdown list.',
+        };
+
+        // Add data validation for Unit column (column F, index 6)
+        // Use range reference to helper sheet
+        const unitCell = worksheet.getCell(rowNumber, 6);
+        // Set default unit to pcs
+        unitCell.value = 'pcs';
+        unitCell.dataValidation = {
+          type: 'list',
+          allowBlank: false,
+          formulae: [unitRange],
+          showErrorMessage: true,
+          errorStyle: 'stop',
+          errorTitle: 'Unit Required',
+          error: 'Unit is required. Please select a unit from the dropdown list.',
+        };
+
+        // Add data validation for Currency column (column I, index 9)
+        // Use range reference to helper sheet
+        const currencyCell = worksheet.getCell(rowNumber, 9);
+        currencyCell.dataValidation = {
+          type: 'list',
+          allowBlank: false,
+          formulae: [currencyRange],
+          showErrorMessage: true,
+          errorStyle: 'stop',
+          errorTitle: 'Currency Required',
+          error: 'Currency is required. Please select USD or LBP from the dropdown list.',
+        };
+        // Set default currency to USD
+        currencyCell.value = 'USD';
+      }
+
+      // Auto-size columns
+      worksheet.columns.forEach((column) => {
+        if (column.header) {
+          column.width = 15;
+        }
+      });
+
+      await workbook.xlsx.writeFile(filePath);
+      return filePath;
     }
   }
 }

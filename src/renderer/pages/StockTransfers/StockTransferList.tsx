@@ -267,39 +267,66 @@ const StockTransferList: React.FC = () => {
     <MainLayout>
       <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" fontWeight="bold">
+          <Typography 
+            variant="h4" 
+            fontWeight="bold"
+            sx={{
+              fontSize: { xs: '20px', sm: '24px', md: '28px' },
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+          >
             Stock Transfers
           </Typography>
-          {canCreate && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleCreate}
-              sx={{ backgroundColor: '#1a237e', '&:hover': { backgroundColor: '#283593' } }}
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={handleRefresh}
+              disabled={loading}
+              sx={{
+                fontSize: '16px',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                textTransform: 'none',
+                borderRadius: 0,
+                borderColor: '#c0c0c0',
+                color: '#1a237e',
+                padding: '8px 20px',
+                minHeight: '44px',
+                '&:hover': {
+                  borderColor: '#1a237e',
+                  backgroundColor: '#f5f5f5',
+                },
+                '&:disabled': {
+                  borderColor: '#e0e0e0',
+                  color: '#9e9e9e',
+                },
+              }}
             >
-              New Transfer
+              Refresh
             </Button>
-          )}
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreate}
+                sx={{ backgroundColor: '#1a237e', '&:hover': { backgroundColor: '#283593' } }}
+              >
+                New Transfer
+              </Button>
+            )}
+          </Box>
         </Box>
 
-        <Paper sx={{ mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', p: 2, pb: 0 }}>
-            <Tooltip title="Refresh">
-              <IconButton onClick={handleRefresh} size="small">
-                <Refresh />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <FilterHeader
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search by transfer number or notes..."
-            onClear={handleClearFilters}
-            fields={filterFields}
-          />
+        <FilterHeader
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search by transfer number or notes..."
+          onClear={handleClearFilters}
+          fields={filterFields}
+        />
 
-          <TableContainer>
-            <Table>
+        <TableContainer component={Paper} sx={{ borderRadius: 0, border: '1px solid #c0c0c0', boxShadow: 'none', backgroundColor: '#ffffff' }}>
+          <Table>
               <TableHead>
                 <TableRow>
                   <TableCell>Transfer Number</TableCell>
@@ -337,18 +364,16 @@ const StockTransferList: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              component="div"
+              count={total}
+              page={page}
+              onPageChange={handlePageChange}
+              rowsPerPage={pageSize}
+              onRowsPerPageChange={handlePageSizeChange}
+              rowsPerPageOptions={[10, 20, 50, 100]}
+            />
           </TableContainer>
-
-          <TablePagination
-            component="div"
-            count={total}
-            page={page}
-            onPageChange={handlePageChange}
-            rowsPerPage={pageSize}
-            onRowsPerPageChange={handlePageSizeChange}
-            rowsPerPageOptions={[10, 20, 50, 100]}
-          />
-        </Paper>
 
         <Toast toast={toast} onClose={hideToast} />
       </Box>

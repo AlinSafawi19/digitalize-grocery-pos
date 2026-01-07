@@ -172,8 +172,7 @@ export default function BackupPage() {
   }), []);
 
   const titleTypographySx = useMemo(() => ({
-    fontSize: '18px',
-    fontWeight: 600,
+    fontSize: { xs: '20px', sm: '24px', md: '28px' },
     fontFamily: 'system-ui, -apple-system, sans-serif',
   }), []);
 
@@ -342,7 +341,7 @@ export default function BackupPage() {
     <MainLayout>
       <Box sx={containerBoxSx}>
         <Box sx={headerBoxSx}>
-          <Typography sx={titleTypographySx}>Backup & Restore</Typography>
+          <Typography variant="h4" fontWeight="bold" sx={titleTypographySx}>Backup & Restore</Typography>
         </Box>
 
         {/* Tabs */}
